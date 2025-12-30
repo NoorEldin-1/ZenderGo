@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'whatsapp' => [
+        'url' => env('WHATSAPP_API_URL', 'http://localhost:21465'),
+        'session' => env('WHATSAPP_SESSION', 'my-session'),
+        'token' => env('WHATSAPP_API_TOKEN', ''),
+    ],
+
 ];
