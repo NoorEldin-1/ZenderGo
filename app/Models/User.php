@@ -25,6 +25,8 @@ class User extends Authenticatable
         'phone',
         'otp_code',
         'otp_expires_at',
+        'whatsapp_session',
+        'whatsapp_token',
     ];
 
     /**

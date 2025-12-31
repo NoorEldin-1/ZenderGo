@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TemplateController;
 use Illuminate\Support\Facades\Route;
 
@@ -48,4 +49,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/templates', [TemplateController::class, 'index'])->name('templates.index');
     Route::post('/templates', [TemplateController::class, 'store'])->name('templates.store');
     Route::delete('/templates/{template}', [TemplateController::class, 'destroy'])->name('templates.destroy');
+
+    // Settings
+    Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+    Route::put('/settings/whatsapp', [SettingsController::class, 'updateWhatsapp'])->name('settings.whatsapp');
+
+    // WhatsApp Session Management (AJAX)
+    Route::post('/settings/whatsapp/start', [SettingsController::class, 'startSession'])->name('settings.whatsapp.start');
+    Route::get('/settings/whatsapp/qrcode', [SettingsController::class, 'getQrCode'])->name('settings.whatsapp.qrcode');
+    Route::get('/settings/whatsapp/status', [SettingsController::class, 'checkConnection'])->name('settings.whatsapp.status');
+    Route::post('/settings/whatsapp/disconnect', [SettingsController::class, 'disconnect'])->name('settings.whatsapp.disconnect');
 });
+

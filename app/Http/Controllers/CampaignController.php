@@ -62,13 +62,24 @@ class CampaignController extends Controller
             $imagePath = storage_path('app/public/' . $imagePath);
         }
 
+        // Get the user's WhatsApp session and token
+        $user = Auth::user();
+        $userSession = $user->whatsapp_session;
+        $userToken = $user->whatsapp_token;
+
+        if (!$userSession) {
+            return back()->withErrors(['session' => 'يرجى ربط حساب WhatsApp الخاص بك أولاً من إعدادات الحساب.']);
+        }
+
         // Dispatch jobs with throttling (15 seconds delay per contact)
         $delay = 0;
         foreach ($contacts as $contact) {
             SendWhatsappCampaign::dispatch(
                 $contact->phone,
                 $validated['message'],
-                $imagePath
+                $imagePath,
+                $userSession,
+                $userToken
             )->delay(now()->addSeconds($delay));
 
             $delay += 15; // Add 15 seconds delay for each subsequent message

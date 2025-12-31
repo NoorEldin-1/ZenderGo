@@ -30,16 +30,21 @@ class SendWhatsappCampaign implements ShouldQueue
     public function __construct(
         public string $phone,
         public string $message,
-        public ?string $imagePath = null
+        public ?string $imagePath = null,
+        public ?string $whatsappSession = null,
+        public ?string $whatsappToken = null
     ) {
     }
 
     /**
      * Execute the job.
      */
-    public function handle(WhatsAppService $whatsapp): void
+    public function handle(): void
     {
-        Log::info("Sending WhatsApp campaign to {$this->phone}");
+        Log::info("Sending WhatsApp campaign to {$this->phone} using session {$this->whatsappSession}");
+
+        // Create WhatsApp service with the user's session and token
+        $whatsapp = new WhatsAppService($this->whatsappSession, $this->whatsappToken);
 
         $success = false;
 
@@ -55,6 +60,7 @@ class SendWhatsappCampaign implements ShouldQueue
             Log::warning("Failed to send campaign to {$this->phone}");
             // Job will be retried due to failure
             $this->fail(new \Exception("Failed to send message to {$this->phone}"));
+            return;
         }
 
         Log::info("Successfully sent campaign to {$this->phone}");

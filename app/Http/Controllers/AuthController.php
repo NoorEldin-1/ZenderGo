@@ -44,18 +44,25 @@ class AuthController extends Controller
             'otp_expires_at' => now()->addMinutes(5),
         ]);
 
-        // Send OTP via WhatsApp
-        $message = "Your verification code is: {$otp}\n\nThis code expires in 5 minutes.";
-        $sent = $whatsapp->sendMessage($phone, $message);
+        // Send OTP via WhatsApp using default system session
+        $message = "🔐 رمز التحقق الخاص بك هو: *{$otp}*\n\nينتهي هذا الرمز خلال 5 دقائق.\n\n_زندر - تسويق واتساب_";
 
-        if (!$sent) {
-            return back()->withErrors(['phone' => 'Failed to send OTP. Please try again.']);
+        try {
+            $sent = $whatsapp->sendMessage($phone, $message);
+
+            if (!$sent) {
+                \Log::error("Failed to send OTP to {$phone} - WhatsApp service returned false");
+                return back()->withErrors(['phone' => 'فشل إرسال رمز التحقق. تأكد من تشغيل خادم WhatsApp وأن الجلسة متصلة.']);
+            }
+        } catch (\Exception $e) {
+            \Log::error("Exception sending OTP to {$phone}: " . $e->getMessage());
+            return back()->withErrors(['phone' => 'خطأ في الاتصال بخادم WhatsApp. يرجى المحاولة مرة أخرى.']);
         }
 
         // Store phone in session for verification step
         session(['otp_phone' => $phone]);
 
-        return redirect()->route('verify')->with('success', 'OTP sent to your WhatsApp!');
+        return redirect()->route('verify')->with('success', 'تم إرسال رمز التحقق إلى واتساب الخاص بك!');
     }
 
     /**

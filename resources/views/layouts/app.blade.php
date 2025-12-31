@@ -534,6 +534,14 @@
                             <hr class="dropdown-divider">
                         </li>
                         <li>
+                            <a class="dropdown-item" href="{{ route('settings.index') }}">
+                                <i class="bi bi-gear me-2"></i>الإعدادات
+                            </a>
+                        </li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li>
                             <form action="{{ route('logout') }}" method="POST">
                                 @csrf
                                 <button type="submit" class="dropdown-item text-danger">
