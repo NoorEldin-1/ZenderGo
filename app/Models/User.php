@@ -23,10 +23,11 @@ class User extends Authenticatable
         'email',
         'password',
         'phone',
-        'otp_code',
-        'otp_expires_at',
         'whatsapp_session',
         'whatsapp_token',
+        'is_suspended',
+        'suspension_reason',
+        'suspended_at',
     ];
 
     /**
@@ -37,7 +38,6 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
-        'otp_code',
     ];
 
     /**
@@ -49,9 +49,62 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'otp_expires_at' => 'datetime',
             'password' => 'hashed',
+            'is_suspended' => 'boolean',
+            'suspended_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Get the suspension reason in Arabic.
+     */
+    public function getSuspensionReasonTextAttribute(): string
+    {
+        return match ($this->suspension_reason) {
+            'security' => 'الحساب معطل لسبب أمني',
+            'subscription' => 'يرجى دفع الاشتراك لتستطيع التكملة',
+            default => '',
+        };
+    }
+
+    /**
+     * Check if the user is suspended.
+     */
+    public function isSuspended(): bool
+    {
+        return $this->is_suspended;
+    }
+
+    /**
+     * Suspend the user account.
+     */
+    public function suspend(string $reason): void
+    {
+        $this->update([
+            'is_suspended' => true,
+            'suspension_reason' => $reason,
+            'suspended_at' => now(),
+        ]);
+    }
+
+    /**
+     * Unsuspend the user account.
+     */
+    public function unsuspend(): void
+    {
+        $this->update([
+            'is_suspended' => false,
+            'suspension_reason' => null,
+            'suspended_at' => null,
+        ]);
+    }
+
+    /**
+     * Scope to get suspended users.
+     */
+    public function scopeSuspended($query)
+    {
+        return $query->where('is_suspended', true);
     }
 
     /**
@@ -69,5 +122,114 @@ class User extends Authenticatable
     {
         return $this->hasMany(Template::class);
     }
-}
 
+    /**
+     * Get share requests sent by this user.
+     */
+    public function sentShareRequests(): HasMany
+    {
+        return $this->hasMany(ShareRequest::class, 'sender_id');
+    }
+
+    /**
+     * Get share requests received by this user.
+     */
+    public function receivedShareRequests(): HasMany
+    {
+        return $this->hasMany(ShareRequest::class, 'recipient_id');
+    }
+
+    /**
+     * Get count of pending share requests for this user.
+     */
+    public function getPendingShareRequestsCountAttribute(): int
+    {
+        return $this->receivedShareRequests()->pending()->count();
+    }
+
+    /**
+     * Get the subscriptions for the user.
+     */
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    /**
+     * Get the current active subscription.
+     */
+    public function activeSubscription()
+    {
+        return $this->subscriptions()->active()->latest('ends_at')->first();
+    }
+
+    /**
+     * Check if user has an active subscription.
+     */
+    public function hasActiveSubscription(): bool
+    {
+        return $this->activeSubscription() !== null;
+    }
+
+    /**
+     * Get subscription status: trial, paid, or expired.
+     */
+    public function getSubscriptionStatusAttribute(): string
+    {
+        $subscription = $this->activeSubscription();
+
+        if (!$subscription) {
+            return 'expired';
+        }
+
+        return $subscription->type;
+    }
+
+    /**
+     * Get days remaining in current subscription.
+     */
+    public function getSubscriptionDaysRemainingAttribute(): int
+    {
+        $subscription = $this->activeSubscription();
+        return $subscription ? $subscription->daysRemaining() : 0;
+    }
+
+    /**
+     * Get the end date of current subscription.
+     */
+    public function getSubscriptionEndsAtAttribute()
+    {
+        $subscription = $this->activeSubscription();
+        return $subscription ? $subscription->ends_at : null;
+    }
+
+    /**
+     * Create a trial subscription for this user.
+     */
+    public function createTrialSubscription(): Subscription
+    {
+        $trialDays = SystemSetting::getTrialDays();
+
+        return $this->subscriptions()->create([
+            'type' => 'trial',
+            'price_paid' => 0,
+            'starts_at' => now(),
+            'ends_at' => now()->addDays($trialDays),
+        ]);
+    }
+
+    /**
+     * Create a paid subscription for this user.
+     */
+    public function createPaidSubscription(): Subscription
+    {
+        $price = SystemSetting::getSubscriptionPrice();
+
+        return $this->subscriptions()->create([
+            'type' => 'paid',
+            'price_paid' => $price,
+            'starts_at' => now(),
+            'ends_at' => now()->addMonth(),
+        ]);
+    }
+}

@@ -16,6 +16,7 @@ class Contact extends Model
         'user_id',
         'name',
         'phone',
+        'store_name',
     ];
 
     /**

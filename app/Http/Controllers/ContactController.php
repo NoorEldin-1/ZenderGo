@@ -6,6 +6,7 @@ use App\Models\Contact;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
@@ -62,11 +63,56 @@ class ContactController extends Controller
     }
 
     /**
-     * Display a listing of contacts.
+     * Display a listing of contacts with server-side search.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $contacts = Auth::user()->contacts()->latest()->paginate(20);
+        $query = Auth::user()->contacts();
+
+        // Apply search filter if provided
+        if ($request->filled('q')) {
+            $search = $request->q;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        $contacts = $query->latest()->paginate(20)->withQueryString();
+
+        // Get share history for displayed contacts
+        $contactIds = $contacts->pluck('id')->toArray();
+        $shareHistory = DB::table('share_request_contacts')
+            ->join('share_requests', 'share_request_contacts.share_request_id', '=', 'share_requests.id')
+            ->join('users', 'share_requests.recipient_id', '=', 'users.id')
+            ->where('share_requests.sender_id', Auth::id())
+            ->whereIn('share_request_contacts.contact_id', $contactIds)
+            ->select(
+                'share_request_contacts.contact_id',
+                'users.phone as shared_with',
+                'share_requests.status'
+            )
+            ->get()
+            ->groupBy('contact_id');
+
+        // Attach share history to each contact
+        foreach ($contacts as $contact) {
+            $contact->share_history = $shareHistory->get($contact->id, collect())->toArray();
+        }
+
+        // Return JSON for AJAX requests
+        if ($request->ajax()) {
+            return response()->json([
+                'contacts' => $contacts->items(),
+                'pagination' => [
+                    'current_page' => $contacts->currentPage(),
+                    'last_page' => $contacts->lastPage(),
+                    'total' => $contacts->total(),
+                    'first_item' => $contacts->firstItem(),
+                    'last_item' => $contacts->lastItem(),
+                ]
+            ]);
+        }
 
         return view('contacts.index', compact('contacts'));
     }
@@ -120,15 +166,20 @@ class ContactController extends Controller
                 return back()->withErrors(['file' => 'الملف فارغ أو لا يحتوي على بيانات']);
             }
 
-            // Get headers (first row)
-            $headers = array_map('strtolower', array_map('trim', $rows[0]));
+            // Get headers (first row) - normalize to lowercase and trim
+            $headers = array_map(function ($h) {
+                return strtolower(trim(str_replace('_', '', $h ?? '')));
+            }, $rows[0]);
 
-            // Find column indexes
-            $nameIndex = array_search('name', $headers);
-            $phoneIndex = array_search('phone', $headers);
+            // Find column indexes - support both new and legacy column names
+            // New format: Store_Name, Cust_FullName, Cust_Mobile
+            // Legacy format: name, phone
+            $storeNameIndex = $this->findColumnIndex($headers, ['storename', 'store_name', 'store']);
+            $nameIndex = $this->findColumnIndex($headers, ['custfullname', 'cust_fullname', 'fullname', 'name', 'customername', 'customer']);
+            $phoneIndex = $this->findColumnIndex($headers, ['custmobile', 'cust_mobile', 'mobile', 'phone', 'telephone', 'tel']);
 
             if ($nameIndex === false || $phoneIndex === false) {
-                return back()->withErrors(['file' => 'الملف يجب أن يحتوي على أعمدة: name و phone']);
+                return back()->withErrors(['file' => 'الملف يجب أن يحتوي على أعمدة: Cust_FullName (أو name) و Cust_Mobile (أو phone)']);
             }
 
             // Get existing phones for this user
@@ -140,6 +191,7 @@ class ContactController extends Controller
             // Process rows
             $preview = [
                 'filename' => $file->getClientOriginalName(),
+                'has_store_name' => $storeNameIndex !== false,
                 'rows' => [],
                 'summary' => [
                     'total' => 0,
@@ -151,6 +203,7 @@ class ContactController extends Controller
 
             for ($i = 1; $i < count($rows); $i++) {
                 $row = $rows[$i];
+                $storeName = ($storeNameIndex !== false && isset($row[$storeNameIndex])) ? trim($row[$storeNameIndex]) : '';
                 $name = isset($row[$nameIndex]) ? trim($row[$nameIndex]) : '';
                 $phone = isset($row[$phoneIndex]) ? trim($row[$phoneIndex]) : '';
 
@@ -218,6 +271,7 @@ class ContactController extends Controller
 
                 $preview['rows'][] = [
                     'row_number' => $i + 1,
+                    'store_name' => $storeName,
                     'name' => $name,
                     'phone' => $phone,
                     'status' => $status,
@@ -233,6 +287,101 @@ class ContactController extends Controller
         } catch (\Exception $e) {
             return back()->withErrors(['file' => 'خطأ في قراءة الملف: ' . $e->getMessage()]);
         }
+    }
+
+    /**
+     * Find column index using intelligent fuzzy matching.
+     * 
+     * This method uses multiple strategies to find the correct column:
+     * 1. Exact match (after normalization)
+     * 2. Prefix match (handles cases like cust_mobile_1, mobile2, etc.)
+     * 3. Contains match (column contains the keyword)
+     * 4. Similarity scoring (for typos and variations)
+     * 
+     * @param array $headers All column headers from the file
+     * @param array $possibleNames List of acceptable column names
+     * @return int|false Column index or false if not found
+     */
+    private function findColumnIndex(array $headers, array $possibleNames): int|false
+    {
+        // Strategy 1: Exact match (after normalization)
+        foreach ($possibleNames as $name) {
+            $normalizedName = $this->normalizeColumnName($name);
+            foreach ($headers as $index => $header) {
+                if ($this->normalizeColumnName($header) === $normalizedName) {
+                    return $index;
+                }
+            }
+        }
+
+        // Strategy 2: Prefix match (handles cust_mobile_1, phone2, etc.)
+        foreach ($possibleNames as $name) {
+            $normalizedName = $this->normalizeColumnName($name);
+            foreach ($headers as $index => $header) {
+                $normalizedHeader = $this->normalizeColumnName($header);
+                // Check if header starts with the name (ignoring trailing numbers)
+                if (str_starts_with($normalizedHeader, $normalizedName)) {
+                    // Make sure the rest is just numbers or empty
+                    $remainder = substr($normalizedHeader, strlen($normalizedName));
+                    if ($remainder === '' || preg_match('/^\d+$/', $remainder)) {
+                        return $index;
+                    }
+                }
+            }
+        }
+
+        // Strategy 3: Contains match (more flexible)
+        foreach ($possibleNames as $name) {
+            $normalizedName = $this->normalizeColumnName($name);
+            // Only use contains for longer names to avoid false positives
+            if (strlen($normalizedName) >= 4) {
+                foreach ($headers as $index => $header) {
+                    $normalizedHeader = $this->normalizeColumnName($header);
+                    if (str_contains($normalizedHeader, $normalizedName)) {
+                        return $index;
+                    }
+                }
+            }
+        }
+
+        // Strategy 4: Similarity scoring (handles typos)
+        $bestMatch = null;
+        $bestScore = 0;
+        $threshold = 0.8; // 80% similarity required
+
+        foreach ($headers as $index => $header) {
+            $normalizedHeader = $this->normalizeColumnName($header);
+            foreach ($possibleNames as $name) {
+                $normalizedName = $this->normalizeColumnName($name);
+                similar_text($normalizedHeader, $normalizedName, $percent);
+                $score = $percent / 100;
+
+                if ($score > $threshold && $score > $bestScore) {
+                    $bestScore = $score;
+                    $bestMatch = $index;
+                }
+            }
+        }
+
+        return $bestMatch ?? false;
+    }
+
+    /**
+     * Normalize column name for comparison.
+     * Removes special characters, numbers at the end, and converts to lowercase.
+     */
+    private function normalizeColumnName(string $name): string
+    {
+        // Convert to lowercase
+        $name = strtolower(trim($name));
+
+        // Remove common separators and special characters
+        $name = preg_replace('/[\s_\-\.]+/', '', $name);
+
+        // Remove trailing numbers (like cust_mobile_1 -> custmobile)
+        $name = preg_replace('/\d+$/', '', $name);
+
+        return $name;
     }
 
     /**
@@ -285,6 +434,7 @@ class ContactController extends Controller
                     'user_id' => $userId,
                     'name' => $row['name'],
                     'phone' => $phone,
+                    'store_name' => $row['store_name'] ?? null,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ];
@@ -349,6 +499,7 @@ class ContactController extends Controller
                 'user_id' => $userId,
                 'name' => $row['name'],
                 'phone' => $phone,
+                'store_name' => $row['store_name'] ?? null,
                 'created_at' => $now,
                 'updated_at' => $now,
             ];

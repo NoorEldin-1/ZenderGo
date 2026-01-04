@@ -12,6 +12,19 @@
                     <p class="text-muted">أدخل رقم هاتفك للمتابعة</p>
                 </div>
 
+                <!-- Info/Error Messages -->
+                @if (session('info'))
+                    <div class="alert alert-info mb-4">
+                        <i class="bi bi-info-circle me-2"></i>{{ session('info') }}
+                    </div>
+                @endif
+
+                @if (session('suspension_error'))
+                    <div class="alert alert-danger mb-4">
+                        <i class="bi bi-shield-exclamation me-2"></i>{{ session('suspension_error') }}
+                    </div>
+                @endif
+
                 <form action="{{ route('login') }}" method="POST">
                     @csrf
 
@@ -33,7 +46,7 @@
 
                     <div class="d-grid">
                         <button type="submit" class="btn btn-whatsapp btn-lg">
-                            <i class="bi bi-send me-2"></i>إرسال رمز التحقق
+                            <i class="bi bi-box-arrow-in-left me-2"></i>تسجيل الدخول
                         </button>
                     </div>
                 </form>
@@ -41,8 +54,7 @@
         </div>
 
         <p class="text-center text-muted small mt-4">
-            <i class="bi bi-shield-check me-1"></i>
-            سيتم إرسال رمز التحقق عبر واتساب
+            ليس لديك حساب؟ <a href="{{ route('register') }}" class="text-success fw-semibold">إنشاء حساب جديد</a>
         </p>
     </div>
 @endsection

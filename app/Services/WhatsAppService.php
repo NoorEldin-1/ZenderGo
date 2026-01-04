@@ -38,6 +38,14 @@ class WhatsAppService
     }
 
     /**
+     * Get the current token.
+     */
+    public function getToken(): string
+    {
+        return $this->token;
+    }
+
+    /**
      * Generate a token for a new session.
      * This MUST be called before starting a new session for the first time.
      */

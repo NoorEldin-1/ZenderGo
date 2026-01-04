@@ -534,14 +534,6 @@
                             <hr class="dropdown-divider">
                         </li>
                         <li>
-                            <a class="dropdown-item" href="{{ route('settings.index') }}">
-                                <i class="bi bi-gear me-2"></i>الإعدادات
-                            </a>
-                        </li>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                        <li>
                             <form action="{{ route('logout') }}" method="POST">
                                 @csrf
                                 <button type="submit" class="dropdown-item text-danger">
@@ -580,6 +572,19 @@
                         الحملات
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('guide') ? 'active' : '' }}" href="{{ route('guide') }}">
+                        <i class="bi bi-book"></i>
+                        دليل الاستخدام
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('subscription.*') ? 'active' : '' }}"
+                        href="{{ route('subscription.index') }}">
+                        <i class="bi bi-gem"></i>
+                        اشتراكي
+                    </a>
+                </li>
             </ul>
         </nav>
 
@@ -615,25 +620,39 @@
         <nav class="mobile-nav d-lg-none">
             <div class="container-fluid">
                 <div class="row g-0 text-center">
-                    <div class="col-4">
+                    <div class="col">
                         <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
                             href="{{ route('dashboard') }}">
                             <i class="bi bi-speedometer2"></i>
                             الرئيسية
                         </a>
                     </div>
-                    <div class="col-4">
+                    <div class="col">
                         <a class="nav-link {{ request()->routeIs('contacts.*') ? 'active' : '' }}"
                             href="{{ route('contacts.index') }}">
                             <i class="bi bi-people"></i>
                             جهات الاتصال
                         </a>
                     </div>
-                    <div class="col-4">
+                    <div class="col">
                         <a class="nav-link {{ request()->routeIs('campaigns.*') ? 'active' : '' }}"
                             href="{{ route('campaigns.create') }}">
                             <i class="bi bi-megaphone"></i>
                             الحملات
+                        </a>
+                    </div>
+                    <div class="col">
+                        <a class="nav-link {{ request()->routeIs('subscription.*') ? 'active' : '' }}"
+                            href="{{ route('subscription.index') }}">
+                            <i class="bi bi-gem"></i>
+                            اشتراكي
+                        </a>
+                    </div>
+                    <div class="col">
+                        <a class="nav-link {{ request()->routeIs('guide') ? 'active' : '' }}"
+                            href="{{ route('guide') }}">
+                            <i class="bi bi-book"></i>
+                            الدليل
                         </a>
                     </div>
                 </div>
