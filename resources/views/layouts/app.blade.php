@@ -495,6 +495,20 @@
             color: #666;
             font-size: 0.9rem;
         }
+
+        /* Support link in nav */
+        .nav-link.support-link {
+            color: rgba(37, 211, 102, 0.9) !important;
+        }
+
+        .nav-link.support-link:hover {
+            color: #25D366 !important;
+            background: rgba(37, 211, 102, 0.15);
+        }
+
+        .mobile-nav .nav-link.support-link {
+            color: rgba(37, 211, 102, 0.9) !important;
+        }
     </style>
     @stack('styles')
 </head>
@@ -572,6 +586,7 @@
                         الحملات
                     </a>
                 </li>
+
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('guide') ? 'active' : '' }}" href="{{ route('guide') }}">
                         <i class="bi bi-book"></i>
@@ -583,6 +598,15 @@
                         href="{{ route('subscription.index') }}">
                         <i class="bi bi-gem"></i>
                         اشتراكي
+                    </a>
+                </li>
+                @php
+                    $supportPhone = \App\Models\SystemSetting::getSupportPhoneNumber();
+                @endphp
+                <li class="nav-item mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.1);">
+                    <a class="nav-link support-link" href="https://wa.me/2{{ $supportPhone }}" target="_blank">
+                        <i class="bi bi-whatsapp"></i>
+                        تواصل مع الدعم
                     </a>
                 </li>
             </ul>
@@ -641,6 +665,7 @@
                             الحملات
                         </a>
                     </div>
+
                     <div class="col">
                         <a class="nav-link {{ request()->routeIs('subscription.*') ? 'active' : '' }}"
                             href="{{ route('subscription.index') }}">
@@ -653,6 +678,12 @@
                             href="{{ route('guide') }}">
                             <i class="bi bi-book"></i>
                             الدليل
+                        </a>
+                    </div>
+                    <div class="col">
+                        <a class="nav-link support-link" href="https://wa.me/2{{ $supportPhone }}" target="_blank">
+                            <i class="bi bi-whatsapp"></i>
+                            الدعم
                         </a>
                     </div>
                 </div>

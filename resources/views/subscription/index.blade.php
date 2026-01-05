@@ -384,9 +384,35 @@
             </a>
         </div>
 
+        @php
+            $supportPhone = \App\Models\SystemSetting::getSupportPhoneNumber();
+        @endphp
+
         {{-- Current Subscription Status Card --}}
         <div class="subscription-card">
-            @if ($subscription && $subscription->isActive())
+            {{-- Check if user is suspended for subscription reasons --}}
+            @if (auth()->user()->is_suspended && auth()->user()->suspension_reason === 'subscription')
+                {{-- Account Suspended for Subscription --}}
+                <div class="expired-alert"
+                    style="background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%); border: 2px solid #dc3545;">
+                    <i class="bi bi-pause-circle-fill d-block" style="font-size: 2.5rem; color: #dc3545;"></i>
+                    <h5 style="color: #dc3545;">حسابك معطل</h5>
+                    <p class="text-muted mb-2">تم تعطيل حسابك بسبب مشكلة في الاشتراك.</p>
+                    <a href="https://wa.me/2{{ $supportPhone }}" target="_blank" class="btn btn-sm btn-success">
+                        <i class="bi bi-whatsapp me-1"></i>تواصل مع الدعم: {{ $supportPhone }}
+                    </a>
+                </div>
+
+                <div class="subscription-header">
+                    <div class="subscription-icon expired">
+                        <i class="bi bi-x-circle"></i>
+                    </div>
+                    <div class="subscription-type expired">اشتراك متوقف</div>
+                    <span class="status-badge expired">
+                        <i class="bi bi-pause-circle-fill ms-1"></i>معطل
+                    </span>
+                </div>
+            @elseif ($subscription && $subscription->isActive())
                 {{-- Active Subscription --}}
                 <div class="subscription-header">
                     <div class="subscription-icon {{ $subscription->type }}">
@@ -408,21 +434,37 @@
                     </span>
                 </div>
 
-                <div class="info-cards">
+                @php
+                    $timeRemaining = $subscription->detailedTimeRemaining();
+                @endphp
+                <div class="info-cards" style="grid-template-columns: repeat(3, 1fr);">
                     <div class="info-card">
                         <div class="icon text-primary">
-                            <i class="bi bi-calendar-event"></i>
+                            <i class="bi bi-calendar-day"></i>
                         </div>
-                        <div class="value">{{ $subscription->daysRemaining() }}</div>
-                        <div class="label">يوم متبقي</div>
+                        <div class="value">{{ $timeRemaining['days'] }}</div>
+                        <div class="label">يوم</div>
                     </div>
                     <div class="info-card">
-                        <div class="icon text-success">
-                            <i class="bi bi-calendar-check"></i>
+                        <div class="icon text-info">
+                            <i class="bi bi-clock"></i>
                         </div>
-                        <div class="value">{{ $subscription->ends_at->format('m/d') }}</div>
-                        <div class="label">ينتهي في</div>
+                        <div class="value">{{ $timeRemaining['hours'] }}</div>
+                        <div class="label">ساعة</div>
                     </div>
+                    <div class="info-card">
+                        <div class="icon text-warning">
+                            <i class="bi bi-stopwatch"></i>
+                        </div>
+                        <div class="value">{{ $timeRemaining['minutes'] }}</div>
+                        <div class="label">دقيقة</div>
+                    </div>
+                </div>
+                <div class="text-center mt-2 mb-3">
+                    <small class="text-muted">
+                        <i class="bi bi-calendar-check me-1"></i>ينتهي في:
+                        {{ $subscription->ends_at->format('Y/m/d - H:i') }}
+                    </small>
                 </div>
 
                 @php
@@ -463,8 +505,22 @@
                 </div>
             @endif
 
-            {{-- Payment Section - Only show if NOT in active trial period --}}
-            @if ($subscription && $subscription->isActive() && $subscription->isTrial())
+            {{-- Payment Section - Handle different states --}}
+            @if (auth()->user()->is_suspended && auth()->user()->suspension_reason === 'subscription')
+                {{-- Suspended for subscription - show contact support message --}}
+                <div class="payment-section">
+                    <div class="alert alert-danger mb-0">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                            <strong>لا يمكنك الاشتراك حالياً</strong>
+                        </div>
+                        <p class="mb-2">حسابك معطل بسبب مشكلة في الاشتراك.</p>
+                        <a href="https://wa.me/2{{ $supportPhone }}" target="_blank" class="btn btn-sm btn-success">
+                            <i class="bi bi-whatsapp me-1"></i>تواصل مع الدعم: {{ $supportPhone }}
+                        </a>
+                    </div>
+                </div>
+            @elseif ($subscription && $subscription->isActive() && $subscription->isTrial())
                 {{-- Trial Active - Block Subscription --}}
                 <div class="payment-section">
                     <div class="trial-notice">
@@ -478,14 +534,23 @@
                                 <br>
                                 ستتمكن من الاشتراك المدفوع بعد انتهاء الفترة التجريبية.
                             </p>
+                            @php
+                                $trialTimeRemaining = $subscription->detailedTimeRemaining();
+                            @endphp
                             <div class="trial-countdown mb-3">
-                                <div class="d-flex justify-content-center align-items-center gap-2">
-                                    <i class="bi bi-calendar-event text-info"></i>
-                                    <span>متبقي <strong class="text-info">{{ $subscription->daysRemaining() }}</strong>
-                                        يوم</span>
+                                <div class="d-flex justify-content-center align-items-center gap-3 flex-wrap">
+                                    <span class="badge bg-info px-3 py-2">
+                                        <i class="bi bi-calendar-day me-1"></i>{{ $trialTimeRemaining['days'] }} يوم
+                                    </span>
+                                    <span class="badge bg-primary px-3 py-2">
+                                        <i class="bi bi-clock me-1"></i>{{ $trialTimeRemaining['hours'] }} ساعة
+                                    </span>
+                                    <span class="badge bg-warning text-dark px-3 py-2">
+                                        <i class="bi bi-stopwatch me-1"></i>{{ $trialTimeRemaining['minutes'] }} دقيقة
+                                    </span>
                                 </div>
-                                <small class="text-muted d-block mt-1">
-                                    تنتهي بتاريخ: {{ $subscription->ends_at->format('Y/m/d') }}
+                                <small class="text-muted d-block mt-2">
+                                    تنتهي بتاريخ: {{ $subscription->ends_at->format('Y/m/d - H:i') }}
                                 </small>
                             </div>
 
@@ -505,8 +570,46 @@
                         </div>
                     </div>
                 </div>
+            @elseif ($subscription && $subscription->isActive() && $subscription->isPaid())
+                {{-- Active Paid Subscription - Show Thank You Message --}}
+                <div class="payment-section">
+                    <div class="trial-notice"
+                        style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border-color: #28a745;">
+                        <div class="text-center py-4">
+                            <div class="trial-notice-icon"
+                                style="background: linear-gradient(135deg, #28a745 0%, #218838 100%);">
+                                <i class="bi bi-patch-check-fill"></i>
+                            </div>
+                            <h5 class="mt-3 mb-2" style="color: #155724;">اشتراكك نشط</h5>
+                            <p class="text-muted mb-3">
+                                شكراً لاشتراكك معنا! استمتع بجميع مميزات النظام.
+                                <br>
+                                سيتم إشعارك قبل انتهاء الاشتراك لتجديده.
+                            </p>
+                            @php
+                                $paidTimeRemaining = $subscription->detailedTimeRemaining();
+                            @endphp
+                            <div class="trial-countdown mb-3">
+                                <div class="d-flex justify-content-center align-items-center gap-3 flex-wrap">
+                                    <span class="badge bg-success px-3 py-2">
+                                        <i class="bi bi-calendar-day me-1"></i>{{ $paidTimeRemaining['days'] }} يوم
+                                    </span>
+                                    <span class="badge bg-primary px-3 py-2">
+                                        <i class="bi bi-clock me-1"></i>{{ $paidTimeRemaining['hours'] }} ساعة
+                                    </span>
+                                    <span class="badge bg-info px-3 py-2">
+                                        <i class="bi bi-stopwatch me-1"></i>{{ $paidTimeRemaining['minutes'] }} دقيقة
+                                    </span>
+                                </div>
+                                <small class="text-muted d-block mt-2">
+                                    ينتهي بتاريخ: {{ $subscription->ends_at->format('Y/m/d - H:i') }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             @else
-                {{-- Show Payment Section - Trial expired or no subscription --}}
+                {{-- Show Payment Section - Trial/Paid expired or no subscription --}}
                 <div class="payment-section">
                     <h6><i class="bi bi-wallet2 me-2"></i>الاشتراك أو التجديد</h6>
 
@@ -560,9 +663,13 @@
                             <p class="text-muted small mb-2">
                                 تم إرسال طلبك بتاريخ {{ $pendingRequest->created_at->format('Y/m/d - H:i') }}
                             </p>
-                            <p class="mb-0 small">
+                            <p class="mb-2 small">
                                 <i class="bi bi-clock me-1"></i>سيتم مراجعة طلبك وتفعيل اشتراكك في أقرب وقت
                             </p>
+                            <a href="https://wa.me/2{{ $supportPhone }}" target="_blank"
+                                class="btn btn-sm btn-outline-success">
+                                <i class="bi bi-whatsapp me-1"></i>للاستفسار: {{ $supportPhone }}
+                            </a>
                         </div>
                     @else
                         {{-- Upload Form --}}
@@ -578,8 +685,8 @@
                                 <img id="previewImage" class="upload-preview d-none" alt="معاينة">
                             </div>
 
-                            <input type="file" id="receiptInput" name="receipt" accept="image/jpeg,image/png,image/webp"
-                                class="d-none" required>
+                            <input type="file" id="receiptInput" name="receipt"
+                                accept="image/jpeg,image/png,image/webp" class="d-none" required>
 
                             @error('receipt')
                                 <div class="text-danger small mt-2">

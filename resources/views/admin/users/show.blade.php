@@ -73,7 +73,19 @@
                         $subscription = $user->activeSubscription();
                     @endphp
 
-                    @if ($subscription)
+                    {{-- If account is suspended for subscription reasons, show warning first --}}
+                    @if ($user->is_suspended && $user->suspension_reason === 'subscription')
+                        <div class="alert alert-danger mb-3">
+                            <i class="bi bi-exclamation-circle-fill me-1"></i>
+                            <strong>الحساب معطل بسبب الاشتراك</strong>
+                            <p class="mb-0 mt-1 small">تم تعطيل هذا الحساب لأسباب متعلقة بالاشتراك.</p>
+                        </div>
+                    @endif
+
+                    @if ($subscription && !($user->is_suspended && $user->suspension_reason === 'subscription'))
+                        @php
+                            $timeInfo = $subscription->detailedTimeRemaining();
+                        @endphp
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <span class="text-muted">نوع الاشتراك</span>
                             @if ($subscription->isTrial())
@@ -87,14 +99,16 @@
                             @endif
                         </div>
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="text-muted">الأيام المتبقية</span>
-                            <span class="badge {{ $subscription->daysRemaining() <= 3 ? 'bg-danger' : 'bg-primary' }} fs-6">
-                                {{ $subscription->daysRemaining() }} يوم
-                            </span>
+                            <span class="text-muted">المدة المتبقية</span>
+                            <div class="text-end">
+                                <span class="badge bg-primary me-1">{{ $timeInfo['days'] }} يوم</span>
+                                <span class="badge bg-info me-1">{{ $timeInfo['hours'] }} ساعة</span>
+                                <span class="badge bg-warning text-dark">{{ $timeInfo['minutes'] }} دقيقة</span>
+                            </div>
                         </div>
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <span class="text-muted">ينتهي في</span>
-                            <span class="text-dark fw-semibold">{{ $subscription->ends_at->format('Y/m/d') }}</span>
+                            <span class="text-dark fw-semibold">{{ $subscription->ends_at->format('Y/m/d - H:i') }}</span>
                         </div>
                         @if ($subscription->isPaid())
                             <div class="d-flex justify-content-between align-items-center">
@@ -103,11 +117,13 @@
                                     جنيه</span>
                             </div>
                         @endif
-                    @else
-                        <div class="alert alert-warning mb-3">
-                            <i class="bi bi-exclamation-triangle me-1"></i>
-                            لا يوجد اشتراك نشط
-                        </div>
+                    @elseif (!$subscription || ($user->is_suspended && $user->suspension_reason === 'subscription'))
+                        @if (!($user->is_suspended && $user->suspension_reason === 'subscription'))
+                            <div class="alert alert-warning mb-3">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                لا يوجد اشتراك نشط
+                            </div>
+                        @endif
                     @endif
 
                     <hr class="my-3">

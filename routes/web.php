@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ShareController;
@@ -68,6 +69,8 @@ Route::middleware('auth')->group(function () {
         // Campaigns
         Route::get('/campaigns', [CampaignController::class, 'create'])->name('campaigns.create');
         Route::post('/campaigns/send', [CampaignController::class, 'send'])->name('campaigns.send');
+
+
 
         // Templates API
         Route::get('/templates', [TemplateController::class, 'index'])->name('templates.index');

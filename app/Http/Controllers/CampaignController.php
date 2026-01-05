@@ -24,7 +24,7 @@ class CampaignController extends Controller
                 });
             }
 
-            $contacts = $query->latest()->paginate(20);
+            $contacts = $query->latest()->paginate(50);
 
             return response()->json($contacts);
         }
@@ -74,9 +74,15 @@ class CampaignController extends Controller
         // Dispatch jobs with throttling (15 seconds delay per contact)
         $delay = 0;
         foreach ($contacts as $contact) {
+            // Extract first name from contact name (first word)
+            $firstName = explode(' ', trim($contact->name))[0] ?? $contact->name;
+
+            // Replace placeholder with actual name
+            $personalizedMessage = str_replace('{{ اسم_المستلم }}', $firstName, $validated['message']);
+
             SendWhatsappCampaign::dispatch(
                 $contact->phone,
-                $validated['message'],
+                $personalizedMessage,
                 $imagePath,
                 $userSession,
                 $userToken

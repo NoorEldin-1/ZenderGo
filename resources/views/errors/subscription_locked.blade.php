@@ -172,6 +172,9 @@
 @endpush
 
 @section('content')
+    @php
+        $supportPhone = \App\Models\SystemSetting::getSupportPhoneNumber();
+    @endphp
     <div class="locked-container">
         <div class="locked-card">
             <div class="icon-container">
@@ -192,6 +195,13 @@
                 <i class="bi bi-rocket-takeoff"></i>
                 تجديد الاشتراك الآن
             </a>
+
+            <div class="mt-4 pt-3 border-top">
+                <p class="text-muted small mb-2">هل تحتاج مساعدة؟</p>
+                <a href="https://wa.me/2{{ $supportPhone }}" target="_blank" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-whatsapp me-1"></i>تواصل مع الدعم: {{ $supportPhone }}
+                </a>
+            </div>
 
             <a href="{{ route('dashboard') }}" class="back-link">
                 العودة للرئيسية

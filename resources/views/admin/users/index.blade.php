@@ -99,15 +99,17 @@
                                         $subscription = $user->activeSubscription();
                                     @endphp
                                     @if ($subscription)
+                                        @php
+                                            $timeInfo = $subscription->detailedTimeRemaining();
+                                        @endphp
                                         @if ($subscription->isTrial())
-                                            <span class="badge bg-info">
-                                                <i class="bi bi-gift me-1"></i>تجريبي ({{ $subscription->daysRemaining() }}
-                                                يوم)
+                                            <span class="badge bg-info" title="{{ $timeInfo['formatted'] }}">
+                                                <i class="bi bi-gift me-1"></i>تجريبي ({{ $timeInfo['formatted'] }})
                                             </span>
                                         @else
-                                            <span class="badge bg-success">
+                                            <span class="badge bg-success" title="{{ $timeInfo['formatted'] }}">
                                                 <i class="bi bi-patch-check me-1"></i>مدفوع
-                                                ({{ $subscription->daysRemaining() }} يوم)
+                                                ({{ $timeInfo['formatted'] }})
                                             </span>
                                         @endif
                                     @else
@@ -129,11 +131,9 @@
                                             class="btn btn-sm btn-outline-success" title="عرض">
                                             <i class="bi bi-eye"></i>
                                         </a>
-                                        <button type="button" class="btn btn-sm btn-outline-danger btn-delete-user" 
-                                            title="حذف"
-                                            data-user-id="{{ $user->id }}"
-                                            data-user-name="{{ $user->name }}"
-                                            data-user-phone="{{ $user->phone }}">
+                                        <button type="button" class="btn btn-sm btn-outline-danger btn-delete-user"
+                                            title="حذف" data-user-id="{{ $user->id }}"
+                                            data-user-name="{{ $user->name }}" data-user-phone="{{ $user->phone }}">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </div>
@@ -170,7 +170,7 @@
                 </div>
                 <div class="modal-body text-center py-4">
                     <div class="mb-3">
-                        <div class="rounded-circle bg-danger bg-opacity-10 d-inline-flex align-items-center justify-content-center" 
+                        <div class="rounded-circle bg-danger bg-opacity-10 d-inline-flex align-items-center justify-content-center"
                             style="width: 80px; height: 80px;">
                             <i class="bi bi-person-x text-danger" style="font-size: 2.5rem;"></i>
                         </div>
@@ -202,24 +202,25 @@
 @endsection
 
 @push('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const deleteModal = new bootstrap.Modal(document.getElementById('deleteUserModal'));
-        const deleteForm = document.getElementById('deleteUserForm');
-        const deleteUserInfo = document.getElementById('deleteUserInfo');
-        
-        document.querySelectorAll('.btn-delete-user').forEach(function(button) {
-            button.addEventListener('click', function() {
-                const userId = this.dataset.userId;
-                const userName = this.dataset.userName;
-                const userPhone = this.dataset.userPhone;
-                
-                deleteUserInfo.innerHTML = '<strong>' + userName + '</strong><br><span dir="ltr">' + userPhone + '</span>';
-                deleteForm.action = '{{ route("admin.users.index") }}/' + userId;
-                
-                deleteModal.show();
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteUserModal'));
+            const deleteForm = document.getElementById('deleteUserForm');
+            const deleteUserInfo = document.getElementById('deleteUserInfo');
+
+            document.querySelectorAll('.btn-delete-user').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    const userId = this.dataset.userId;
+                    const userName = this.dataset.userName;
+                    const userPhone = this.dataset.userPhone;
+
+                    deleteUserInfo.innerHTML = '<strong>' + userName +
+                        '</strong><br><span dir="ltr">' + userPhone + '</span>';
+                    deleteForm.action = '{{ route('admin.users.index') }}/' + userId;
+
+                    deleteModal.show();
+                });
             });
         });
-    });
-</script>
+    </script>
 @endpush

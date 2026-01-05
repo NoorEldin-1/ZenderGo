@@ -56,13 +56,14 @@ class User extends Authenticatable
     }
 
     /**
-     * Get the suspension reason in Arabic.
+     * Get the suspension reason in Arabic with support contact.
      */
     public function getSuspensionReasonTextAttribute(): string
     {
+        $supportPhone = SystemSetting::getSupportPhoneNumber();
         return match ($this->suspension_reason) {
-            'security' => 'الحساب معطل لسبب أمني',
-            'subscription' => 'يرجى دفع الاشتراك لتستطيع التكملة',
+            'security' => "الحساب معطل لسبب أمني. للتواصل مع الدعم: {$supportPhone}",
+            'subscription' => "يرجى دفع الاشتراك لتستطيع التكملة. للتواصل: {$supportPhone}",
             default => '',
         };
     }
@@ -219,12 +220,27 @@ class User extends Authenticatable
     }
 
     /**
-     * Create a paid subscription for this user.
+     * Create or extend a paid subscription for this user.
+     * If user has an active subscription, extends it instead of creating new.
      */
     public function createPaidSubscription(): Subscription
     {
         $price = SystemSetting::getSubscriptionPrice();
 
+        // Check if there's an active subscription
+        $activeSubscription = $this->activeSubscription();
+
+        if ($activeSubscription) {
+            // Extend the current subscription by one month from its end date
+            $activeSubscription->update([
+                'ends_at' => $activeSubscription->ends_at->addMonth(),
+                'type' => 'paid',
+                'price_paid' => $activeSubscription->price_paid + $price,
+            ]);
+            return $activeSubscription->fresh();
+        }
+
+        // Create new subscription if no active one exists
         return $this->subscriptions()->create([
             'type' => 'paid',
             'price_paid' => $price,

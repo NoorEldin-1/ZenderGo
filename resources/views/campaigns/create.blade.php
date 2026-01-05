@@ -112,6 +112,11 @@
                                 <i class="bi bi-type-strikethrough"></i>
                             </button>
                             <div class="vr mx-1"></div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="insertNameBtn"
+                                title="إدراج اسم المستلم">
+                                <i class="bi bi-person-badge me-1"></i>اسم الشخص
+                            </button>
+                            <div class="vr mx-1"></div>
                             <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal"
                                 data-bs-target="#templatesModal">
                                 <i class="bi bi-lightning me-1"></i>القوالب
@@ -135,9 +140,12 @@
                             <div class="emoji-grid" id="emojiGrid"></div>
                         </div>
 
-                        <!-- Textarea -->
-                        <textarea class="form-control border-0 message-textarea" id="message" name="message" rows="5"
-                            placeholder="اكتب رسالتك هنا... ✍️" maxlength="4096" required>{{ old('message') }}</textarea>
+                        <!-- Rich Text Editor with Contenteditable -->
+                        <div class="message-editor-container">
+                            <div class="rich-message-editor" id="messageEditor" contenteditable="true"
+                                data-placeholder="اكتب رسالتك هنا... ✍️"></div>
+                        </div>
+                        <textarea class="d-none" id="message" name="message">{{ old('message') }}</textarea>
 
                         <!-- Image -->
                         <div class="p-2 border-top bg-light">
@@ -417,6 +425,99 @@
             color: var(--whatsapp-green);
             border-bottom-color: var(--whatsapp-green);
         }
+
+        /* Rich Message Editor Container Styles */
+        .message-editor-container {
+            position: relative;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fffe 100%);
+            border-radius: 0;
+            transition: all 0.3s ease;
+        }
+
+        .message-editor-container:focus-within {
+            background: linear-gradient(135deg, #f0fff8 0%, #e8fff4 100%);
+            box-shadow: inset 0 0 0 2px rgba(37, 211, 102, 0.15);
+        }
+
+        .message-editor-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(180deg, #25d366 0%, #128c7e 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .message-editor-container:focus-within::before {
+            opacity: 1;
+        }
+
+        /* Rich Message Editor Styles */
+        .rich-message-editor {
+            min-height: 280px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 1rem 1.25rem;
+            font-size: 1.05rem;
+            line-height: 1.8;
+            outline: none;
+            direction: rtl;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background: transparent;
+            color: #1a1a1a;
+            letter-spacing: 0.01em;
+        }
+
+        .rich-message-editor:empty::before {
+            content: attr(data-placeholder);
+            color: #9e9e9e;
+            pointer-events: none;
+            font-style: italic;
+        }
+
+        .rich-message-editor:focus {
+            background: transparent;
+        }
+
+        /* Custom Scrollbar for Editor */
+        .rich-message-editor::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .rich-message-editor::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .rich-message-editor::-webkit-scrollbar-thumb {
+            background: #c5c5c5;
+            border-radius: 10px;
+        }
+
+        .rich-message-editor::-webkit-scrollbar-thumb:hover {
+            background: #25d366;
+        }
+
+        .name-placeholder {
+            background: linear-gradient(135deg, #00c853 0%, #00a844 100%);
+            color: white;
+            padding: 2px 10px;
+            border-radius: 15px;
+            font-weight: 600;
+            font-size: 0.9em;
+            display: inline-block;
+            margin: 0 2px;
+            cursor: default;
+            user-select: all;
+        }
+
+        .name-placeholder::before {
+            content: "👤 ";
+        }
     </style>
 @endpush
 
@@ -425,6 +526,7 @@
         (function() {
             const csrf = document.querySelector('meta[name="csrf-token"]').content;
             const messageTextarea = document.getElementById('message');
+            const messageEditor = document.getElementById('messageEditor');
             const sendBtn = document.getElementById('sendBtn');
             const templatesModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('templatesModal'));
             const saveTemplateModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('saveTemplateModal'));
@@ -586,6 +688,9 @@
                     `<input type="hidden" name="contacts[]" value="${id}">`
                 ).join('');
 
+                // Sync editor content to hidden textarea
+                syncEditorToTextarea();
+
                 // Enable/Disable Send Button
                 const hasMessage = messageTextarea.value.trim().length > 0;
                 sendBtn.disabled = state.selectedContacts.size === 0 || !hasMessage;
@@ -722,13 +827,37 @@
                 });
             });
 
-            function insertAtCursor(text) {
-                const start = messageTextarea.selectionStart;
-                const val = messageTextarea.value;
-                messageTextarea.value = val.slice(0, start) + text + val.slice(messageTextarea.selectionEnd);
-                messageTextarea.selectionStart = messageTextarea.selectionEnd = start + text.length;
-                messageTextarea.focus();
-                updateUIState(); // Reuse main UI update
+            // Insert text/HTML at cursor in contenteditable
+            function insertAtCursor(text, isHtml = false) {
+                messageEditor.focus();
+                if (isHtml) {
+                    document.execCommand('insertHTML', false, text);
+                } else {
+                    document.execCommand('insertText', false, text);
+                }
+                updateUIState();
+            }
+
+            // Insert name placeholder as styled element
+            function insertNamePlaceholder() {
+                const placeholder = '<span class="name-placeholder" contenteditable="false">اسم المستلم</span>&nbsp;';
+                messageEditor.focus();
+                document.execCommand('insertHTML', false, placeholder);
+                updateUIState();
+            }
+
+            // Sync contenteditable content to hidden textarea for form submission
+            function syncEditorToTextarea() {
+                // Get text content, replacing styled placeholders with the actual placeholder text
+                let content = messageEditor.innerHTML;
+                // Replace styled name placeholders with the raw placeholder
+                content = content.replace(/<span class="name-placeholder"[^>]*>.*?<\/span>/g, '@{{ اسم_المستلم }}');
+                // Convert HTML to plain text
+                const temp = document.createElement('div');
+                temp.innerHTML = content;
+                // Replace <br> and </div> with newlines
+                temp.innerHTML = temp.innerHTML.replace(/<br\s*\/?>/gi, '\n').replace(/<\/div>/gi, '\n');
+                messageTextarea.value = temp.textContent || temp.innerText || '';
             }
 
             // Format
@@ -746,6 +875,11 @@
                     messageTextarea.focus();
                     updateUIState();
                 });
+            });
+
+            // Insert Name Placeholder Button
+            document.getElementById('insertNameBtn')?.addEventListener('click', () => {
+                insertNamePlaceholder();
             });
 
             // ========== TEMPLATES ==========
@@ -782,7 +916,9 @@
 
                 myTemplatesList.querySelectorAll('.use-tpl').forEach(btn => {
                     btn.onclick = () => {
-                        messageTextarea.value = btn.dataset.content;
+                        const content = btn.dataset.content;
+                        messageTextarea.value = content;
+                        messageEditor.textContent = content;
                         templatesModal.hide();
                         updateUIState();
                     };
@@ -802,7 +938,9 @@
 
             document.querySelectorAll('.default-tpl').forEach(btn => {
                 btn.onclick = () => {
-                    messageTextarea.value = btn.dataset.content;
+                    const content = btn.dataset.content;
+                    messageTextarea.value = content;
+                    messageEditor.textContent = content;
                     templatesModal.hide();
                     updateUIState();
                 };
@@ -880,7 +1018,10 @@
                 document.getElementById('imagePreview').classList.add('d-none');
             });
 
-            messageTextarea?.addEventListener('input', updateUIState); // Hook into new update function
+            // Editor input handler
+            messageEditor?.addEventListener('input', () => {
+                updateUIState();
+            });
 
             showEmojis('popular');
             updateUIState();

@@ -17,6 +17,7 @@ class AdminSettingsController extends Controller
             'trial_days' => SystemSetting::getTrialDays(),
             'subscription_price' => SystemSetting::getSubscriptionPrice(),
             'vodafone_cash_number' => SystemSetting::getVodafoneCashNumber(),
+            'support_phone_number' => SystemSetting::getSupportPhoneNumber(),
         ];
 
         return view('admin.settings', compact('settings'));
@@ -31,13 +32,16 @@ class AdminSettingsController extends Controller
             'trial_days' => 'required|integer|min:1|max:365',
             'subscription_price' => 'required|numeric|min:0',
             'vodafone_cash_number' => 'required|string|regex:/^01[0-9]{9}$/',
+            'support_phone_number' => 'required|string|regex:/^01[0-9]{9}$/',
         ], [
             'vodafone_cash_number.regex' => 'رقم فودافون كاش غير صحيح. يجب أن يبدأ بـ 01 ويتكون من 11 رقم.',
+            'support_phone_number.regex' => 'رقم الدعم غير صحيح. يجب أن يبدأ بـ 01 ويتكون من 11 رقم.',
         ]);
 
         SystemSetting::set('trial_days', $request->trial_days);
         SystemSetting::set('subscription_price', $request->subscription_price);
         SystemSetting::set('vodafone_cash_number', $request->vodafone_cash_number);
+        SystemSetting::set('support_phone_number', $request->support_phone_number);
 
         return back()->with('success', 'تم حفظ الإعدادات بنجاح.');
     }

@@ -219,6 +219,32 @@
                 </div>
             </div>
 
+            <div class="setting-group">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="icon-box bg-success bg-opacity-10 text-success">
+                        <i class="bi bi-headset"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="setting-label">رقم الدعم الفني</div>
+                        <div class="setting-description">
+                            رقم WhatsApp للدعم الفني الذي سيظهر للمستخدمين في رسائل الأخطاء وزر الدعم العائم
+                        </div>
+                        <div class="input-group" style="max-width: 300px;">
+                            <span class="input-group-text">
+                                <i class="bi bi-whatsapp text-white"></i>
+                            </span>
+                            <input type="text" name="support_phone_number"
+                                class="form-control @error('support_phone_number') is-invalid @enderror"
+                                value="{{ old('support_phone_number', $settings['support_phone_number']) }}"
+                                placeholder="01XXXXXXXXX" dir="ltr" required>
+                        </div>
+                        @error('support_phone_number')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                    </div>
+                </div>
+            </div>
+
             <div class="d-flex justify-content-end pt-3">
                 <button type="submit" class="btn btn-success btn-save">
                     <i class="bi bi-check2-circle ms-2"></i>حفظ الإعدادات

@@ -62,6 +62,44 @@ class Subscription extends Model
     }
 
     /**
+     * Get detailed remaining time (days, hours, minutes) with formatted Arabic string.
+     */
+    public function detailedTimeRemaining(): array
+    {
+        if ($this->isExpired()) {
+            return ['days' => 0, 'hours' => 0, 'minutes' => 0, 'formatted' => 'منتهي'];
+        }
+
+        $now = now();
+        $end = $this->ends_at;
+
+        $totalMinutes = (int) $now->diffInMinutes($end, false);
+        $days = (int) floor($totalMinutes / (60 * 24));
+        $hours = (int) floor(($totalMinutes % (60 * 24)) / 60);
+        $minutes = (int) ($totalMinutes % 60);
+
+        // Build formatted string
+        $parts = [];
+        if ($days > 0) {
+            $parts[] = "{$days} يوم";
+        }
+        if ($hours > 0) {
+            $parts[] = "{$hours} ساعة";
+        }
+        // Show minutes only when less than 1 day remaining
+        if ($minutes > 0 && $days < 1) {
+            $parts[] = "{$minutes} دقيقة";
+        }
+
+        return [
+            'days' => $days,
+            'hours' => $hours,
+            'minutes' => $minutes,
+            'formatted' => implode('، ', $parts) ?: 'أقل من دقيقة'
+        ];
+    }
+
+    /**
      * Get the percentage of subscription time remaining.
      */
     public function percentageRemaining(): int

@@ -56,4 +56,12 @@ class SystemSetting extends Model
     {
         return (string) static::get('vodafone_cash_number', '01XXXXXXXXX');
     }
+
+    /**
+     * Get Support phone number setting.
+     */
+    public static function getSupportPhoneNumber(): string
+    {
+        return (string) static::get('support_phone_number', '01000000000');
+    }
 }
