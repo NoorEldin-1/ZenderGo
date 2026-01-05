@@ -149,6 +149,30 @@ class User extends Authenticatable
     }
 
     /**
+     * Get template share requests sent by this user.
+     */
+    public function sentTemplateShareRequests(): HasMany
+    {
+        return $this->hasMany(TemplateShareRequest::class, 'sender_id');
+    }
+
+    /**
+     * Get template share requests received by this user.
+     */
+    public function receivedTemplateShareRequests(): HasMany
+    {
+        return $this->hasMany(TemplateShareRequest::class, 'recipient_id');
+    }
+
+    /**
+     * Get count of pending template share requests for this user.
+     */
+    public function getPendingTemplateShareRequestsCountAttribute(): int
+    {
+        return $this->receivedTemplateShareRequests()->pending()->count();
+    }
+
+    /**
      * Get the subscriptions for the user.
      */
     public function subscriptions(): HasMany

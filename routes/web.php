@@ -8,6 +8,7 @@ use App\Http\Controllers\HealthController;
 use App\Http\Controllers\ShareController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\TemplateController;
+use App\Http\Controllers\TemplateShareController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -80,6 +81,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/templates', [TemplateController::class, 'index'])->name('templates.index');
         Route::post('/templates', [TemplateController::class, 'store'])->name('templates.store');
         Route::delete('/templates/{template}', [TemplateController::class, 'destroy'])->name('templates.destroy');
+
+        // Template Sharing (Ephemeral - no history kept)
+        Route::get('/templates/share/pending', [TemplateShareController::class, 'pending'])->name('templates.share.pending');
+        Route::post('/templates/share', [TemplateShareController::class, 'store'])->name('templates.share.store');
+        Route::post('/templates/share/{id}/accept', [TemplateShareController::class, 'accept'])->name('templates.share.accept');
+        Route::post('/templates/share/{id}/reject', [TemplateShareController::class, 'reject'])->name('templates.share.reject');
+        Route::delete('/templates/share/{id}', [TemplateShareController::class, 'destroy'])->name('templates.share.destroy');
 
         // Share Requests
         Route::get('/shares', [ShareController::class, 'index'])->name('shares.index');

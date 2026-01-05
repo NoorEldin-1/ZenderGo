@@ -48,17 +48,25 @@ class SendWhatsappCampaign implements ShouldQueue
 
         $success = false;
 
-        if ($this->imagePath && file_exists($this->imagePath)) {
-            // Send image with caption
-            $success = $whatsapp->sendImage($this->phone, $this->message, $this->imagePath);
+        // Normalize image path and check if file exists
+        $normalizedImagePath = $this->imagePath ? str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $this->imagePath) : null;
+
+        Log::debug("Image path received: {$this->imagePath}");
+        Log::debug("Normalized image path: {$normalizedImagePath}");
+        Log::debug("File exists check: " . ($normalizedImagePath && file_exists($normalizedImagePath) ? 'true' : 'false'));
+
+        if ($normalizedImagePath && file_exists($normalizedImagePath)) {
+            // Send image with caption (collage or single image)
+            Log::info("Sending image with campaign to {$this->phone}");
+            $success = $whatsapp->sendImage($this->phone, $this->message, $normalizedImagePath);
         } else {
             // Send text message only
+            Log::info("No image found, sending text only to {$this->phone}");
             $success = $whatsapp->sendMessage($this->phone, $this->message);
         }
 
         if (!$success) {
             Log::warning("Failed to send campaign to {$this->phone}");
-            // Job will be retried due to failure
             $this->fail(new \Exception("Failed to send message to {$this->phone}"));
             return;
         }

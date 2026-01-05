@@ -147,24 +147,30 @@
                         </div>
                         <textarea class="d-none" id="message" name="message">{{ old('message') }}</textarea>
 
-                        <!-- Image -->
+                        <!-- Multi-Image Upload Section -->
                         <div class="p-2 border-top bg-light">
-                            <div class="d-flex align-items-center gap-2">
-                                <label class="btn btn-sm btn-outline-secondary mb-0" for="image">
-                                    <i class="bi bi-image"></i>
-                                    <span class="d-none d-sm-inline ms-1">صورة</span>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <label class="btn btn-sm btn-outline-success mb-0 position-relative" for="images"
+                                    id="imagesLabel">
+                                    <i class="bi bi-images"></i>
+                                    <span class="ms-1">صور</span>
+                                    <span class="badge bg-success rounded-pill ms-1" id="imageCount">0/5</span>
                                 </label>
-                                <input type="file" class="d-none" id="image" name="image" accept="image/*">
-                                <div id="imagePreview" class="d-none flex-grow-1">
-                                    <div class="d-flex align-items-center gap-2 bg-white rounded px-2 py-1">
-                                        <img src="" alt="" class="rounded" style="height: 28px;">
-                                        <span class="small text-truncate" id="imageName"
-                                            style="max-width: 120px;"></span>
-                                        <button type="button" class="btn btn-link text-danger p-0" id="removeImage">
-                                            <i class="bi bi-x-circle"></i>
-                                        </button>
-                                    </div>
+                                <input type="file" class="d-none" id="images" name="images[]" accept="image/*"
+                                    multiple>
+
+                                <!-- Images Preview Container -->
+                                <div id="imagesPreview" class="d-flex gap-2 flex-wrap flex-grow-1"></div>
+                            </div>
+                            <div class="mt-2 d-flex align-items-center gap-2">
+                                <div class="alert alert-info py-1 px-2 mb-0 small d-flex align-items-center gap-2 flex-grow-1"
+                                    id="imageHint">
+                                    <i class="bi bi-lightbulb text-warning"></i>
+                                    <span>يمكنك رفع <strong>حتى 5 صور</strong> مع كل رسالة (بحد أقصى 5MB لكل صورة)</span>
                                 </div>
+                                <button type="button" class="btn btn-sm btn-outline-danger d-none" id="clearAllImages">
+                                    <i class="bi bi-x-lg me-1"></i>مسح الكل
+                                </button>
                             </div>
                         </div>
 
@@ -204,14 +210,24 @@
                                 <i class="bi bi-collection me-1"></i>جاهزة
                             </button>
                         </li>
+                        <li class="nav-item">
+                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#pendingRequests">
+                                <i class="bi bi-inbox me-1"></i>الواردة
+                                <span class="badge bg-danger rounded-pill ms-1 d-none" id="pendingRequestsBadge">0</span>
+                            </button>
+                        </li>
                     </ul>
 
                     <div class="tab-content">
                         <!-- My Templates -->
                         <div class="tab-pane fade show active" id="myTemplates">
-                            <div class="p-2 border-bottom bg-light">
-                                <button type="button" class="btn btn-success btn-sm w-100" id="saveCurrentBtn">
-                                    <i class="bi bi-plus-lg me-1"></i>حفظ الرسالة الحالية كقالب
+                            <div class="p-2 border-bottom bg-light d-flex gap-2">
+                                <button type="button" class="btn btn-success btn-sm flex-grow-1" id="saveCurrentBtn">
+                                    <i class="bi bi-plus-lg me-1"></i>حفظ الرسالة الحالية
+                                </button>
+                                <button type="button" class="btn btn-outline-primary btn-sm d-none"
+                                    id="shareSelectedBtn">
+                                    <i class="bi bi-share me-1"></i>مشاركة (<span id="shareCount">0</span>)
                                 </button>
                             </div>
                             <div id="myTemplatesList" style="max-height: 250px; overflow-y: auto;">
@@ -275,7 +291,49 @@
                                 </button>
                             </div>
                         </div>
+
+                        <!-- Pending Requests -->
+                        <div class="tab-pane fade" id="pendingRequests">
+                            <div id="pendingRequestsList" style="max-height: 300px; overflow-y: auto;">
+                                <div class="text-center py-4 text-muted" id="noPendingRequestsMsg">
+                                    <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                                    لا توجد طلبات مشاركة
+                                </div>
+                            </div>
+                        </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Share Templates Modal -->
+    <div class="modal fade" id="shareTemplatesModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header py-2 bg-primary text-white">
+                    <h6 class="modal-title fw-bold">
+                        <i class="bi bi-share me-1"></i>مشاركة القوالب
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">رقم هاتف المستلم</label>
+                        <input type="text" class="form-control" id="sharePhoneInput" placeholder="01XXXXXXXXX"
+                            dir="ltr">
+                        <div class="form-text">أدخل رقم هاتف المستخدم الذي تريد مشاركة القوالب معه</div>
+                    </div>
+                    <div class="alert alert-info py-2 mb-0 small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        سيتم إرسال <strong id="shareCountInfo">0</strong> قالب للمستلم
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="confirmShareBtn">
+                        <i class="bi bi-send me-1"></i>إرسال
+                    </button>
                 </div>
             </div>
         </div>
@@ -364,6 +422,40 @@
 
         .contact-item.hidden {
             display: none !important;
+        }
+
+        /* Template Selection Styling - Enhanced Visibility */
+        .template-item {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .template-item:hover {
+            background-color: #f0f9f4;
+        }
+
+        .template-item:has(.tpl-checkbox:checked) {
+            background: linear-gradient(135deg, rgba(37, 211, 102, 0.15) 0%, rgba(37, 211, 102, 0.08) 100%);
+            border-right: 4px solid #25d366 !important;
+        }
+
+        .template-item .tpl-checkbox {
+            width: 22px;
+            height: 22px;
+            border: 2px solid #25d366;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .template-item .tpl-checkbox:checked {
+            background-color: #25d366;
+            border-color: #25d366;
+        }
+
+        .template-item .tpl-checkbox:focus {
+            box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.25);
         }
 
         .message-textarea {
@@ -517,6 +609,85 @@
 
         .name-placeholder::before {
             content: "👤 ";
+        }
+
+        /* Multi-Image Preview Styles */
+        .image-preview-item {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 4px 8px;
+            gap: 6px;
+            transition: all 0.2s ease;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .image-preview-item:hover {
+            border-color: #25d366;
+            box-shadow: 0 2px 8px rgba(37, 211, 102, 0.2);
+        }
+
+        .image-preview-item img {
+            width: 32px;
+            height: 32px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        .image-preview-item .image-name {
+            max-width: 80px;
+            font-size: 0.75rem;
+            color: #495057;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .image-preview-item .remove-image-btn {
+            background: none;
+            border: none;
+            color: #dc3545;
+            padding: 0;
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+            opacity: 0.7;
+            transition: all 0.2s;
+        }
+
+        .image-preview-item .remove-image-btn:hover {
+            opacity: 1;
+            transform: scale(1.2);
+        }
+
+        #imagesLabel {
+            transition: all 0.2s ease;
+        }
+
+        #imagesLabel:hover {
+            background-color: #25d366;
+            border-color: #25d366;
+            color: white;
+        }
+
+        #imagesLabel:hover .badge {
+            background-color: white !important;
+            color: #25d366 !important;
         }
     </style>
 @endpush
@@ -885,15 +1056,27 @@
             // ========== TEMPLATES ==========
             const myTemplatesList = document.getElementById('myTemplatesList');
             const noTemplatesMsg = document.getElementById('noTemplatesMsg');
+            const shareSelectedBtn = document.getElementById('shareSelectedBtn');
+            const shareTemplatesModal = bootstrap.Modal.getOrCreateInstance(document.getElementById(
+                'shareTemplatesModal'));
+            const pendingRequestsBadge = document.getElementById('pendingRequestsBadge');
+            const pendingRequestsList = document.getElementById('pendingRequestsList');
+
+            // State for template selection
+            const selectedTemplates = new Set();
 
             async function loadTemplates() {
                 const res = await fetch('/templates');
                 const data = await res.json();
                 renderTemplates(data);
+                loadPendingRequests();
             }
 
             function renderTemplates(templates) {
                 myTemplatesList.innerHTML = '';
+                selectedTemplates.clear();
+                updateShareButton();
+
                 if (!templates.length) {
                     myTemplatesList.innerHTML =
                         `<div class="text-center py-4 text-muted" id="noTemplatesMsg"><i class="bi bi-inbox fs-3 d-block mb-2"></i>لا توجد قوالب محفوظة</div>`;
@@ -904,14 +1087,27 @@
                     const div = document.createElement('div');
                     div.className = 'template-item d-flex align-items-center p-2 border-bottom';
                     div.innerHTML = `
-                <button type="button" class="btn btn-link text-start flex-grow-1 p-0 text-decoration-none use-tpl" data-content="${escapeHtml(t.content)}">
-                    <strong class="d-block">${escapeHtml(t.name)}</strong>
-                    <small class="text-muted text-truncate d-block" style="max-width: 250px;">${escapeHtml(t.content.slice(0, 50))}...</small>
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-danger del-tpl" data-id="${t.id}">
-                    <i class="bi bi-trash"></i>
-                </button>`;
+                        <input type="checkbox" class="form-check-input me-2 tpl-checkbox" data-id="${t.id}">
+                        <button type="button" class="btn btn-link text-start flex-grow-1 p-0 text-decoration-none use-tpl" data-content="${escapeHtml(t.content)}">
+                            <strong class="d-block">${escapeHtml(t.name)}</strong>
+                            <small class="text-muted text-truncate d-block" style="max-width: 200px;">${escapeHtml(t.content.slice(0, 40))}...</small>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger del-tpl ms-2" data-id="${t.id}">
+                            <i class="bi bi-trash"></i>
+                        </button>`;
                     myTemplatesList.appendChild(div);
+                });
+
+                // Checkbox change handler
+                myTemplatesList.querySelectorAll('.tpl-checkbox').forEach(cb => {
+                    cb.onchange = () => {
+                        if (cb.checked) {
+                            selectedTemplates.add(cb.dataset.id);
+                        } else {
+                            selectedTemplates.delete(cb.dataset.id);
+                        }
+                        updateShareButton();
+                    };
                 });
 
                 myTemplatesList.querySelectorAll('.use-tpl').forEach(btn => {
@@ -932,6 +1128,162 @@
                             `حذف "<strong>${name}</strong>" نهائياً؟`;
                         templatesModal.hide();
                         setTimeout(() => deleteTemplateModal.show(), 200);
+                    };
+                });
+            }
+
+            function updateShareButton() {
+                const count = selectedTemplates.size;
+                document.getElementById('shareCount').textContent = count;
+                if (count > 0) {
+                    shareSelectedBtn.classList.remove('d-none');
+                } else {
+                    shareSelectedBtn.classList.add('d-none');
+                }
+            }
+
+            // Share selected templates
+            shareSelectedBtn?.addEventListener('click', () => {
+                const count = selectedTemplates.size;
+                document.getElementById('shareCountInfo').textContent = count;
+                document.getElementById('sharePhoneInput').value = '';
+                templatesModal.hide();
+                setTimeout(() => shareTemplatesModal.show(), 200);
+            });
+
+            // Confirm share
+            document.getElementById('confirmShareBtn')?.addEventListener('click', async () => {
+                const phone = document.getElementById('sharePhoneInput').value.trim();
+                if (!phone) {
+                    shareTemplatesModal.hide();
+                    setTimeout(() => showAlert('أدخل رقم الهاتف', 'warning'), 200);
+                    return;
+                }
+
+                try {
+                    const res = await fetch('/templates/share', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrf
+                        },
+                        body: JSON.stringify({
+                            phone: phone,
+                            templates: Array.from(selectedTemplates)
+                        })
+                    });
+
+                    const data = await res.json();
+                    shareTemplatesModal.hide();
+
+                    if (data.success) {
+                        selectedTemplates.clear();
+                        updateShareButton();
+                        loadTemplates();
+                        setTimeout(() => showAlert(data.message, 'success'), 200);
+                    } else {
+                        setTimeout(() => showAlert(data.message, 'error'), 200);
+                    }
+                } catch (err) {
+                    shareTemplatesModal.hide();
+                    setTimeout(() => showAlert('حدث خطأ أثناء الإرسال', 'error'), 200);
+                }
+            });
+
+            // Load pending share requests
+            async function loadPendingRequests() {
+                try {
+                    const res = await fetch('/templates/share/pending');
+                    const requests = await res.json();
+                    renderPendingRequests(requests);
+                } catch (err) {
+                    console.error('Error loading pending requests:', err);
+                }
+            }
+
+            function renderPendingRequests(requests) {
+                pendingRequestsList.innerHTML = '';
+
+                if (!requests.length) {
+                    pendingRequestsList.innerHTML =
+                        `<div class="text-center py-4 text-muted" id="noPendingRequestsMsg"><i class="bi bi-inbox fs-3 d-block mb-2"></i>لا توجد طلبات مشاركة</div>`;
+                    pendingRequestsBadge.classList.add('d-none');
+                    return;
+                }
+
+                pendingRequestsBadge.textContent = requests.length;
+                pendingRequestsBadge.classList.remove('d-none');
+
+                requests.forEach(req => {
+                    const div = document.createElement('div');
+                    div.className = 'p-3 border-bottom';
+                    div.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <strong class="d-block">${escapeHtml(req.sender?.name || 'مستخدم')}</strong>
+                                <small class="text-muted" dir="ltr">${escapeHtml(req.sender?.phone || '')}</small>
+                            </div>
+                            <span class="badge bg-primary">${req.items?.length || 0} قالب</span>
+                        </div>
+                        <div class="mb-2 small text-muted">
+                            ${req.items?.map(i => `<span class="badge bg-light text-dark me-1 mb-1">${escapeHtml(i.name)}</span>`).join('') || ''}
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-success btn-sm flex-grow-1 accept-share" data-id="${req.id}">
+                                <i class="bi bi-check me-1"></i>قبول
+                            </button>
+                            <button type="button" class="btn btn-outline-danger btn-sm flex-grow-1 reject-share" data-id="${req.id}">
+                                <i class="bi bi-x me-1"></i>رفض
+                            </button>
+                        </div>
+                    `;
+                    pendingRequestsList.appendChild(div);
+                });
+
+                // Accept handler
+                pendingRequestsList.querySelectorAll('.accept-share').forEach(btn => {
+                    btn.onclick = async () => {
+                        btn.disabled = true;
+                        try {
+                            const res = await fetch(`/templates/share/${btn.dataset.id}/accept`, {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': csrf
+                                }
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                                showAlert(data.message, 'success');
+                                loadTemplates();
+                            } else {
+                                showAlert(data.message, 'error');
+                            }
+                        } catch (err) {
+                            showAlert('حدث خطأ', 'error');
+                        }
+                        btn.disabled = false;
+                    };
+                });
+
+                // Reject handler
+                pendingRequestsList.querySelectorAll('.reject-share').forEach(btn => {
+                    btn.onclick = async () => {
+                        btn.disabled = true;
+                        try {
+                            const res = await fetch(`/templates/share/${btn.dataset.id}/reject`, {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': csrf
+                                }
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                                loadPendingRequests();
+                            }
+                        } catch (err) {
+                            showAlert('حدث خطأ', 'error');
+                        }
+                        btn.disabled = false;
                     };
                 });
             }
@@ -1000,22 +1352,121 @@
 
             loadTemplates();
 
-            // Image Handler
-            document.getElementById('image')?.addEventListener('change', function() {
-                if (this.files?.[0]) {
-                    const reader = new FileReader();
-                    reader.onload = e => {
-                        document.querySelector('#imagePreview img').src = e.target.result;
-                        document.getElementById('imageName').textContent = this.files[0].name;
-                        document.getElementById('imagePreview').classList.remove('d-none');
-                    };
-                    reader.readAsDataURL(this.files[0]);
+            // ========== MULTI-IMAGE HANDLER ==========
+            const MAX_IMAGES = 5;
+            const imagesInput = document.getElementById('images');
+            const imagesPreview = document.getElementById('imagesPreview');
+            const imageCount = document.getElementById('imageCount');
+            const clearAllBtn = document.getElementById('clearAllImages');
+            const imageHint = document.getElementById('imageHint');
+            let selectedFiles = new DataTransfer();
+
+            function updateImageCount() {
+                const count = selectedFiles.files.length;
+                imageCount.textContent = `${count}/${MAX_IMAGES}`;
+
+                // Update badge color based on count
+                if (count >= MAX_IMAGES) {
+                    imageCount.className = 'badge bg-danger rounded-pill ms-1';
+                } else if (count > 0) {
+                    imageCount.className = 'badge bg-success rounded-pill ms-1';
+                } else {
+                    imageCount.className = 'badge bg-secondary rounded-pill ms-1';
                 }
+
+                // Show/hide clear all button
+                if (count > 0) {
+                    clearAllBtn.classList.remove('d-none');
+                    imageHint.classList.add('d-none');
+                } else {
+                    clearAllBtn.classList.add('d-none');
+                    imageHint.classList.remove('d-none');
+                }
+            }
+
+            function renderImagePreviews() {
+                imagesPreview.innerHTML = '';
+
+                for (let i = 0; i < selectedFiles.files.length; i++) {
+                    const file = selectedFiles.files[i];
+                    const reader = new FileReader();
+
+                    reader.onload = (e) => {
+                        const previewItem = document.createElement('div');
+                        previewItem.className = 'image-preview-item';
+                        previewItem.dataset.index = i;
+                        previewItem.innerHTML = `
+                            <img src="${e.target.result}" alt="${escapeHtml(file.name)}">
+                            <span class="image-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>
+                            <button type="button" class="remove-image-btn" title="إزالة">
+                                <i class="bi bi-x-circle-fill"></i>
+                            </button>
+                        `;
+
+                        previewItem.querySelector('.remove-image-btn').onclick = () => {
+                            removeImage(i);
+                        };
+
+                        imagesPreview.appendChild(previewItem);
+                    };
+
+                    reader.readAsDataURL(file);
+                }
+
+                updateImageCount();
+            }
+
+            function removeImage(index) {
+                const newDataTransfer = new DataTransfer();
+
+                for (let i = 0; i < selectedFiles.files.length; i++) {
+                    if (i !== index) {
+                        newDataTransfer.items.add(selectedFiles.files[i]);
+                    }
+                }
+
+                selectedFiles = newDataTransfer;
+                imagesInput.files = selectedFiles.files;
+                renderImagePreviews();
+            }
+
+            function clearAllImages() {
+                selectedFiles = new DataTransfer();
+                imagesInput.files = selectedFiles.files;
+                imagesPreview.innerHTML = '';
+                updateImageCount();
+            }
+
+            imagesInput?.addEventListener('change', function() {
+                const newFiles = Array.from(this.files);
+                const currentCount = selectedFiles.files.length;
+                const availableSlots = MAX_IMAGES - currentCount;
+
+                if (newFiles.length > availableSlots) {
+                    if (availableSlots === 0) {
+                        showAlert(`تم الوصول للحد الأقصى! لا يمكنك رفع أكثر من ${MAX_IMAGES} صور.`, 'warning');
+                    } else {
+                        showAlert(`يمكنك إضافة ${availableSlots} صورة/صور فقط. سيتم تجاهل الباقي.`, 'warning');
+                    }
+                }
+
+                const filesToAdd = newFiles.slice(0, availableSlots);
+
+                filesToAdd.forEach(file => {
+                    // Validate file size (5MB max)
+                    if (file.size > 5 * 1024 * 1024) {
+                        showAlert(`الصورة "${file.name}" تتجاوز الحد الأقصى (5MB)`, 'error');
+                        return;
+                    }
+                    selectedFiles.items.add(file);
+                });
+
+                this.files = selectedFiles.files;
+                renderImagePreviews();
             });
 
-            document.getElementById('removeImage')?.addEventListener('click', () => {
-                document.getElementById('image').value = '';
-                document.getElementById('imagePreview').classList.add('d-none');
+            clearAllBtn?.addEventListener('click', () => {
+                clearAllImages();
             });
 
             // Editor input handler
