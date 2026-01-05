@@ -97,6 +97,7 @@ class ShareController extends Controller
 
     /**
      * Accept a share request.
+     * Optimized to avoid N+1 queries by batch loading existing phones.
      */
     public function accept($id)
     {
@@ -112,22 +113,36 @@ class ShareController extends Controller
                 'responded_at' => now(),
             ]);
 
-            // Copy contacts to recipient's account
-            foreach ($shareRequest->contacts as $contactData) {
-                // Check if contact with same phone already exists for this user
-                $existingContact = Auth::user()->contacts()
-                    ->where('phone', $contactData->phone)
-                    ->first();
+            // Batch load all existing phones for this user (avoid N+1)
+            $existingPhones = Auth::user()->contacts()
+                ->pluck('phone')
+                ->flip()
+                ->toArray();
 
-                if (!$existingContact) {
-                    // Create new contact for recipient
-                    Contact::create([
-                        'user_id' => Auth::id(),
+            // Prepare batch insert data
+            $newContacts = [];
+            $now = now();
+            $userId = Auth::id();
+
+            foreach ($shareRequest->contacts as $contactData) {
+                // Check in memory instead of querying DB
+                if (!isset($existingPhones[$contactData->phone])) {
+                    $newContacts[] = [
+                        'user_id' => $userId,
                         'name' => $contactData->name,
                         'phone' => $contactData->phone,
                         'store_name' => $contactData->store_name,
-                    ]);
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                    // Mark as existing to avoid duplicates within this batch
+                    $existingPhones[$contactData->phone] = true;
                 }
+            }
+
+            // Single batch insert instead of multiple individual inserts
+            if (!empty($newContacts)) {
+                Contact::insert($newContacts);
             }
         });
 

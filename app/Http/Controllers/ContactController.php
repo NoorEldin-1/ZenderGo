@@ -149,6 +149,7 @@ class ContactController extends Controller
 
     /**
      * Preview import - validate file and show report.
+     * Optimized for memory efficiency with large files.
      */
     public function previewImport(Request $request)
     {
@@ -156,11 +157,33 @@ class ContactController extends Controller
             'file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
         ]);
 
+        // Set memory limit for import operations (prevents runaway memory usage)
+        ini_set('memory_limit', '256M');
+
         try {
             $file = $request->file('file');
-            $spreadsheet = IOFactory::load($file->getPathname());
+            $extension = strtolower($file->getClientOriginalExtension());
+
+            // Use appropriate reader based on file type for better performance
+            $readerType = match ($extension) {
+                'xlsx' => \PhpOffice\PhpSpreadsheet\IOFactory::READER_XLSX,
+                'xls' => \PhpOffice\PhpSpreadsheet\IOFactory::READER_XLS,
+                'csv' => \PhpOffice\PhpSpreadsheet\IOFactory::READER_CSV,
+                default => \PhpOffice\PhpSpreadsheet\IOFactory::READER_XLSX,
+            };
+
+            $reader = IOFactory::createReader($readerType);
+
+            // Optimization: Read data only, skip formatting (50% memory savings)
+            $reader->setReadDataOnly(true);
+
+            $spreadsheet = $reader->load($file->getPathname());
             $worksheet = $spreadsheet->getActiveSheet();
             $rows = $worksheet->toArray();
+
+            // Free memory immediately
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet);
 
             if (count($rows) < 2) {
                 return back()->withErrors(['file' => 'الملف فارغ أو لا يحتوي على بيانات']);
@@ -182,10 +205,10 @@ class ContactController extends Controller
                 return back()->withErrors(['file' => 'الملف يجب أن يحتوي على أعمدة: Cust_FullName (أو name) و Cust_Mobile (أو phone)']);
             }
 
-            // Get existing phones for this user
-            $existingPhones = Auth::user()->contacts()->pluck('phone')->toArray();
+            // Optimization: Use flip() for O(1) lookup instead of in_array() O(n)
+            $existingPhones = Auth::user()->contacts()->pluck('phone')->flip()->toArray();
 
-            // Track phones in file for duplicate detection
+            // Track phones in file for duplicate detection (also using flip for O(1))
             $phonesInFile = [];
 
             // Process rows
@@ -201,7 +224,8 @@ class ContactController extends Controller
                 ]
             ];
 
-            for ($i = 1; $i < count($rows); $i++) {
+            $rowCount = count($rows);
+            for ($i = 1; $i < $rowCount; $i++) {
                 $row = $rows[$i];
                 $storeName = ($storeNameIndex !== false && isset($row[$storeNameIndex])) ? trim($row[$storeNameIndex]) : '';
                 $name = isset($row[$nameIndex]) ? trim($row[$nameIndex]) : '';
@@ -238,14 +262,14 @@ class ContactController extends Controller
                     $errors[] = 'رقم الهاتف طويل جداً (أكثر من 20 رقم)';
                 }
 
-                // Check for duplicate in file
-                if (!empty($phone) && in_array($phone, $phonesInFile)) {
+                // Check for duplicate in file (O(1) instead of O(n))
+                if (!empty($phone) && isset($phonesInFile[$phone])) {
                     $errors[] = 'رقم مكرر في الملف';
                     $status = 'duplicate';
                 }
 
-                // Check for duplicate in database
-                if (!empty($phone) && in_array($phone, $existingPhones)) {
+                // Check for duplicate in database (O(1) instead of O(n))
+                if (!empty($phone) && isset($existingPhones[$phone])) {
                     $errors[] = 'الرقم موجود مسبقاً في جهات الاتصال';
                     $status = 'duplicate';
                 }
@@ -255,9 +279,9 @@ class ContactController extends Controller
                     $status = 'error';
                 }
 
-                // Add to phones in file for duplicate tracking
+                // Add to phones in file for duplicate tracking (using key for O(1))
                 if (!empty($phone)) {
-                    $phonesInFile[] = $phone;
+                    $phonesInFile[$phone] = true;
                 }
 
                 // Update summary
@@ -288,6 +312,7 @@ class ContactController extends Controller
             return back()->withErrors(['file' => 'خطأ في قراءة الملف: ' . $e->getMessage()]);
         }
     }
+
 
     /**
      * Find column index using intelligent fuzzy matching.

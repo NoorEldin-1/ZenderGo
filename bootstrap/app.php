@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin.auth' => \App\Http\Middleware\AdminAuth::class,
             'subscription.active' => \App\Http\Middleware\EnsureSubscriptionActive::class,
+            'rate.heavy' => \App\Http\Middleware\RateLimitHeavyOperations::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

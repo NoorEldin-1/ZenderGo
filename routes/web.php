@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\HealthController;
 use App\Http\Controllers\ShareController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\TemplateController;
@@ -14,6 +15,9 @@ use Illuminate\Support\Facades\Route;
 | Web Routes
 |--------------------------------------------------------------------------
 */
+
+// Health check endpoint for monitoring (no auth required)
+Route::get('/health', [HealthController::class, 'check'])->name('health.check');
 
 // Redirect home to login or guide
 Route::get('/', function () {
@@ -61,14 +65,14 @@ Route::middleware('auth')->group(function () {
     // Protected by Subscription Status
     Route::middleware('subscription.active')->group(function () {
         // Contacts - Custom routes BEFORE resource
-        Route::delete('/contacts/bulk-delete', [ContactController::class, 'bulkDelete'])->name('contacts.bulk-delete');
-        Route::post('/contacts/preview', [ContactController::class, 'previewImport'])->name('contacts.preview');
-        Route::post('/contacts/confirm-import', [ContactController::class, 'confirmImport'])->name('contacts.confirm-import');
+        Route::delete('/contacts/bulk-delete', [ContactController::class, 'bulkDelete'])->middleware('rate.heavy:bulk_delete')->name('contacts.bulk-delete');
+        Route::post('/contacts/preview', [ContactController::class, 'previewImport'])->middleware('rate.heavy:import')->name('contacts.preview');
+        Route::post('/contacts/confirm-import', [ContactController::class, 'confirmImport'])->middleware('rate.heavy:import')->name('contacts.confirm-import');
         Route::resource('contacts', ContactController::class)->except(['show', 'edit']);
 
         // Campaigns
         Route::get('/campaigns', [CampaignController::class, 'create'])->name('campaigns.create');
-        Route::post('/campaigns/send', [CampaignController::class, 'send'])->name('campaigns.send');
+        Route::post('/campaigns/send', [CampaignController::class, 'send'])->middleware('rate.heavy:campaign')->name('campaigns.send');
 
 
 
@@ -79,7 +83,7 @@ Route::middleware('auth')->group(function () {
 
         // Share Requests
         Route::get('/shares', [ShareController::class, 'index'])->name('shares.index');
-        Route::post('/shares', [ShareController::class, 'store'])->name('shares.store');
+        Route::post('/shares', [ShareController::class, 'store'])->middleware('rate.heavy:share')->name('shares.store');
         Route::post('/shares/{id}/accept', [ShareController::class, 'accept'])->name('shares.accept');
         Route::post('/shares/{id}/reject', [ShareController::class, 'reject'])->name('shares.reject');
         Route::delete('/shares/{id}', [ShareController::class, 'destroy'])->name('shares.destroy');
