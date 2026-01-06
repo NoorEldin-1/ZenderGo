@@ -31,16 +31,19 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
 
-    // Reconnect (for existing users with expired sessions)
-    Route::get('/login/reconnect', [AuthController::class, 'showReconnectForm'])->name('login.reconnect');
-    Route::post('/login/reconnect/start', [AuthController::class, 'startReconnect'])->name('login.reconnect.start');
-    Route::get('/login/reconnect/check', [AuthController::class, 'checkReconnect'])->name('login.reconnect.check');
-
     // Registration
     Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
     Route::post('/register/start', [AuthController::class, 'startRegistration'])->name('register.start');
     Route::get('/register/check', [AuthController::class, 'checkRegistration'])->name('register.check');
 });
+
+// Reconnect routes (accessible to both guests and authenticated users)
+// Guests: redirected from login when session expired
+// Authenticated: redirected from middleware when WhatsApp disconnected
+Route::get('/login/reconnect', [AuthController::class, 'showReconnectForm'])->name('login.reconnect');
+Route::post('/login/reconnect/start', [AuthController::class, 'startReconnect'])->name('login.reconnect.start');
+Route::get('/login/reconnect/check', [AuthController::class, 'checkReconnect'])->name('login.reconnect.check');
+
 
 // Protected routes (authenticated users only)
 Route::middleware('auth')->group(function () {
@@ -63,17 +66,24 @@ Route::middleware('auth')->group(function () {
     Route::get('/subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
     Route::post('/subscription/payment', [SubscriptionController::class, 'submitPayment'])->name('subscription.payment');
 
-    // Protected by Subscription Status
-    Route::middleware('subscription.active')->group(function () {
+    // Password Change Routes (Accessible even if subscription is inactive)
+    Route::get('/password/change', [AuthController::class, 'showChangePasswordForm'])->name('password.change');
+    Route::post('/password/change', [AuthController::class, 'changePassword'])->name('password.update');
+
+    // Protected by Subscription Status AND WhatsApp Connection
+    Route::middleware(['subscription.active', 'whatsapp.connected'])->group(function () {
         // Contacts - Custom routes BEFORE resource
         Route::delete('/contacts/bulk-delete', [ContactController::class, 'bulkDelete'])->middleware('rate.heavy:bulk_delete')->name('contacts.bulk-delete');
         Route::post('/contacts/preview', [ContactController::class, 'previewImport'])->middleware('rate.heavy:import')->name('contacts.preview');
         Route::post('/contacts/confirm-import', [ContactController::class, 'confirmImport'])->middleware('rate.heavy:import')->name('contacts.confirm-import');
         Route::resource('contacts', ContactController::class)->except(['show', 'edit']);
 
-        // Campaigns
+        // Campaigns (quota system handles rate limiting based on contacts sent)
         Route::get('/campaigns', [CampaignController::class, 'create'])->name('campaigns.create');
-        Route::post('/campaigns/send', [CampaignController::class, 'send'])->middleware('rate.heavy:campaign')->name('campaigns.send');
+        Route::get('/campaigns/quota-status', [CampaignController::class, 'quotaStatus'])->name('campaigns.quota');
+        Route::post('/campaigns/send', [CampaignController::class, 'send'])->name('campaigns.send');
+        Route::get('/whatsapp/status', [CampaignController::class, 'whatsappStatus'])->name('whatsapp.status');
+        Route::post('/whatsapp/force-logout', [CampaignController::class, 'forceLogout'])->name('whatsapp.force-logout');
 
 
 

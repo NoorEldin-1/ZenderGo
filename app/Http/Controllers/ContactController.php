@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Contact;
+use App\Models\SystemSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -114,7 +115,14 @@ class ContactController extends Controller
             ]);
         }
 
-        return view('contacts.index', compact('contacts'));
+        // Add contact limit data for view
+        $user = Auth::user();
+        $contactLimit = SystemSetting::getContactLimit();
+        $contactCount = $user->contact_count;
+        $remainingSlots = $user->remaining_contact_slots;
+        $usagePercent = $user->contact_usage_percent;
+
+        return view('contacts.index', compact('contacts', 'contactLimit', 'contactCount', 'remainingSlots', 'usagePercent'));
     }
 
     /**
@@ -122,7 +130,13 @@ class ContactController extends Controller
      */
     public function create()
     {
-        return view('contacts.create');
+        $user = Auth::user();
+        $contactLimit = SystemSetting::getContactLimit();
+        $contactCount = $user->contact_count;
+        $remainingSlots = $user->remaining_contact_slots;
+        $canAddContact = $user->canAddContacts(1);
+
+        return view('contacts.create', compact('contactLimit', 'contactCount', 'remainingSlots', 'canAddContact'));
     }
 
     /**
@@ -130,6 +144,14 @@ class ContactController extends Controller
      */
     public function store(Request $request)
     {
+        // Check contact limit first
+        if (!Auth::user()->canAddContacts(1)) {
+            $limit = SystemSetting::getContactLimit();
+            return back()->withErrors([
+                'limit' => "لقد وصلت للحد الأقصى من جهات الاتصال ({$limit}). يرجى حذف بعض جهات الاتصال أولاً."
+            ])->withInput();
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'required|string|min:10|max:20',
@@ -144,7 +166,7 @@ class ContactController extends Controller
 
         Auth::user()->contacts()->create($validated);
 
-        return redirect()->route('contacts.index')->with('success', 'Contact added successfully!');
+        return redirect()->route('contacts.index')->with('success', 'تم إضافة جهة الاتصال بنجاح!');
     }
 
     /**
@@ -306,7 +328,13 @@ class ContactController extends Controller
             // Store in cache instead of session (expires in 30 minutes)
             Cache::put($this->getImportCacheKey(), $preview, now()->addMinutes(30));
 
-            return view('contacts.preview', compact('preview'));
+            // Get contact limit data
+            $user = Auth::user();
+            $contactLimit = SystemSetting::getContactLimit();
+            $contactCount = $user->contact_count;
+            $remainingSlots = $user->remaining_contact_slots;
+
+            return view('contacts.preview', compact('preview', 'contactLimit', 'contactCount', 'remainingSlots'));
 
         } catch (\Exception $e) {
             return back()->withErrors(['file' => 'خطأ في قراءة الملف: ' . $e->getMessage()]);
@@ -412,11 +440,22 @@ class ContactController extends Controller
     /**
      * Confirm import - import only selected valid rows.
      * Optimized for large datasets using batch inserts.
+     * Enforces contact limit per user.
      */
     public function confirmImport(Request $request)
     {
         // Remove execution time limit for large imports
         set_time_limit(0);
+
+        // Check contact limit first
+        $user = Auth::user();
+        $remainingSlots = $user->remaining_contact_slots;
+
+        if ($remainingSlots <= 0) {
+            $limit = SystemSetting::getContactLimit();
+            return redirect()->route('contacts.index')
+                ->withErrors(['limit' => "لقد وصلت للحد الأقصى من جهات الاتصال ({$limit}). لا يمكن استيراد المزيد. يرجى حذف بعض جهات الاتصال أولاً."]);
+        }
 
         // Check if user sent custom selected rows (from JS)
         $selectedRows = $request->input('selected_rows');
@@ -437,10 +476,17 @@ class ContactController extends Controller
             $now = now();
             $imported = 0;
             $skipped = 0;
+            $limitReached = false;
             $batchData = [];
             $batchSize = 500; // Insert 500 contacts at a time
 
             foreach ($rows as $row) {
+                // Check if we've reached the contact limit
+                if ($imported >= $remainingSlots) {
+                    $limitReached = true;
+                    break;
+                }
+
                 if (empty($row['name']) || empty($row['phone'])) {
                     $skipped++;
                     continue;
@@ -483,8 +529,15 @@ class ContactController extends Controller
             // Clear cache
             Cache::forget($this->getImportCacheKey());
 
-            return redirect()->route('contacts.index')
-                ->with('success', "تم استيراد {$imported} جهة اتصال بنجاح! (تم تخطي {$skipped})");
+            $successMessage = "تم استيراد {$imported} جهة اتصال بنجاح!";
+            if ($skipped > 0) {
+                $successMessage .= " (تم تخطي {$skipped})";
+            }
+            if ($limitReached) {
+                $successMessage .= " ⚠️ تم الوصول للحد الأقصى من جهات الاتصال.";
+            }
+
+            return redirect()->route('contacts.index')->with('success', $successMessage);
         }
 
         // Fallback: use cache data
@@ -502,10 +555,17 @@ class ContactController extends Controller
         $now = now();
         $imported = 0;
         $skipped = 0;
+        $limitReached = false;
         $batchData = [];
         $batchSize = 500;
 
         foreach ($preview['rows'] as $row) {
+            // Check if we've reached the contact limit
+            if ($imported >= $remainingSlots) {
+                $limitReached = true;
+                break;
+            }
+
             if ($row['status'] !== 'valid') {
                 $skipped++;
                 continue;
@@ -548,8 +608,15 @@ class ContactController extends Controller
         // Clear cache
         Cache::forget($this->getImportCacheKey());
 
-        return redirect()->route('contacts.index')
-            ->with('success', "تم استيراد {$imported} جهة اتصال بنجاح! (تم تخطي {$skipped})");
+        $successMessage = "تم استيراد {$imported} جهة اتصال بنجاح!";
+        if ($skipped > 0) {
+            $successMessage .= " (تم تخطي {$skipped})";
+        }
+        if ($limitReached) {
+            $successMessage .= " ⚠️ تم الوصول للحد الأقصى من جهات الاتصال.";
+        }
+
+        return redirect()->route('contacts.index')->with('success', $successMessage);
     }
 
     /**

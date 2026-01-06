@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
@@ -20,12 +21,13 @@ class AuthController extends Controller
 
     /**
      * Handle login request.
-     * Check if user exists and their WhatsApp connection status.
+     * Check password, then user exists and their WhatsApp connection status.
      */
     public function login(Request $request)
     {
         $request->validate([
             'phone' => 'required|string|min:10|max:20',
+            'password' => 'required|string|min:6',
         ]);
 
         $phone = $request->phone;
@@ -39,8 +41,16 @@ class AuthController extends Controller
                 ->with('info', 'رقم الهاتف غير مسجل. يرجى التسجيل أولاً.');
         }
 
-        // Check if user is suspended
-        if ($user->is_suspended) {
+        // Verify password
+        if (!Hash::check($request->password, $user->password)) {
+            return back()
+                ->withInput()
+                ->withErrors(['password' => 'كلمة المرور غير صحيحة']);
+        }
+
+        // Check if user is suspended for SECURITY reason - completely block
+        // Subscription suspended users CAN login (will be redirected to subscription page)
+        if ($user->is_suspended && $user->suspension_reason === 'security') {
             return back()
                 ->withInput()
                 ->withErrors(['phone' => $user->suspension_reason_text]);
@@ -64,26 +74,55 @@ class AuthController extends Controller
             ->with('warning', 'جلسة WhatsApp منتهية. يرجى إعادة ربط حسابك.');
     }
 
+
     /**
      * Show the reconnect page for existing users with expired sessions.
+     * Supports both:
+     * - Users redirected from login (session-based)
+     * - Already authenticated users with disconnected WhatsApp
      */
     public function showReconnectForm()
     {
-        if (!session('login_user_id')) {
+        // Check for session-based flow (from login)
+        $sessionUserId = session('login_user_id');
+
+        // Also support already logged-in users
+        $authUserId = Auth::id();
+
+        $userId = $sessionUserId ?? $authUserId;
+
+        if (!$userId) {
             return redirect()->route('login');
         }
 
+        $user = User::find($userId);
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        // Store session data for reconnect flow if coming from authenticated user
+        if (!$sessionUserId && $authUserId) {
+            session([
+                'login_phone' => $user->phone,
+                'login_user_id' => $user->id,
+            ]);
+        }
+
         return view('auth.reconnect', [
-            'phone' => session('login_phone'),
+            'phone' => $user->phone,
+            'isLoggedIn' => (bool) $authUserId,
         ]);
     }
 
     /**
      * Start reconnection session for existing user (AJAX).
+     * Supports both session-based (from login) and authenticated users.
      */
     public function startReconnect()
     {
-        $userId = session('login_user_id');
+        // Support both session-based and authenticated users
+        $userId = session('login_user_id') ?? Auth::id();
+
         if (!$userId) {
             return response()->json([
                 'success' => false,
@@ -150,10 +189,13 @@ class AuthController extends Controller
 
     /**
      * Check reconnection status (AJAX).
+     * Supports both session-based and authenticated users.
      */
     public function checkReconnect()
     {
-        $userId = session('login_user_id');
+        // Support both session-based and authenticated users
+        $userId = session('login_user_id') ?? Auth::id();
+
         if (!$userId) {
             return response()->json([
                 'success' => false,
@@ -173,14 +215,20 @@ class AuthController extends Controller
         $status = $whatsapp->checkConnection();
 
         if ($status['connected'] ?? false) {
-            // Connected! Log in the user
-            Auth::login($user, true);
+            // Connected! Log in the user if not already
+            if (!Auth::check()) {
+                Auth::login($user, true);
+            }
+
             session()->forget(['login_phone', 'login_user_id']);
+
+            // Redirect to intended URL or guide
+            $redirectUrl = session()->pull('url.intended', route('guide'));
 
             return response()->json([
                 'success' => true,
                 'connected' => true,
-                'redirect' => route('guide'),
+                'redirect' => $redirectUrl,
             ]);
         }
 
@@ -200,10 +248,15 @@ class AuthController extends Controller
 
     /**
      * Start registration session (AJAX).
-     * Generates a new session and returns QR code.
+     * Validates password and generates a new session with QR code.
      */
-    public function startRegistration()
+    public function startRegistration(Request $request)
     {
+        // Validate password
+        $request->validate([
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
         // Generate unique session name for registration
         $sessionName = 'reg-' . time() . '-' . rand(1000, 9999);
 
@@ -217,10 +270,11 @@ class AuthController extends Controller
 
         Log::info("Token generation result for registration", $tokenResult);
 
-        // Store session info in HTTP session for later
+        // Store session info and hashed password in HTTP session for later
         session([
             'reg_session' => $sessionName,
             'reg_token' => $token,
+            'reg_password' => Hash::make($request->password),
         ]);
 
         // Start the WhatsApp session
@@ -246,12 +300,13 @@ class AuthController extends Controller
 
     /**
      * Check registration status (AJAX).
-     * Checks if WhatsApp is connected and creates user account.
+     * Checks if WhatsApp is connected and creates user account with password.
      */
     public function checkRegistration()
     {
         $sessionName = session('reg_session');
         $token = session('reg_token');
+        $hashedPassword = session('reg_password');
 
         if (!$sessionName) {
             return response()->json([
@@ -281,26 +336,31 @@ class AuthController extends Controller
             // Check if user already exists with this phone
             $existingUser = User::where('phone', $phoneNumber)->first();
             if ($existingUser) {
-                // Update existing user's session info and log them in
+                // Update existing user's session info and optionally password, then log them in
                 $existingUser->whatsapp_session = $sessionName;
                 $existingUser->whatsapp_token = $token;
+                // Update password if provided (re-registration updates password)
+                if ($hashedPassword) {
+                    $existingUser->password = $hashedPassword;
+                }
                 $existingUser->save();
 
                 Auth::login($existingUser, true);
-                session()->forget(['reg_session', 'reg_token']);
+                session()->forget(['reg_session', 'reg_token', 'reg_password']);
 
                 return response()->json([
                     'success' => true,
                     'connected' => true,
                     'redirect' => route('guide'),
-                    'message' => 'مرحباً بعودتك! تم تحديث جلسة WhatsApp.',
+                    'message' => 'مرحباً بعودتك! تم تحديث جلسة WhatsApp وكلمة المرور.',
                 ]);
             }
 
-            // Create new user
+            // Create new user with password
             $user = User::create([
                 'name' => 'User ' . substr($phoneNumber, -4),
                 'phone' => $phoneNumber,
+                'password' => $hashedPassword,
                 'whatsapp_session' => $sessionName,
                 'whatsapp_token' => $token,
             ]);
@@ -309,7 +369,7 @@ class AuthController extends Controller
             $user->createTrialSubscription();
 
             Auth::login($user, true);
-            session()->forget(['reg_session', 'reg_token']);
+            session()->forget(['reg_session', 'reg_token', 'reg_password']);
 
             return response()->json([
                 'success' => true,
@@ -436,5 +496,37 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('login');
+    }
+
+    /**
+     * Show the change password form.
+     */
+    public function showChangePasswordForm()
+    {
+        return view('auth.change-password');
+    }
+
+    /**
+     * Handle password change request.
+     */
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        $user = Auth::user();
+
+        // Verify current password
+        if (!Hash::check($request->current_password, $user->password)) {
+            return back()->withErrors(['current_password' => 'كلمة المرور الحالية غير صحيحة']);
+        }
+
+        // Update password
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        return back()->with('success', 'تم تغيير كلمة المرور بنجاح!');
     }
 }

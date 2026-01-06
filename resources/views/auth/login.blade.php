@@ -44,6 +44,23 @@
                         @enderror
                     </div>
 
+                    <div class="mb-4">
+                        <label for="password" class="form-label fw-semibold">كلمة المرور</label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text bg-light">
+                                <i class="bi bi-lock text-success"></i>
+                            </span>
+                            <input type="password" class="form-control @error('password') is-invalid @enderror"
+                                id="password" name="password" placeholder="أدخل كلمة المرور" required>
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        @error('password')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
+                        @enderror
+                    </div>
+
                     <div class="d-grid">
                         <button type="submit" class="btn btn-whatsapp btn-lg">
                             <i class="bi bi-box-arrow-in-left me-2"></i>تسجيل الدخول
@@ -58,3 +75,21 @@
         </p>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const togglePassword = document.getElementById('togglePassword');
+            const passwordInput = document.getElementById('password');
+
+            if (togglePassword && passwordInput) {
+                togglePassword.addEventListener('click', function() {
+                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInput.setAttribute('type', type);
+                    this.querySelector('i').classList.toggle('bi-eye');
+                    this.querySelector('i').classList.toggle('bi-eye-slash');
+                });
+            }
+        });
+    </script>
+@endpush

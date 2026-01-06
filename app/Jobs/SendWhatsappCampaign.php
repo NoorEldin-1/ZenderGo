@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Exceptions\WhatsAppDisconnectedException;
 use App\Services\WhatsAppService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -46,6 +47,25 @@ class SendWhatsappCampaign implements ShouldQueue
         // Create WhatsApp service with the user's session and token
         $whatsapp = new WhatsAppService($this->whatsappSession, $this->whatsappToken);
 
+        // Pre-flight connection check to fail fast if disconnected
+        try {
+            $connectionStatus = $whatsapp->checkConnection();
+
+            if (!($connectionStatus['connected'] ?? false)) {
+                Log::warning("WhatsApp session {$this->whatsappSession} is disconnected, cannot send message to {$this->phone}");
+
+                // Don't retry if session is disconnected - it won't reconnect automatically
+                $this->fail(new WhatsAppDisconnectedException(
+                    'جلسة WhatsApp غير متصلة',
+                    $this->whatsappSession
+                ));
+                return;
+            }
+        } catch (\Exception $e) {
+            Log::warning("Failed to check connection status for {$this->whatsappSession}: " . $e->getMessage());
+            // Continue anyway - the actual send will fail if there's a real problem
+        }
+
         $success = false;
 
         // Normalize image path and check if file exists
@@ -79,6 +99,28 @@ class SendWhatsappCampaign implements ShouldQueue
      */
     public function failed(\Throwable $exception): void
     {
-        Log::error("Campaign job failed for {$this->phone}: " . $exception->getMessage());
+        Log::error("Campaign job failed for {$this->phone}: " . $exception->getMessage(), [
+            'session' => $this->whatsappSession,
+            'exception_class' => get_class($exception),
+        ]);
+
+        // If it's a disconnection error, we might want to mark the user's session as invalid
+        if ($exception instanceof WhatsAppDisconnectedException) {
+            Log::warning("WhatsApp disconnection detected during campaign send to {$this->phone}");
+            // The middleware cache will be updated on next status check
+        }
+    }
+
+    /**
+     * Determine if the job should be retried based on the exception.
+     */
+    public function shouldRetry(\Throwable $exception): bool
+    {
+        // Don't retry disconnection errors - session won't reconnect automatically
+        if ($exception instanceof WhatsAppDisconnectedException) {
+            return false;
+        }
+
+        return $this->attempts() < $this->tries;
     }
 }

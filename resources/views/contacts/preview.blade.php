@@ -20,6 +20,33 @@
         </div>
     </div>
 
+    <!-- Contact Limit Warning -->
+    @if ($remainingSlots <= 0)
+        <div class="alert alert-danger mb-3">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong>لا يمكن استيراد جهات اتصال!</strong>
+            <p class="mb-0 mt-1">لقد وصلت للحد الأقصى ({{ number_format($contactLimit) }} جهة اتصال). يرجى حذف بعض جهات
+                الاتصال أولاً قبل الاستيراد.</p>
+        </div>
+    @elseif($preview['summary']['valid'] > $remainingSlots)
+        <div class="alert alert-warning mb-3">
+            <i class="bi bi-exclamation-circle me-2"></i>
+            <strong>تنبيه: تجاوز الحد المسموح!</strong>
+            <p class="mb-0 mt-1">
+                لديك <strong>{{ number_format($remainingSlots) }}</strong> جهة اتصال متبقية فقط من الحد الأقصى
+                ({{ number_format($contactLimit) }}).
+                <br>عدد جهات الاتصال الصالحة في الملف: <strong>{{ $preview['summary']['valid'] }}</strong>
+                <br><strong>يرجى حذف بعض جهات الاتصال الحالية أولاً لتتمكن من استيراد كل الجهات.</strong>
+            </p>
+        </div>
+    @elseif($remainingSlots <= 20)
+        <div class="alert alert-info mb-3">
+            <i class="bi bi-info-circle me-2"></i>
+            متبقي <strong>{{ number_format($remainingSlots) }}</strong> جهة اتصال من الحد الأقصى
+            ({{ number_format($contactLimit) }}).
+        </div>
+    @endif
+
     <!-- Summary Cards -->
     <div class="row g-2 mb-4">
         <div class="col-3">
@@ -194,7 +221,8 @@
             <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
                 <p class="mb-0 text-center text-md-start" id="importMessage">
                     <i class="bi bi-info-circle text-primary me-1"></i>
-                    سيتم استيراد <strong class="text-success" id="importCount">{{ $preview['summary']['valid'] }}</strong>
+                    سيتم استيراد <strong class="text-success"
+                        id="importCount">{{ $preview['summary']['valid'] }}</strong>
                     جهة اتصال
                 </p>
                 <div class="d-flex gap-2 w-100 w-md-auto">
@@ -235,6 +263,10 @@
         const rowStates = @json($preview['rows']);
         const ignoredRows = new Set();
         const removedRows = new Set();
+
+        // Contact limit info from server
+        const remainingSlots = {{ $remainingSlots }};
+        const contactLimit = {{ $contactLimit }};
 
         // Pagination state
         let currentPage = 1;
@@ -681,23 +713,41 @@
                 if (!ignoredRows.has(row.originalIndex) && row.status === 'valid') valid++;
             });
 
+            // Limit to remaining slots
+            const canImport = Math.min(valid, remainingSlots);
+            const limitExceeded = valid > remainingSlots;
+
             // Update UI counts
             document.getElementById('validCount').textContent = valid;
-            document.getElementById('importCount').textContent = valid;
-            document.getElementById('importBtnCount').textContent = valid;
-            document.getElementById('importBtn').disabled = valid === 0;
 
-            // Build selected rows for import - ONLY filtered valid rows
+            if (limitExceeded) {
+                document.getElementById('importCount').innerHTML =
+                    `<span class="text-warning">${canImport}</span> <small class="text-danger">(من ${valid})</small>`;
+                document.getElementById('importBtnCount').textContent = canImport;
+            } else {
+                document.getElementById('importCount').textContent = canImport;
+                document.getElementById('importBtnCount').textContent = canImport;
+            }
+
+            document.getElementById('importBtn').disabled = canImport === 0;
+
+            // Build selected rows for import - ONLY filtered valid rows, LIMITED to remainingSlots
             const selectedRows = [];
-            filteredRows.forEach(row => {
+            let addedCount = 0;
+
+            for (const row of filteredRows) {
+                if (addedCount >= remainingSlots) break; // Stop at limit
+
                 if (!ignoredRows.has(row.originalIndex) && row.status === 'valid') {
                     selectedRows.push({
                         name: row.name,
                         phone: row.phone,
                         store_name: row.store_name || null
                     });
+                    addedCount++;
                 }
-            });
+            }
+
             document.getElementById('selectedRowsInput').value = JSON.stringify(selectedRows);
             updateBulkActions();
         }

@@ -37,13 +37,12 @@ class CheckExpiredSubscriptions extends Command
         foreach ($users as $user) {
             // Check if user has an active subscription
             if (!$user->hasActiveSubscription()) {
-                // Suspend the user due to expired subscription
-                $user->suspend('subscription');
+                // Just log - don't suspend. User will be redirected to subscription page by middleware
                 $expiredCount++;
 
-                $this->warn("تم تعطيل حساب: {$user->name} ({$user->phone}) - انتهاء الاشتراك");
+                $this->warn("اشتراك منتهي: {$user->name} ({$user->phone})");
 
-                Log::info("Suspended user {$user->id} ({$user->phone}) due to expired subscription");
+                Log::info("User {$user->id} ({$user->phone}) has expired subscription - needs renewal");
             }
         }
 

@@ -15,6 +15,28 @@
         <div class="col-lg-6">
             <div class="card">
                 <div class="card-body p-4">
+                    @if (!$canAddContact)
+                        <div class="alert alert-danger mb-4">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <strong>لا يمكن إضافة جهات اتصال جديدة!</strong>
+                            <p class="mb-0 mt-1 small">لقد وصلت للحد الأقصى ({{ number_format($contactLimit) }} جهة اتصال).
+                                يرجى حذف بعض جهات الاتصال أولاً.</p>
+                        </div>
+                    @elseif($remainingSlots <= 10)
+                        <div class="alert alert-warning mb-4">
+                            <i class="bi bi-exclamation-circle me-2"></i>
+                            <strong>تنبيه:</strong> متبقي {{ $remainingSlots }} جهة اتصال فقط من الحد الأقصى
+                            ({{ number_format($contactLimit) }}).
+                        </div>
+                    @endif
+
+                    @error('limit')
+                        <div class="alert alert-danger mb-4">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            {{ $message }}
+                        </div>
+                    @enderror
+
                     <form action="{{ route('contacts.store') }}" method="POST">
                         @csrf
 
@@ -28,7 +50,7 @@
                                 </span>
                                 <input type="text" class="form-control @error('name') is-invalid @enderror"
                                     id="name" name="name" value="{{ old('name') }}" placeholder="اسم جهة الاتصال"
-                                    required autofocus>
+                                    required autofocus {{ !$canAddContact ? 'disabled' : '' }}>
                             </div>
                             @error('name')
                                 <div class="text-danger small mt-1">{{ $message }}</div>
@@ -45,7 +67,8 @@
                                 </span>
                                 <input type="tel" class="form-control @error('phone') is-invalid @enderror"
                                     id="phone" name="phone" value="{{ old('phone') }}" placeholder="01012345678"
-                                    inputmode="numeric" pattern="[0-9]*" dir="ltr" required>
+                                    inputmode="numeric" pattern="[0-9]*" dir="ltr" required
+                                    {{ !$canAddContact ? 'disabled' : '' }}>
                             </div>
                             <div class="form-text">أدخل رقم الهاتف المصري (مثال: 01012345678)</div>
                             @error('phone')
@@ -54,7 +77,8 @@
                         </div>
 
                         <div class="d-flex flex-column flex-sm-row gap-2">
-                            <button type="submit" class="btn btn-primary flex-fill">
+                            <button type="submit" class="btn btn-primary flex-fill"
+                                {{ !$canAddContact ? 'disabled' : '' }}>
                                 <i class="bi bi-plus-lg me-1"></i>إضافة جهة الاتصال
                             </button>
                             <a href="{{ route('contacts.index') }}" class="btn btn-outline-secondary">

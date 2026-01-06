@@ -14,10 +14,12 @@ class AdminSettingsController extends Controller
     public function index()
     {
         $settings = [
-            'trial_days' => SystemSetting::getTrialDays(),
+            'trial_duration' => SystemSetting::getTrialDuration(),
+            'trial_duration_unit' => SystemSetting::getTrialDurationUnit(),
             'subscription_price' => SystemSetting::getSubscriptionPrice(),
             'vodafone_cash_number' => SystemSetting::getVodafoneCashNumber(),
             'support_phone_number' => SystemSetting::getSupportPhoneNumber(),
+            'contact_limit' => SystemSetting::getContactLimit(),
         ];
 
         return view('admin.settings', compact('settings'));
@@ -29,21 +31,29 @@ class AdminSettingsController extends Controller
     public function update(Request $request)
     {
         $request->validate([
-            'trial_days' => 'required|integer|min:1|max:365',
+            'trial_duration' => 'required|integer|min:1|max:9999',
+            'trial_duration_unit' => 'required|in:minutes,hours,days',
             'subscription_price' => 'required|numeric|min:0',
             'vodafone_cash_number' => 'required|string|regex:/^01[0-9]{9}$/',
             'support_phone_number' => 'required|string|regex:/^01[0-9]{9}$/',
+            'contact_limit' => 'required|integer|min:10|max:100000',
         ], [
             'vodafone_cash_number.regex' => 'رقم فودافون كاش غير صحيح. يجب أن يبدأ بـ 01 ويتكون من 11 رقم.',
             'support_phone_number.regex' => 'رقم الدعم غير صحيح. يجب أن يبدأ بـ 01 ويتكون من 11 رقم.',
+            'trial_duration_unit.in' => 'وحدة المدة غير صحيحة.',
+            'contact_limit.min' => 'الحد الأدنى لجهات الاتصال هو 10.',
+            'contact_limit.max' => 'الحد الأقصى لجهات الاتصال هو 100,000.',
         ]);
 
-        SystemSetting::set('trial_days', $request->trial_days);
+        SystemSetting::set('trial_duration', $request->trial_duration);
+        SystemSetting::set('trial_duration_unit', $request->trial_duration_unit);
         SystemSetting::set('subscription_price', $request->subscription_price);
         SystemSetting::set('vodafone_cash_number', $request->vodafone_cash_number);
         SystemSetting::set('support_phone_number', $request->support_phone_number);
+        SystemSetting::set('contact_limit', $request->contact_limit);
 
         return back()->with('success', 'تم حفظ الإعدادات بنجاح.');
     }
 }
+
 

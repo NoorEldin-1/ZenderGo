@@ -548,6 +548,14 @@
                             <hr class="dropdown-divider">
                         </li>
                         <li>
+                            <a class="dropdown-item" href="{{ route('password.change') }}">
+                                <i class="bi bi-key me-2"></i>تغيير كلمة المرور
+                            </a>
+                        </li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li>
                             <form action="{{ route('logout') }}" method="POST">
                                 @csrf
                                 <button type="submit" class="dropdown-item text-danger">
@@ -556,6 +564,15 @@
                             </form>
                         </li>
                     </ul>
+                </div>
+
+                <!-- WhatsApp Connection Status Indicator -->
+                <div id="whatsappStatusIndicator" class="d-none ms-2">
+                    <a href="{{ route('login.reconnect') }}"
+                        class="btn btn-sm btn-outline-warning d-flex align-items-center gap-1" title="اضغط لإعادة الربط">
+                        <i class="bi bi-wifi-off"></i>
+                        <span class="d-none d-sm-inline">غير متصل</span>
+                    </a>
                 </div>
             @endauth
         </div>
@@ -751,6 +768,9 @@
             }
         });
     </script>
+
+
+
     @stack('scripts')
 </body>
 

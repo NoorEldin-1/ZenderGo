@@ -30,6 +30,36 @@
         </div>
     </div>
 
+    <!-- Contact Usage Indicator -->
+    <div class="card mb-3 border-0 shadow-sm">
+        <div class="card-body py-2 px-3">
+            <div
+                class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-people text-primary"></i>
+                    <span class="small">جهات الاتصال:</span>
+                    <strong
+                        class="@if ($usagePercent > 90) text-danger @elseif($usagePercent > 70) text-warning @else text-success @endif">
+                        {{ number_format($contactCount) }} / {{ number_format($contactLimit) }}
+                    </strong>
+                </div>
+                <div class="flex-grow-1" style="max-width: 200px; min-width: 120px;">
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar @if ($usagePercent > 90) bg-danger @elseif($usagePercent > 70) bg-warning @else bg-success @endif"
+                            role="progressbar" style="width: {{ min(100, $usagePercent) }}%"
+                            aria-valuenow="{{ $usagePercent }}" aria-valuemin="0" aria-valuemax="100">
+                        </div>
+                    </div>
+                </div>
+                @if ($remainingSlots <= 0)
+                    <span class="badge bg-danger">وصلت للحد الأقصى</span>
+                @elseif($remainingSlots <= 10)
+                    <span class="badge bg-warning text-dark">متبقي {{ $remainingSlots }} فقط</span>
+                @endif
+            </div>
+        </div>
+    </div>
+
     <!-- Search & Bulk Actions -->
     <div class="card mb-3">
         <div class="card-body py-2 px-3">
@@ -584,12 +614,12 @@
                     `<small class="d-block mt-1">
                         <i class="bi bi-share-fill text-info me-1" style="font-size: 0.7rem;"></i>
                         ${contact.share_history.map(s => `
-                                        <span class="badge ${s.status === 'accepted' ? 'bg-success' : (s.status === 'pending' ? 'bg-warning text-dark' : 'bg-secondary')}" 
-                                              style="font-size: 0.65rem;" dir="ltr"
-                                              title="${s.status === 'accepted' ? 'مقبول' : (s.status === 'pending' ? 'قيد الانتظار' : 'مرفوض')}">
-                                            ${s.shared_with}
-                                        </span>
-                                    `).join('')}
+                                            <span class="badge ${s.status === 'accepted' ? 'bg-success' : (s.status === 'pending' ? 'bg-warning text-dark' : 'bg-secondary')}" 
+                                                  style="font-size: 0.65rem;" dir="ltr"
+                                                  title="${s.status === 'accepted' ? 'مقبول' : (s.status === 'pending' ? 'قيد الانتظار' : 'مرفوض')}">
+                                                ${s.shared_with}
+                                            </span>
+                                        `).join('')}
                        </small>` :
                     '';
 

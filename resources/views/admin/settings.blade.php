@@ -148,21 +148,37 @@
             <div class="setting-group">
                 <div class="d-flex align-items-start gap-3">
                     <div class="icon-box bg-info bg-opacity-10 text-info">
-                        <i class="bi bi-calendar-check"></i>
+                        <i class="bi bi-clock-history"></i>
                     </div>
                     <div class="flex-grow-1">
-                        <div class="setting-label">أيام الفترة التجريبية</div>
+                        <div class="setting-label">مدة الفترة التجريبية</div>
                         <div class="setting-description">
-                            عدد الأيام التي يحصل عليها المستخدم الجديد مجاناً عند التسجيل
+                            المدة التي يحصل عليها المستخدم الجديد مجاناً عند التسجيل (يمكن تحديدها بالدقائق أو الساعات أو
+                            الأيام)
                         </div>
-                        <div class="input-group" style="max-width: 250px;">
-                            <input type="number" name="trial_days"
-                                class="form-control @error('trial_days') is-invalid @enderror"
-                                value="{{ old('trial_days', $settings['trial_days']) }}" min="1" max="365"
-                                required>
-                            <span class="input-group-text">يوم</span>
+                        <div class="d-flex gap-2 align-items-center" style="max-width: 350px;">
+                            <input type="number" name="trial_duration"
+                                class="form-control @error('trial_duration') is-invalid @enderror"
+                                value="{{ old('trial_duration', $settings['trial_duration']) }}" min="1"
+                                max="9999" required style="width: 120px;">
+                            <select name="trial_duration_unit"
+                                class="form-select @error('trial_duration_unit') is-invalid @enderror"
+                                style="width: 130px;">
+                                <option value="minutes"
+                                    {{ old('trial_duration_unit', $settings['trial_duration_unit']) == 'minutes' ? 'selected' : '' }}>
+                                    دقيقة</option>
+                                <option value="hours"
+                                    {{ old('trial_duration_unit', $settings['trial_duration_unit']) == 'hours' ? 'selected' : '' }}>
+                                    ساعة</option>
+                                <option value="days"
+                                    {{ old('trial_duration_unit', $settings['trial_duration_unit']) == 'days' ? 'selected' : '' }}>
+                                    يوم</option>
+                            </select>
                         </div>
-                        @error('trial_days')
+                        @error('trial_duration')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                        @error('trial_duration_unit')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
@@ -239,6 +255,30 @@
                                 placeholder="01XXXXXXXXX" dir="ltr" required>
                         </div>
                         @error('support_phone_number')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                    </div>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="icon-box bg-primary bg-opacity-10 text-primary">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="setting-label">حد جهات الاتصال لكل مستخدم</div>
+                        <div class="setting-description">
+                            الحد الأقصى لعدد جهات الاتصال التي يمكن لكل مستخدم إضافتها (من 10 إلى 100,000)
+                        </div>
+                        <div class="input-group" style="max-width: 250px;">
+                            <input type="number" name="contact_limit"
+                                class="form-control @error('contact_limit') is-invalid @enderror"
+                                value="{{ old('contact_limit', $settings['contact_limit']) }}" min="10"
+                                max="100000" required>
+                            <span class="input-group-text">جهة اتصال</span>
+                        </div>
+                        @error('contact_limit')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>

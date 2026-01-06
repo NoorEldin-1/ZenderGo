@@ -174,6 +174,43 @@
                             </div>
                         </div>
 
+                        <!-- Quota Status Widget -->
+                        <div class="p-3 border-top bg-light">
+                            <div class="quota-widget">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="bi bi-speedometer2 text-primary"></i>
+                                        <span class="fw-bold small">حد الإرسال</span>
+                                    </div>
+                                    <span class="badge bg-{{ $quotaStatus['status_color'] ?? 'success' }}"
+                                        id="quotaRemaining">
+                                        {{ $quotaStatus['remaining'] ?? 50 }} / {{ $quotaStatus['limit'] ?? 50 }} متبقي
+                                    </span>
+                                </div>
+                                <div class="progress mb-2" style="height: 8px;">
+                                    <div class="progress-bar bg-{{ $quotaStatus['status_color'] ?? 'success' }}"
+                                        id="quotaProgress" role="progressbar"
+                                        style="width: {{ $quotaStatus['percentage_remaining'] ?? 100 }}%"
+                                        aria-valuenow="{{ $quotaStatus['percentage_remaining'] ?? 100 }}"
+                                        aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted" id="quotaResetTime">
+                                        <i class="bi bi-clock me-1"></i>
+                                        @if ($quotaStatus['is_window_expired'] ?? true)
+                                            الكوتا متاحة (لم تبدأ بعد)
+                                        @else
+                                            تتجدد بعد: {{ $quotaStatus['reset_in'] ?? '' }}
+                                        @endif
+                                    </small>
+                                    <small class="text-{{ $quotaStatus['status_color'] ?? 'success' }} fw-semibold"
+                                        id="quotaUsed">
+                                        استخدمت {{ $quotaStatus['used'] ?? 0 }} رسالة
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Submit -->
                         <div class="p-2 border-top d-flex justify-content-between align-items-center">
                             <small class="text-muted"><i class="bi bi-clock me-1"></i>فاصل 15 ثانية</small>
@@ -689,6 +726,62 @@
             background-color: white !important;
             color: #25d366 !important;
         }
+
+        /* Quota Widget Styles */
+        .quota-widget {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .quota-widget .progress {
+            background-color: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .quota-widget .progress-bar {
+            transition: width 0.5s ease, background-color 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .quota-widget .badge {
+            font-size: 0.85rem;
+            padding: 6px 12px;
+            border-radius: 20px;
+        }
+
+        /* Quota warning animations */
+        @keyframes quotaPulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .quota-warning {
+            animation: quotaPulse 1.5s ease-in-out infinite;
+        }
+
+        .quota-danger {
+            animation: quotaPulse 0.8s ease-in-out infinite;
+        }
+
+        /* Quota exceeded state */
+        .quota-exceeded {
+            background: linear-gradient(135deg, rgba(220, 53, 69, 0.1) 0%, rgba(220, 53, 69, 0.05) 100%) !important;
+            border: 1px solid rgba(220, 53, 69, 0.2);
+        }
+
+        .quota-exceeded .badge {
+            background-color: #dc3545 !important;
+        }
     </style>
 @endpush
 
@@ -712,7 +805,17 @@
                 lastPage: 1,
                 isLoading: false,
                 searchQuery: '',
-                limit: 50
+                limit: 50,
+                // Quota tracking
+                quota: {
+                    limit: {{ $quotaStatus['limit'] ?? 50 }},
+                    remaining: {{ $quotaStatus['remaining'] ?? 50 }},
+                    used: {{ $quotaStatus['used'] ?? 0 }},
+                    percentageRemaining: {{ $quotaStatus['percentage_remaining'] ?? 100 }},
+                    statusColor: '{{ $quotaStatus['status_color'] ?? 'success' }}',
+                    resetIn: '{{ $quotaStatus['reset_in'] ?? '' }}',
+                    isExpired: {{ $quotaStatus['is_window_expired'] ?? true ? 'true' : 'false' }}
+                }
             };
 
             // --- Selectors ---
@@ -759,6 +862,87 @@
 
                 document.getElementById('alertMessage').textContent = message;
                 alertModal.show();
+            }
+
+            // --- Quota Management Functions ---
+            function updateQuotaUI() {
+                const quotaRemaining = document.getElementById('quotaRemaining');
+                const quotaProgress = document.getElementById('quotaProgress');
+                const quotaResetTime = document.getElementById('quotaResetTime');
+                const quotaUsed = document.getElementById('quotaUsed');
+                const quotaWidget = document.querySelector('.quota-widget');
+
+                // Update text
+                quotaRemaining.textContent = `${state.quota.remaining} / ${state.quota.limit} متبقي`;
+                quotaUsed.textContent = `استخدمت ${state.quota.used} رسالة`;
+
+                // Update progress bar
+                quotaProgress.style.width = `${state.quota.percentageRemaining}%`;
+
+                // Update colors based on status
+                quotaRemaining.className = `badge bg-${state.quota.statusColor}`;
+                quotaProgress.className = `progress-bar bg-${state.quota.statusColor}`;
+                quotaUsed.className = `text-${state.quota.statusColor} fw-semibold`;
+
+                // Update reset time
+                if (state.quota.isExpired) {
+                    quotaResetTime.innerHTML = '<i class="bi bi-clock me-1"></i>الكوتا متاحة (لم تبدأ بعد)';
+                } else {
+                    quotaResetTime.innerHTML = `<i class="bi bi-clock me-1"></i>تتجدد بعد: ${state.quota.resetIn}`;
+                }
+
+                // Add warning/danger animations
+                quotaWidget.classList.remove('quota-warning', 'quota-danger', 'quota-exceeded');
+                if (state.quota.remaining === 0) {
+                    quotaWidget.classList.add('quota-exceeded');
+                } else if (state.quota.percentageRemaining <= 10) {
+                    quotaWidget.classList.add('quota-danger');
+                } else if (state.quota.percentageRemaining <= 25) {
+                    quotaWidget.classList.add('quota-warning');
+                }
+            }
+
+            function checkQuotaLimit() {
+                const selectedCount = state.selectedContacts.size;
+                const exceeds = selectedCount > state.quota.remaining;
+
+                if (exceeds && state.quota.remaining > 0) {
+                    showAlert(
+                        `لا يمكنك اختيار أكثر من ${state.quota.remaining} مستلم. الكوتا المتبقية: ${state.quota.remaining}`,
+                        'warning');
+                    return false;
+                } else if (exceeds && state.quota.remaining === 0) {
+                    showAlert(`تجاوزت حد الإرسال. الكوتا تتجدد بعد ${state.quota.resetIn}`, 'error');
+                    return false;
+                }
+                return true;
+            }
+
+            async function refreshQuota() {
+                try {
+                    const response = await fetch('{{ route('campaigns.quota') }}', {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    });
+                    const data = await response.json();
+
+                    state.quota = {
+                        limit: data.limit,
+                        remaining: data.remaining,
+                        used: data.used,
+                        percentageRemaining: data.percentage_remaining,
+                        statusColor: data.status_color,
+                        resetIn: data.reset_in,
+                        isExpired: data.is_window_expired
+                    };
+
+                    updateQuotaUI();
+                    updateSendButtonState();
+                } catch (error) {
+                    console.error('Error refreshing quota:', error);
+                }
             }
 
             // --- Core Logic: Fetch Contacts ---
@@ -836,10 +1020,23 @@
                 const id = checkbox.value;
 
                 if (checkbox.checked) {
+                    // Check per-request limit (50)
                     if (state.selectedContacts.size >= state.limit) {
                         checkbox.checked = false;
                         showAlert(`عفواً، الحد الأقصى للمستلمين هو ${state.limit} مستلم فقط للحفاظ على استقرار الخدمة.`,
                             'warning');
+                        return;
+                    }
+                    // Check quota limit
+                    if (state.selectedContacts.size >= state.quota.remaining) {
+                        checkbox.checked = false;
+                        if (state.quota.remaining === 0) {
+                            showAlert(`تجاوزت حد الإرسال. الكوتا تتجدد بعد ${state.quota.resetIn}`, 'error');
+                        } else {
+                            showAlert(
+                                `الكوتا المتبقية ${state.quota.remaining} رسالة فقط. تتجدد بعد ${state.quota.resetIn}`,
+                                'warning');
+                        }
                         return;
                     }
                     state.selectedContacts.add(id);
@@ -851,8 +1048,21 @@
             }
 
             function updateUIState() {
-                // Update Badge
-                els.selectedCount.textContent = `${state.selectedContacts.size} / ${state.limit}`;
+                // Update Badge - show both selected and quota remaining
+                const quotaLimited = Math.min(state.limit, state.quota.remaining);
+                els.selectedCount.textContent = `${state.selectedContacts.size} / ${quotaLimited}`;
+
+                // Change badge color based on quota
+                if (state.quota.remaining === 0) {
+                    els.selectedCount.classList.remove('bg-primary');
+                    els.selectedCount.classList.add('bg-danger');
+                } else if (state.selectedContacts.size >= state.quota.remaining) {
+                    els.selectedCount.classList.remove('bg-primary');
+                    els.selectedCount.classList.add('bg-warning');
+                } else {
+                    els.selectedCount.classList.remove('bg-danger', 'bg-warning');
+                    els.selectedCount.classList.add('bg-primary');
+                }
 
                 // Update Hidden Inputs for Server
                 els.inputsContainer.innerHTML = Array.from(state.selectedContacts).map(id =>
@@ -862,12 +1072,30 @@
                 // Sync editor content to hidden textarea
                 syncEditorToTextarea();
 
-                // Enable/Disable Send Button
-                const hasMessage = messageTextarea.value.trim().length > 0;
-                sendBtn.disabled = state.selectedContacts.size === 0 || !hasMessage;
+                // Enable/Disable Send Button (with quota check)
+                updateSendButtonState();
 
                 // Update Select All Checkbox logic
                 updateSelectAllState();
+            }
+
+            function updateSendButtonState() {
+                const hasMessage = messageTextarea.value.trim().length > 0;
+                const hasContacts = state.selectedContacts.size > 0;
+                const withinQuota = state.selectedContacts.size <= state.quota.remaining;
+
+                sendBtn.disabled = !hasMessage || !hasContacts || !withinQuota;
+
+                // Update button text if quota exceeded
+                if (hasContacts && !withinQuota) {
+                    sendBtn.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>تجاوز الحد';
+                    sendBtn.classList.remove('btn-whatsapp');
+                    sendBtn.classList.add('btn-danger');
+                } else {
+                    sendBtn.innerHTML = '<i class="bi bi-send me-1"></i>إرسال';
+                    sendBtn.classList.remove('btn-danger');
+                    sendBtn.classList.add('btn-whatsapp');
+                }
             }
 
             function updateSelectAllState() {

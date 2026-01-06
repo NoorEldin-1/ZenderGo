@@ -390,14 +390,14 @@
 
         {{-- Current Subscription Status Card --}}
         <div class="subscription-card">
-            {{-- Check if user is suspended for subscription reasons --}}
-            @if (auth()->user()->is_suspended && auth()->user()->suspension_reason === 'subscription')
-                {{-- Account Suspended for Subscription --}}
+            {{-- Check if user is suspended for SECURITY reasons - these cannot do anything --}}
+            @if (auth()->user()->is_suspended && auth()->user()->suspension_reason === 'security')
+                {{-- Account Suspended for Security --}}
                 <div class="expired-alert"
                     style="background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%); border: 2px solid #dc3545;">
-                    <i class="bi bi-pause-circle-fill d-block" style="font-size: 2.5rem; color: #dc3545;"></i>
+                    <i class="bi bi-shield-exclamation d-block" style="font-size: 2.5rem; color: #dc3545;"></i>
                     <h5 style="color: #dc3545;">حسابك معطل</h5>
-                    <p class="text-muted mb-2">تم تعطيل حسابك بسبب مشكلة في الاشتراك.</p>
+                    <p class="text-muted mb-2">تم تعطيل حسابك لأسباب أمنية.</p>
                     <a href="https://wa.me/2{{ $supportPhone }}" target="_blank" class="btn btn-sm btn-success">
                         <i class="bi bi-whatsapp me-1"></i>تواصل مع الدعم: {{ $supportPhone }}
                     </a>
@@ -405,11 +405,29 @@
 
                 <div class="subscription-header">
                     <div class="subscription-icon expired">
-                        <i class="bi bi-x-circle"></i>
+                        <i class="bi bi-shield-x"></i>
                     </div>
-                    <div class="subscription-type expired">اشتراك متوقف</div>
+                    <div class="subscription-type expired">حساب موقوف</div>
                     <span class="status-badge expired">
-                        <i class="bi bi-pause-circle-fill ms-1"></i>معطل
+                        <i class="bi bi-shield-exclamation ms-1"></i>معطل
+                    </span>
+                </div>
+            @elseif (auth()->user()->is_suspended && auth()->user()->suspension_reason === 'subscription')
+                {{-- Account Suspended for Subscription - needs to pay --}}
+                <div class="expired-alert"
+                    style="background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%); border: 2px solid #ffc107;">
+                    <i class="bi bi-exclamation-triangle-fill d-block" style="font-size: 2.5rem; color: #856404;"></i>
+                    <h5 style="color: #856404;">يرجى تجديد الاشتراك</h5>
+                    <p class="text-muted mb-0">تم إيقاف حسابك بسبب الاشتراك. قم بتجديد اشتراكك للاستمرار.</p>
+                </div>
+
+                <div class="subscription-header">
+                    <div class="subscription-icon expired">
+                        <i class="bi bi-credit-card-2-front"></i>
+                    </div>
+                    <div class="subscription-type expired">بحاجة للتجديد</div>
+                    <span class="status-badge expired">
+                        <i class="bi bi-exclamation-circle-fill ms-1"></i>مطلوب الدفع
                     </span>
                 </div>
             @elseif ($subscription && $subscription->isActive())
@@ -506,19 +524,109 @@
             @endif
 
             {{-- Payment Section - Handle different states --}}
-            @if (auth()->user()->is_suspended && auth()->user()->suspension_reason === 'subscription')
-                {{-- Suspended for subscription - show contact support message --}}
+            @if (auth()->user()->is_suspended && auth()->user()->suspension_reason === 'security')
+                {{-- Suspended for SECURITY - cannot subscribe at all --}}
                 <div class="payment-section">
                     <div class="alert alert-danger mb-0">
                         <div class="d-flex align-items-center gap-2 mb-2">
-                            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
-                            <strong>لا يمكنك الاشتراك حالياً</strong>
+                            <i class="bi bi-shield-exclamation fs-5"></i>
+                            <strong>حسابك موقوف</strong>
                         </div>
-                        <p class="mb-2">حسابك معطل بسبب مشكلة في الاشتراك.</p>
+                        <p class="mb-2">تم إيقاف حسابك لأسباب أمنية. تواصل مع الدعم لمعرفة التفاصيل.</p>
                         <a href="https://wa.me/2{{ $supportPhone }}" target="_blank" class="btn btn-sm btn-success">
                             <i class="bi bi-whatsapp me-1"></i>تواصل مع الدعم: {{ $supportPhone }}
                         </a>
                     </div>
+                </div>
+            @elseif (auth()->user()->is_suspended && auth()->user()->suspension_reason === 'subscription')
+                {{-- Suspended for SUBSCRIPTION - show payment form to renew --}}
+                <div class="payment-section">
+                    <h6><i class="bi bi-wallet2 me-2"></i>تجديد الاشتراك</h6>
+
+                    {{-- Show last rejected request warning --}}
+                    @if ($lastRejectedRequest)
+                        <div class="rejected-alert d-flex align-items-start gap-3">
+                            <i class="bi bi-x-circle-fill"></i>
+                            <div>
+                                <h6 class="mb-1">تم رفض طلبك السابق</h6>
+                                @if ($lastRejectedRequest->admin_notes)
+                                    <p class="mb-0 small"><strong>ملاحظة:</strong> {{ $lastRejectedRequest->admin_notes }}
+                                    </p>
+                                @else
+                                    <p class="mb-0 small">يمكنك إرسال طلب جديد بصورة واضحة</p>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- Instructions --}}
+                    <div class="alert alert-warning mb-3">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <i class="bi bi-exclamation-triangle fs-5"></i>
+                            <strong>مطلوب تجديد الاشتراك:</strong>
+                        </div>
+                        <ol class="mb-0 pe-4">
+                            <li>حوّل المبلغ <strong>({{ number_format($subscriptionPrice) }} جنيه)</strong> على رقم فودافون
+                                كاش أدناه</li>
+                            <li>بعد التحويل، ارفع صورة الوصل من هنا</li>
+                            <li>انتظر مراجعة الطلب وإعادة تفعيل حسابك</li>
+                        </ol>
+                    </div>
+
+                    {{-- Vodafone Cash Number --}}
+                    <div class="vodafone-number">
+                        <div>
+                            <small class="d-block opacity-75">رقم فودافون كاش</small>
+                            <span class="number" id="vodafoneNumber">{{ $vodafoneCashNumber }}</span>
+                        </div>
+                        <button type="button" class="copy-btn" onclick="copyNumber()">
+                            <i class="bi bi-clipboard me-1"></i>نسخ
+                        </button>
+                    </div>
+
+                    @if ($pendingRequest)
+                        {{-- Pending Request Display --}}
+                        <div class="pending-alert">
+                            <i class="bi bi-hourglass-split d-block"></i>
+                            <h6>طلبك قيد المراجعة</h6>
+                            <p class="text-muted small mb-2">
+                                تم إرسال طلبك بتاريخ {{ $pendingRequest->created_at->format('Y/m/d - H:i') }}
+                            </p>
+                            <p class="mb-2 small">
+                                <i class="bi bi-clock me-1"></i>سيتم مراجعة طلبك وتفعيل اشتراكك في أقرب وقت
+                            </p>
+                            <a href="https://wa.me/2{{ $supportPhone }}" target="_blank"
+                                class="btn btn-sm btn-outline-success">
+                                <i class="bi bi-whatsapp me-1"></i>للاستفسار: {{ $supportPhone }}
+                            </a>
+                        </div>
+                    @else
+                        {{-- Upload Form --}}
+                        <form action="{{ route('subscription.payment') }}" method="POST" enctype="multipart/form-data"
+                            id="paymentForm">
+                            @csrf
+                            <div class="upload-area" id="uploadArea"
+                                onclick="document.getElementById('receiptInput').click()">
+                                <i class="bi bi-cloud-upload"></i>
+                                <p><strong>اضغط لرفع صورة الوصل</strong></p>
+                                <p class="small text-muted">JPG, PNG, WebP - حد أقصى 5MB</p>
+                                <img id="previewImage" class="upload-preview d-none" alt="معاينة">
+                            </div>
+
+                            <input type="file" id="receiptInput" name="receipt"
+                                accept="image/jpeg,image/png,image/webp" class="d-none" required>
+
+                            @error('receipt')
+                                <div class="text-danger small mt-2">
+                                    <i class="bi bi-exclamation-circle me-1"></i>{{ $message }}
+                                </div>
+                            @enderror
+
+                            <button type="submit" class="btn btn-success w-100 mt-3 py-2" id="submitBtn" disabled>
+                                <i class="bi bi-send me-1"></i>إرسال طلب التجديد
+                            </button>
+                        </form>
+                    @endif
                 </div>
             @elseif ($subscription && $subscription->isActive() && $subscription->isTrial())
                 {{-- Trial Active - Block Subscription --}}
@@ -557,7 +665,8 @@
                             {{-- Subscription Info Preview --}}
                             <div class="subscription-preview mt-3">
                                 <div class="alert alert-light border mb-0 text-start">
-                                    <h6 class="mb-2"><i class="bi bi-info-circle text-success me-1"></i>معلومات الاشتراك:
+                                    <h6 class="mb-2"><i class="bi bi-info-circle text-success me-1"></i>معلومات
+                                        الاشتراك:
                                     </h6>
                                     <ul class="mb-0 pe-3 small">
                                         <li><strong>سعر الاشتراك:</strong> {{ number_format($subscriptionPrice) }} جنيه /

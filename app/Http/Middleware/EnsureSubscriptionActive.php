@@ -23,15 +23,20 @@ class EnsureSubscriptionActive
             return $next($request);
         }
 
-        // Check if suspended for subscription reason
-        if ($user->is_suspended && $user->suspension_reason === 'subscription') {
+        // Check if suspended for SECURITY reason - completely blocked
+        if ($user->is_suspended && $user->suspension_reason === 'security') {
             return redirect()->route('subscription.locked');
         }
 
-        // Direct subscription check (instant protection without scheduler)
-        if (!$user->hasActiveSubscription() && !$user->is_suspended) {
-            $user->suspend('subscription');
-            return redirect()->route('subscription.locked');
+        // Check if suspended for SUBSCRIPTION reason - redirect to subscription page
+        // This takes priority over hasActiveSubscription() because admin explicitly suspended them
+        if ($user->is_suspended && $user->suspension_reason === 'subscription') {
+            return redirect()->route('subscription.index');
+        }
+
+        // Check subscription status - redirect to subscription page to renew
+        if (!$user->hasActiveSubscription()) {
+            return redirect()->route('subscription.index');
         }
 
         return $next($request);

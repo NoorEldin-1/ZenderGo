@@ -229,17 +229,54 @@ class User extends Authenticatable
     }
 
     /**
+     * Get current contact count for this user.
+     */
+    public function getContactCountAttribute(): int
+    {
+        return $this->contacts()->count();
+    }
+
+    /**
+     * Get remaining contact slots for this user.
+     */
+    public function getRemainingContactSlotsAttribute(): int
+    {
+        $limit = SystemSetting::getContactLimit();
+        $current = $this->contact_count;
+        return max(0, $limit - $current);
+    }
+
+    /**
+     * Check if user can add more contacts.
+     */
+    public function canAddContacts(int $count = 1): bool
+    {
+        return $this->remaining_contact_slots >= $count;
+    }
+
+    /**
+     * Get contact usage percentage.
+     */
+    public function getContactUsagePercentAttribute(): float
+    {
+        $limit = SystemSetting::getContactLimit();
+        if ($limit <= 0)
+            return 0;
+        return min(100, ($this->contact_count / $limit) * 100);
+    }
+
+    /**
      * Create a trial subscription for this user.
      */
     public function createTrialSubscription(): Subscription
     {
-        $trialDays = SystemSetting::getTrialDays();
+        $trialMinutes = SystemSetting::getTrialDurationInMinutes();
 
         return $this->subscriptions()->create([
             'type' => 'trial',
             'price_paid' => 0,
             'starts_at' => now(),
-            'ends_at' => now()->addDays($trialDays),
+            'ends_at' => now()->addMinutes($trialMinutes),
         ]);
     }
 

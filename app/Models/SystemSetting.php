@@ -34,11 +34,35 @@ class SystemSetting extends Model
     }
 
     /**
-     * Get trial days setting.
+     * Get trial duration value.
      */
-    public static function getTrialDays(): int
+    public static function getTrialDuration(): int
     {
-        return (int) static::get('trial_days', 7);
+        return (int) static::get('trial_duration', 7);
+    }
+
+    /**
+     * Get trial duration unit (minutes, hours, days).
+     */
+    public static function getTrialDurationUnit(): string
+    {
+        return (string) static::get('trial_duration_unit', 'days');
+    }
+
+    /**
+     * Get trial duration in minutes for calculations.
+     */
+    public static function getTrialDurationInMinutes(): int
+    {
+        $value = static::getTrialDuration();
+        $unit = static::getTrialDurationUnit();
+
+        return match ($unit) {
+            'minutes' => $value,
+            'hours' => $value * 60,
+            'days' => $value * 60 * 24,
+            default => $value * 60 * 24, // default to days
+        };
     }
 
     /**
@@ -63,5 +87,29 @@ class SystemSetting extends Model
     public static function getSupportPhoneNumber(): string
     {
         return (string) static::get('support_phone_number', '01000000000');
+    }
+
+    /**
+     * Get campaign quota limit (max contacts per window).
+     */
+    public static function getCampaignQuotaLimit(): int
+    {
+        return (int) static::get('campaign_quota_limit', 50);
+    }
+
+    /**
+     * Get campaign quota window in hours.
+     */
+    public static function getCampaignQuotaWindowHours(): int
+    {
+        return (int) static::get('campaign_quota_window_hours', 5);
+    }
+
+    /**
+     * Get contact limit per user.
+     */
+    public static function getContactLimit(): int
+    {
+        return (int) static::get('contact_limit', 1000);
     }
 }
