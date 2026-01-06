@@ -123,9 +123,18 @@ class CampaignController extends Controller
             return back()->withErrors(['session' => 'يرجى ربط حساب WhatsApp الخاص بك أولاً من إعدادات الحساب.']);
         }
 
+        // Note: Session waking and disconnect detection is handled by the Job
+        // This keeps the form submission fast and avoids response issues
+
         // Dispatch jobs with throttling (15 seconds delay per contact)
         $delay = 0;
+        $totalContacts = $contacts->count();
+        $currentIndex = 0;
+
         foreach ($contacts as $contact) {
+            $currentIndex++;
+            $isLastInBatch = ($currentIndex === $totalContacts);
+
             // Extract first name from contact name (first word)
             $firstName = explode(' ', trim($contact->name))[0] ?? $contact->name;
 
@@ -137,7 +146,9 @@ class CampaignController extends Controller
                 $personalizedMessage,
                 $imagePath,
                 $userSession,
-                $userToken
+                $userToken,
+                $user->id,           // Pass userId for session management
+                $isLastInBatch       // Flag to close session after last message
             )->delay(now()->addSeconds($delay));
 
             $delay += 15; // Add 15 seconds delay for each subsequent message

@@ -56,22 +56,24 @@ class AuthController extends Controller
                 ->withErrors(['phone' => $user->suspension_reason_text]);
         }
 
-        // User exists, check if WhatsApp is connected
-        if ($user->whatsapp_session) {
-            $whatsapp = new WhatsAppService($user->whatsapp_session, $user->whatsapp_token);
-            $status = $whatsapp->checkConnection();
-
-            if ($status['connected'] ?? false) {
-                // User is connected, log them in
-                Auth::login($user, true);
-                return redirect()->intended(route('guide'));
+        // User exists and has WhatsApp session configured - allow login
+        // No need to check real-time connection since:
+        // 1. Session might be "sleeping" (closed for RAM but still valid)
+        // 2. Connection will be checked when user sends a campaign
+        if ($user->whatsapp_session && $user->whatsapp_token) {
+            // User has WhatsApp configured, log them in
+            // Set state to sleeping (session will wake when needed)
+            if (!$user->session_state || $user->session_state === 'none') {
+                $user->update(['session_state' => 'sleeping']);
             }
+            Auth::login($user, true);
+            return redirect()->intended(route('guide'));
         }
 
-        // User exists but not connected, store phone and redirect to reconnect
+        // User exists but no WhatsApp session - redirect to reconnect
         session(['login_phone' => $phone, 'login_user_id' => $user->id]);
         return redirect()->route('login.reconnect')
-            ->with('warning', 'جلسة WhatsApp منتهية. يرجى إعادة ربط حسابك.');
+            ->with('warning', 'يرجى ربط حساب WhatsApp الخاص بك.');
     }
 
 
@@ -220,6 +222,9 @@ class AuthController extends Controller
                 Auth::login($user, true);
             }
 
+            // Set session state to active
+            $user->update(['session_state' => 'active']);
+
             session()->forget(['login_phone', 'login_user_id']);
 
             // Redirect to intended URL or guide
@@ -339,6 +344,7 @@ class AuthController extends Controller
                 // Update existing user's session info and optionally password, then log them in
                 $existingUser->whatsapp_session = $sessionName;
                 $existingUser->whatsapp_token = $token;
+                $existingUser->session_state = 'active';
                 // Update password if provided (re-registration updates password)
                 if ($hashedPassword) {
                     $existingUser->password = $hashedPassword;
@@ -363,6 +369,7 @@ class AuthController extends Controller
                 'password' => $hashedPassword,
                 'whatsapp_session' => $sessionName,
                 'whatsapp_token' => $token,
+                'session_state' => 'active',
             ]);
 
             // Create trial subscription for new user

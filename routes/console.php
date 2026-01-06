@@ -13,6 +13,12 @@ Artisan::command('inspire', function () {
 // SCHEDULED TASKS FOR SERVER HEALTH
 // ============================================
 
+// Close idle WhatsApp sessions every 5 minutes to free RAM
+Schedule::command('sessions:cleanup')->everyFiveMinutes()->name('session-cleanup');
+
+// Monitor RAM usage every minute (auto-cleanup if critical)
+Schedule::command('ram:check --auto-cleanup')->everyMinute()->name('ram-monitor');
+
 // Check expired subscriptions daily at midnight
 Schedule::command('subscriptions:check-expired')->daily();
 

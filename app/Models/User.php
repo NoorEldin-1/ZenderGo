@@ -25,6 +25,7 @@ class User extends Authenticatable
         'phone',
         'whatsapp_session',
         'whatsapp_token',
+        'session_state',
         'is_suspended',
         'suspension_reason',
         'suspended_at',

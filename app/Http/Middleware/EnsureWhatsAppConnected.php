@@ -21,6 +21,14 @@ class EnsureWhatsAppConnected
 {
     /**
      * Handle an incoming request.
+     * 
+     * IMPORTANT: This middleware no longer does real-time connection checks on every request.
+     * Connection checks are only performed at:
+     * - Login (AuthController)
+     * - Campaign sending (SendWhatsappCampaign job)
+     * 
+     * This middleware simply ensures the user has a configured WhatsApp session.
+     * The session_state field tracks whether the session is active, sleeping, or needs reconnect.
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -39,18 +47,32 @@ class EnsureWhatsAppConnected
             );
         }
 
-        // Real-time connection check (no caching to ensure immediate detection)
-        $isConnected = $this->checkConnectionStatus($user);
+        // Allow request based on session_state:
+        // - "active": Session was connected, allow (campaigns will check when sending)
+        // - "sleeping": Session intentionally closed for RAM, allow (will wake when needed)
+        // - "none" or null: Never connected or needs reconnect
 
-        if (!$isConnected) {
-            return $this->handleDisconnected(
-                $request,
-                'تم قطع اتصال WhatsApp. يرجى تسجيل الدخول مجدداً وربط WhatsApp.',
-                $user
-            );
+        if ($user->session_state === 'active' || $user->session_state === 'sleeping') {
+            // Trust the session state - no connection check needed
+            return $next($request);
         }
 
-        return $next($request);
+        // State is "none" or null - user needs to reconnect
+        // But first, give them a chance - maybe they just registered
+        if ($user->whatsapp_token) {
+            // They have a token, so they completed setup before
+            // Set to sleeping and allow - campaign will wake session when needed
+            $user->update(['session_state' => 'sleeping']);
+            Log::info("User {$user->id} had no session_state but has token, setting to sleeping");
+            return $next($request);
+        }
+
+        // No token means they never completed WhatsApp setup
+        return $this->handleDisconnected(
+            $request,
+            'يرجى ربط WhatsApp أولاً.',
+            $user
+        );
     }
 
     /**

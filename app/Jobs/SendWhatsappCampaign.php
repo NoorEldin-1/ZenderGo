@@ -3,12 +3,15 @@
 namespace App\Jobs;
 
 use App\Exceptions\WhatsAppDisconnectedException;
+use App\Models\User;
+use App\Services\SessionManager;
 use App\Services\WhatsAppService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class SendWhatsappCampaign implements ShouldQueue
@@ -33,7 +36,9 @@ class SendWhatsappCampaign implements ShouldQueue
         public string $message,
         public ?string $imagePath = null,
         public ?string $whatsappSession = null,
-        public ?string $whatsappToken = null
+        public ?string $whatsappToken = null,
+        public ?int $userId = null,
+        public bool $isLastInBatch = false
     ) {
     }
 
@@ -44,26 +49,53 @@ class SendWhatsappCampaign implements ShouldQueue
     {
         Log::info("Sending WhatsApp campaign to {$this->phone} using session {$this->whatsappSession}");
 
-        // Create WhatsApp service with the user's session and token
-        $whatsapp = new WhatsAppService($this->whatsappSession, $this->whatsappToken);
+        $sessionManager = new SessionManager();
 
-        // Pre-flight connection check to fail fast if disconnected
-        try {
-            $connectionStatus = $whatsapp->checkConnection();
+        // Get user for session management
+        $user = $this->userId ? User::find($this->userId) : null;
 
-            if (!($connectionStatus['connected'] ?? false)) {
-                Log::warning("WhatsApp session {$this->whatsappSession} is disconnected, cannot send message to {$this->phone}");
+        // Wake session on-demand
+        if ($user) {
+            $wakeResult = $sessionManager->wakeSession($user);
 
-                // Don't retry if session is disconnected - it won't reconnect automatically
+            if ($wakeResult['status'] === 'needs_qr') {
+                // User disconnected from phone - they need to reconnect
+                Log::warning("User {$this->userId} needs to re-scan QR code");
                 $this->fail(new WhatsAppDisconnectedException(
-                    'جلسة WhatsApp غير متصلة',
+                    $wakeResult['message'],
                     $this->whatsappSession
                 ));
                 return;
             }
-        } catch (\Exception $e) {
-            Log::warning("Failed to check connection status for {$this->whatsappSession}: " . $e->getMessage());
-            // Continue anyway - the actual send will fail if there's a real problem
+
+            if ($wakeResult['status'] !== 'connected' || !$wakeResult['service']) {
+                Log::error("Failed to wake session for user {$this->userId}: {$wakeResult['message']}");
+                $this->fail(new WhatsAppDisconnectedException(
+                    $wakeResult['message'],
+                    $this->whatsappSession
+                ));
+                return;
+            }
+
+            $whatsapp = $wakeResult['service'];
+        } else {
+            // Fallback to legacy behavior if userId not provided
+            $whatsapp = new WhatsAppService($this->whatsappSession, $this->whatsappToken);
+
+            // Pre-flight connection check
+            try {
+                $connectionStatus = $whatsapp->checkConnection();
+                if (!($connectionStatus['connected'] ?? false)) {
+                    Log::warning("WhatsApp session {$this->whatsappSession} is disconnected");
+                    $this->fail(new WhatsAppDisconnectedException(
+                        'جلسة WhatsApp غير متصلة',
+                        $this->whatsappSession
+                    ));
+                    return;
+                }
+            } catch (\Exception $e) {
+                Log::warning("Failed to check connection: " . $e->getMessage());
+            }
         }
 
         $success = false;
@@ -92,6 +124,18 @@ class SendWhatsappCampaign implements ShouldQueue
         }
 
         Log::info("Successfully sent campaign to {$this->phone}");
+
+        // Update session activity
+        if ($user) {
+            $sessionManager->markSessionActive($user->id, $this->whatsappSession);
+        }
+
+        // If this is the last message in the batch, close the session to free RAM
+        if ($this->isLastInBatch && $user) {
+            Log::info("Last message in batch, scheduling session close for user {$user->id}");
+            // Delay close by 30 seconds to ensure message is fully sent
+            CloseUserSession::dispatch($user->id)->delay(now()->addSeconds(30));
+        }
     }
 
     /**
@@ -107,7 +151,6 @@ class SendWhatsappCampaign implements ShouldQueue
         // If it's a disconnection error, we might want to mark the user's session as invalid
         if ($exception instanceof WhatsAppDisconnectedException) {
             Log::warning("WhatsApp disconnection detected during campaign send to {$this->phone}");
-            // The middleware cache will be updated on next status check
         }
     }
 
@@ -124,3 +167,4 @@ class SendWhatsappCampaign implements ShouldQueue
         return $this->attempts() < $this->tries;
     }
 }
+

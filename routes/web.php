@@ -70,8 +70,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/password/change', [AuthController::class, 'showChangePasswordForm'])->name('password.change');
     Route::post('/password/change', [AuthController::class, 'changePassword'])->name('password.update');
 
-    // Protected by Subscription Status AND WhatsApp Connection
-    Route::middleware(['subscription.active', 'whatsapp.connected'])->group(function () {
+    // Protected by Subscription Status
+    Route::middleware(['subscription.active'])->group(function () {
         // Contacts - Custom routes BEFORE resource
         Route::delete('/contacts/bulk-delete', [ContactController::class, 'bulkDelete'])->middleware('rate.heavy:bulk_delete')->name('contacts.bulk-delete');
         Route::post('/contacts/preview', [ContactController::class, 'previewImport'])->middleware('rate.heavy:import')->name('contacts.preview');
@@ -82,6 +82,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/campaigns', [CampaignController::class, 'create'])->name('campaigns.create');
         Route::get('/campaigns/quota-status', [CampaignController::class, 'quotaStatus'])->name('campaigns.quota');
         Route::post('/campaigns/send', [CampaignController::class, 'send'])->name('campaigns.send');
+        Route::get('/campaigns/send', fn() => redirect()->route('campaigns.create')); // Redirect GET to form
         Route::get('/whatsapp/status', [CampaignController::class, 'whatsappStatus'])->name('whatsapp.status');
         Route::post('/whatsapp/force-logout', [CampaignController::class, 'forceLogout'])->name('whatsapp.force-logout');
 
