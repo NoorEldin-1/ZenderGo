@@ -73,8 +73,9 @@ class CampaignController extends Controller
         $user = Auth::user();
         $contactCount = count($validated['contacts']);
 
-        // Check quota BEFORE processing
-        if (!$this->quotaService->canSend($user, $contactCount)) {
+        // ATOMIC quota reservation - prevents race conditions
+        // This atomically checks AND reserves the quota in one operation
+        if (!$this->quotaService->reserveQuota($user, $contactCount)) {
             $status = $this->quotaService->getQuotaStatus($user);
             $remaining = $status['remaining'];
             $resetIn = $status['reset_in'];
@@ -110,6 +111,13 @@ class CampaignController extends Controller
             if (count($imagePaths) > 1) {
                 $collageService = new ImageCollageService();
                 $imagePath = $collageService->createCollage($imagePaths);
+
+                // Cleanup original images after collage creation (saves storage)
+                foreach ($imagePaths as $originalPath) {
+                    if (file_exists($originalPath)) {
+                        @unlink($originalPath);
+                    }
+                }
             } elseif (count($imagePaths) === 1) {
                 $imagePath = $imagePaths[0];
             }
@@ -123,8 +131,54 @@ class CampaignController extends Controller
             return back()->withErrors(['session' => 'يرجى ربط حساب WhatsApp الخاص بك أولاً من إعدادات الحساب.']);
         }
 
-        // Note: Session waking and disconnect detection is handled by the Job
-        // This keeps the form submission fast and avoids response issues
+        // ====== Session Wake & Connection Validation ======
+        // Use SessionManager to properly wake sleeping sessions
+        // This handles the case where session was closed after previous campaign
+        $sessionManager = new \App\Services\SessionManager();
+        $wakeResult = $sessionManager->wakeSession($user);
+
+        if ($wakeResult['status'] !== 'connected') {
+            $needsReauth = ($wakeResult['status'] === 'needs_qr');
+
+            \Illuminate\Support\Facades\Log::warning("Campaign blocked - Session wake failed", [
+                'user_id' => $user->id,
+                'status' => $wakeResult['status'],
+                'message' => $wakeResult['message'] ?? 'unknown',
+            ]);
+
+            // If user needs QR re-scan (phone actually disconnected from WhatsApp)
+            if ($needsReauth) {
+                // Clear session data
+                $user->update([
+                    'whatsapp_session' => null,
+                    'whatsapp_token' => null,
+                    'session_state' => 'disconnected',
+                ]);
+
+                // Logout user
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return redirect()->route('login')
+                    ->withErrors(['whatsapp' => $wakeResult['message'] ?? 'تم قطع اتصال WhatsApp. يرجى تسجيل الدخول وإعادة مسح الـ QR Code.']);
+            }
+
+            // Other connection errors (e.g., server issues) - just show error message
+            return back()
+                ->withErrors(['connection' => $wakeResult['message'] ?? 'خطأ في الاتصال بـ WhatsApp. حاول مرة أخرى.'])
+                ->withInput();
+        }
+        // ====== End Session Wake & Connection Validation ======
+
+        // CRITICAL: Mark session as active BEFORE dispatching jobs
+        // This allows all campaign jobs to use the lightweight isSessionActive() check
+        $sessionManager = new \App\Services\SessionManager();
+        $sessionManager->markSessionActive($user->id, $userSession);
+        \Illuminate\Support\Facades\Log::info("Pre-marked session active for campaign dispatch", [
+            'user_id' => $user->id,
+            'session' => $userSession,
+        ]);
 
         // Dispatch jobs with throttling (15 seconds delay per contact)
         $delay = 0;
@@ -154,8 +208,9 @@ class CampaignController extends Controller
             $delay += 15; // Add 15 seconds delay for each subsequent message
         }
 
-        // Record usage AFTER successful dispatch
-        $this->quotaService->recordUsage($user, $contacts->count());
+        // NOTE: Quota was already reserved atomically at the start of send()
+        // No need to record usage here - it was done during reservation
+        // $this->quotaService->recordUsage($user, $contacts->count());
 
         $count = $contacts->count();
         $estimatedTime = ceil($delay / 60);

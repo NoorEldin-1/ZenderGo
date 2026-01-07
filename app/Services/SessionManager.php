@@ -22,14 +22,54 @@ class SessionManager
     protected const CACHE_PREFIX = 'wpp_session:';
 
     /**
-     * Maximum concurrent sessions allowed (to prevent RAM overload)
+     * Maximum concurrent sessions allowed (optimized for 8GB VPS)
+     * Each session uses 200-500 MB RAM
      */
-    protected const MAX_CONCURRENT_SESSIONS = 10;
+    protected const MAX_CONCURRENT_SESSIONS = 3;
 
     /**
-     * Session idle timeout in seconds (for cleanup scheduler)
+     * Session idle timeout in seconds (aggressive cleanup for RAM efficiency)
      */
-    protected const IDLE_TIMEOUT = 600; // 10 minutes
+    protected const IDLE_TIMEOUT = 60; // 1 minute - aggressive cleanup for RAM efficiency
+
+    /**
+     * RAM usage percentage threshold - don't create new sessions above this
+     */
+    protected const RAM_THRESHOLD_PERCENT = 80;
+
+    /**
+     * Check if a user's session is already active and connected.
+     * This is a LIGHTWEIGHT check that does NOT attempt to start the session.
+     * Use this for campaign batch jobs to avoid race conditions.
+     * 
+     * @return array with 'active' => bool, 'service' => WhatsAppService|null
+     */
+    public function isSessionActive(User $user): array
+    {
+        if (!$user->whatsapp_session || !$user->whatsapp_token) {
+            return ['active' => false, 'service' => null, 'reason' => 'no_credentials'];
+        }
+
+        // Check if we have this session tracked as active in cache
+        $cacheKey = self::CACHE_PREFIX . $user->id;
+        $cached = Cache::get($cacheKey);
+
+        if (!$cached) {
+            return ['active' => false, 'service' => null, 'reason' => 'not_tracked'];
+        }
+
+        // Create service and do a quick connection check (no start attempt)
+        $whatsapp = new WhatsAppService($user->whatsapp_session, $user->whatsapp_token);
+        $connectionStatus = $whatsapp->checkConnection();
+
+        if ($connectionStatus['connected'] ?? false) {
+            // Update last activity
+            $this->markSessionActive($user->id, $user->whatsapp_session);
+            return ['active' => true, 'service' => $whatsapp, 'reason' => null];
+        }
+
+        return ['active' => false, 'service' => null, 'reason' => 'disconnected'];
+    }
 
     /**
      * Wake (start) a user's WhatsApp session for sending.
@@ -66,59 +106,95 @@ class SessionManager
             ];
         }
 
+        // Check RAM before creating new session (PRODUCTION ONLY)
+        // Skip RAM check in development - dev machines have high memory usage from IDEs, browsers, etc.
+        if (app()->environment('production')) {
+            $ramStatus = $this->getRamStatus();
+            if ($ramStatus['usage_percent'] >= self::RAM_THRESHOLD_PERCENT) {
+                Log::warning("RAM usage too high ({$ramStatus['usage_percent']}%), forcing cleanup before new session");
+                $this->forceCloseOldestSession();
+
+                // Check again after cleanup
+                $ramStatus = $this->getRamStatus();
+                if ($ramStatus['usage_percent'] >= self::RAM_THRESHOLD_PERCENT) {
+                    Log::error("RAM still critical after cleanup, rejecting new session");
+                    return [
+                        'status' => 'error',
+                        'service' => null,
+                        'message' => 'الذاكرة محملة بشكل كبير. حاول مرة أخرى لاحقاً.',
+                    ];
+                }
+            }
+        }
+
         // Check concurrent session limit
         if ($this->getActiveSessionCount() >= self::MAX_CONCURRENT_SESSIONS) {
-            Log::warning("Max concurrent sessions reached, waiting for cleanup");
+            Log::warning("Max concurrent sessions reached (" . self::MAX_CONCURRENT_SESSIONS . "), forcing cleanup");
             $this->forceCloseOldestSession();
         }
 
-        // Try to start the session
+        // Try to start the session (with retry for just-closed sessions)
         Log::info("Waking session for user {$user->id}: {$user->whatsapp_session}");
-        $result = $whatsapp->startSession();
 
-        // Handle "STARTING" state - wait and check connection
-        $status = $result['status'] ?? '';
-        if (in_array(strtoupper($status), ['STARTING', 'INITIALIZING', 'OPENING'])) {
-            Log::info("Session starting for user {$user->id}, waiting...");
-            sleep(3); // Wait for session to start
+        $maxRetries = 3;
+        $retryDelay = 2; // seconds between retries
 
-            // Check connection again
-            $connectionStatus = $whatsapp->checkConnection();
-            if ($connectionStatus['connected'] ?? false) {
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            $result = $whatsapp->startSession();
+            $status = $result['status'] ?? '';
+            $upperStatus = strtoupper($status);
+
+            Log::debug("Wake attempt {$attempt} for user {$user->id}: status={$status}");
+
+            // Handle "STARTING" state - wait and check connection
+            if (in_array($upperStatus, ['STARTING', 'INITIALIZING', 'OPENING'])) {
+                Log::info("Session starting for user {$user->id}, waiting...");
+                sleep(3); // Wait for session to start
+
+                // Check connection again
+                $connectionStatus = $whatsapp->checkConnection();
+                if ($connectionStatus['connected'] ?? false) {
+                    $this->markSessionActive($user->id, $user->whatsapp_session);
+                    $user->update(['session_state' => 'active']);
+                    Log::info("Session woken after wait for user {$user->id}");
+                    return [
+                        'status' => 'connected',
+                        'service' => $whatsapp,
+                        'message' => 'تم تفعيل الجلسة.',
+                    ];
+                }
+            }
+
+            // Check if session needs QR code (means phone disconnected)
+            if (!empty($result['qrcode']) || $upperStatus === 'QRCODE') {
+                Log::warning("User {$user->id} needs to re-scan QR code - phone disconnected");
+                return [
+                    'status' => 'needs_qr',
+                    'service' => null,
+                    'message' => 'تم قطع اتصال WhatsApp من الموبايل. يرجى إعادة الربط.',
+                ];
+            }
+
+            // Check for successful connection states
+            if (in_array($upperStatus, ['CONNECTED', 'ISLOGGED', 'INCHAT', 'SYNCING'])) {
                 $this->markSessionActive($user->id, $user->whatsapp_session);
                 $user->update(['session_state' => 'active']);
-                Log::info("Session woken after wait for user {$user->id}");
+                Log::info("Session woken successfully for user {$user->id}");
                 return [
                     'status' => 'connected',
                     'service' => $whatsapp,
                     'message' => 'تم تفعيل الجلسة.',
                 ];
             }
+
+            // If not last attempt, wait and retry (session might be in cleanup state)
+            if ($attempt < $maxRetries) {
+                Log::info("Session wake attempt {$attempt} failed for user {$user->id}, retrying in {$retryDelay}s...");
+                sleep($retryDelay);
+            }
         }
 
-        // Check if session needs QR code (means phone disconnected)
-        if (!empty($result['qrcode']) || strtoupper($status) === 'QRCODE') {
-            Log::warning("User {$user->id} needs to re-scan QR code - phone disconnected");
-            return [
-                'status' => 'needs_qr',
-                'service' => null,
-                'message' => 'تم قطع اتصال WhatsApp من الموبايل. يرجى إعادة الربط.',
-            ];
-        }
-
-        // Check for successful connection states
-        if (in_array(strtoupper($status), ['CONNECTED', 'ISLOGGED', 'INCHAT', 'SYNCING'])) {
-            $this->markSessionActive($user->id, $user->whatsapp_session);
-            $user->update(['session_state' => 'active']);
-            Log::info("Session woken successfully for user {$user->id}");
-            return [
-                'status' => 'connected',
-                'service' => $whatsapp,
-                'message' => 'تم تفعيل الجلسة.',
-            ];
-        }
-
-        // If we got here, try one more connection check before failing
+        // Final connection check before giving up
         $finalCheck = $whatsapp->checkConnection();
         if ($finalCheck['connected'] ?? false) {
             $this->markSessionActive($user->id, $user->whatsapp_session);
@@ -130,7 +206,7 @@ class SessionManager
             ];
         }
 
-        Log::warning("Failed to wake session for user {$user->id}", $result);
+        Log::warning("Failed to wake session for user {$user->id} after {$maxRetries} attempts", $result ?? []);
         return [
             'status' => 'error',
             'service' => null,

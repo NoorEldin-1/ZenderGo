@@ -11,10 +11,14 @@ Artisan::command('inspire', function () {
 
 // ============================================
 // SCHEDULED TASKS FOR SERVER HEALTH
+// Optimized for 8GB VPS handling 50-70 users
 // ============================================
 
-// Close idle WhatsApp sessions every 5 minutes to free RAM
-Schedule::command('sessions:cleanup')->everyFiveMinutes()->name('session-cleanup');
+// Close idle WhatsApp sessions every 2 minutes to free RAM (aggressive cleanup)
+Schedule::command('sessions:cleanup')->everyTwoMinutes()->name('session-cleanup');
+
+// Kill orphaned Chrome processes every 5 minutes (handles crash scenarios)
+Schedule::command('sessions:kill-zombies --max-age=300')->everyFiveMinutes()->name('zombie-cleanup');
 
 // Monitor RAM usage every minute (auto-cleanup if critical)
 Schedule::command('ram:check --auto-cleanup')->everyMinute()->name('ram-monitor');
@@ -24,6 +28,9 @@ Schedule::command('subscriptions:check-expired')->daily();
 
 // Clear failed jobs older than 7 days (prevents table bloat)
 Schedule::command('queue:flush')->weekly();
+
+// Cleanup old storage files weekly (low-traffic hours)
+Schedule::command('storage:cleanup')->weeklyOn(0, '4:00')->name('storage-cleanup');
 
 // Prune old telescope/log entries if using telescope
 // Schedule::command('telescope:prune --hours=48')->daily();
