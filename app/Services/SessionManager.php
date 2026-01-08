@@ -22,10 +22,10 @@ class SessionManager
     protected const CACHE_PREFIX = 'wpp_session:';
 
     /**
-     * Maximum concurrent sessions allowed (optimized for 8GB VPS)
+     * Maximum concurrent sessions allowed (optimized for 4GB VPS)
      * Each session uses 200-500 MB RAM
      */
-    protected const MAX_CONCURRENT_SESSIONS = 3;
+    public const MAX_CONCURRENT_SESSIONS = 3;
 
     /**
      * Session idle timeout in seconds (aggressive cleanup for RAM efficiency)
@@ -312,6 +312,7 @@ class SessionManager
 
     /**
      * Force close the oldest idle session to make room for new ones.
+     * IMPORTANT: Respects active campaigns - won't close sessions that are mid-campaign.
      */
     public function forceCloseOldestSession(): bool
     {
@@ -321,13 +322,25 @@ class SessionManager
             return false;
         }
 
-        // Sort by last activity (oldest first)
-        uasort($sessions, fn($a, $b) => $a['last_activity'] <=> $b['last_activity']);
+        // Filter out sessions with active campaigns - don't interrupt them!
+        $closeable = array_filter($sessions, function ($data) {
+            $userId = $data['user_id'];
+            return !Cache::has("campaign_active:{$userId}");
+        });
 
-        $oldest = array_key_first($sessions);
+        if (empty($closeable)) {
+            Log::warning("All active sessions have campaigns in progress, cannot force-close any");
+            return false;
+        }
+
+        // Sort by last activity (oldest first)
+        uasort($closeable, fn($a, $b) => $a['last_activity'] <=> $b['last_activity']);
+
+        $oldest = array_key_first($closeable);
         $user = User::find($oldest);
 
         if ($user) {
+            Log::info("Force-closing oldest idle session for user {$user->id}");
             return $this->closeSession($user);
         }
 

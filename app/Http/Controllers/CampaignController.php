@@ -68,174 +68,154 @@ class CampaignController extends Controller
             ])->withInput();
         }
 
-        $validated = $request->validate([
-            'contacts' => 'required|array|min:1|max:10',
-            'contacts.*' => 'exists:contacts,id',
-            'message' => 'required|string|max:4096',
-            'images' => 'nullable|array|max:5', // Max 5 images
-            'images.*' => 'image|max:5120', // Max 5MB each
-        ], [
-            'contacts.max' => 'عفواً، لا يمكن إرسال الحملة لأكثر من 10 مستلم في المرة الواحدة.',
-            'images.max' => 'عفواً، الحد الأقصى هو 5 صور فقط.',
-            'images.*.max' => 'عفواً، حجم كل صورة يجب ألا يتجاوز 5MB.',
-        ]);
+        // ====== REDIS ATOMIC LOCK - THUNDERING HERD PROTECTION ======
+        // Acquire lock for 10 seconds to prevent duplicate form submissions
+        $lock = Cache::lock("campaign_send_lock:{$user->id}", 10);
 
-        $contactCount = count($validated['contacts']);
-
-        // ATOMIC quota reservation - prevents race conditions
-        // This atomically checks AND reserves the quota in one operation
-        if (!$this->quotaService->reserveQuota($user, $contactCount)) {
-            $status = $this->quotaService->getQuotaStatus($user);
-            $remaining = $status['remaining'];
-            $resetIn = $status['reset_in'];
-
-            $errorMessage = $remaining === 0
-                ? "تجاوزت الحد المسموح للإرسال. الكوتا تتجدد بعد {$resetIn}."
-                : "لا يمكنك إرسال لـ {$contactCount} مستلم. متبقي لك {$remaining} رسالة فقط. الكوتا تتجدد بعد {$resetIn}.";
-
-            return back()->withErrors(['quota' => $errorMessage])->withInput();
+        if (!$lock->get()) {
+            return back()->withErrors([
+                'campaign' => 'جاري معالجة طلب الإرسال، يرجى الانتظار.'
+            ])->withInput();
         }
 
-        // Get selected contacts that belong to the user
-        $contacts = $user->contacts()
-            ->whereIn('id', $validated['contacts'])
-            ->get();
-
-        if ($contacts->isEmpty()) {
-            return back()->withErrors(['contacts' => 'No valid contacts selected.']);
-        }
-
-        // Handle multiple image uploads and create collage
-        $imagePath = null;
-        if ($request->hasFile('images')) {
-            $imagePaths = [];
-            foreach ($request->file('images') as $image) {
-                $storedPath = $image->store('campaign-images', 'public');
-                // Normalize path for cross-platform compatibility
-                $fullPath = storage_path('app' . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $storedPath));
-                $imagePaths[] = $fullPath;
-            }
-
-            // Create collage if multiple images
-            if (count($imagePaths) > 1) {
-                $collageService = new ImageCollageService();
-                $imagePath = $collageService->createCollage($imagePaths);
-
-                // Cleanup original images after collage creation (saves storage)
-                foreach ($imagePaths as $originalPath) {
-                    if (file_exists($originalPath)) {
-                        @unlink($originalPath);
-                    }
-                }
-            } elseif (count($imagePaths) === 1) {
-                $imagePath = $imagePaths[0];
-            }
-        }
-
-        // Get the user's WhatsApp session and token
-        $userSession = $user->whatsapp_session;
-        $userToken = $user->whatsapp_token;
-
-        if (!$userSession) {
-            return back()->withErrors(['session' => 'يرجى ربط حساب WhatsApp الخاص بك أولاً من إعدادات الحساب.']);
-        }
-
-        // ====== Session Wake & Connection Validation ======
-        // Use SessionManager to properly wake sleeping sessions
-        // This handles the case where session was closed after previous campaign
-        $sessionManager = new \App\Services\SessionManager();
-        $wakeResult = $sessionManager->wakeSession($user);
-
-        if ($wakeResult['status'] !== 'connected') {
-            $needsReauth = ($wakeResult['status'] === 'needs_qr');
-
-            \Illuminate\Support\Facades\Log::warning("Campaign blocked - Session wake failed", [
-                'user_id' => $user->id,
-                'status' => $wakeResult['status'],
-                'message' => $wakeResult['message'] ?? 'unknown',
+        try {
+            $validated = $request->validate([
+                'contacts' => 'required|array|min:1|max:10',
+                'contacts.*' => 'exists:contacts,id',
+                'message' => 'required|string|max:4096',
+                'images' => 'nullable|array|max:5', // Max 5 images
+                'images.*' => 'image|max:5120', // Max 5MB each
+            ], [
+                'contacts.max' => 'عفواً، لا يمكن إرسال الحملة لأكثر من 10 مستلم في المرة الواحدة.',
+                'images.max' => 'عفواً، الحد الأقصى هو 5 صور فقط.',
+                'images.*.max' => 'عفواً، حجم كل صورة يجب ألا يتجاوز 5MB.',
             ]);
 
-            // If user needs QR re-scan (phone actually disconnected from WhatsApp)
-            if ($needsReauth) {
-                // Clear session data
-                $user->update([
-                    'whatsapp_session' => null,
-                    'whatsapp_token' => null,
-                    'session_state' => 'disconnected',
-                ]);
+            $contactCount = count($validated['contacts']);
 
-                // Logout user
-                Auth::logout();
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
+            // ATOMIC quota reservation - prevents race conditions
+            // This atomically checks AND reserves the quota in one operation
+            if (!$this->quotaService->reserveQuota($user, $contactCount)) {
+                $status = $this->quotaService->getQuotaStatus($user);
+                $remaining = $status['remaining'];
+                $resetIn = $status['reset_in'];
 
-                return redirect()->route('login')
-                    ->withErrors(['whatsapp' => $wakeResult['message'] ?? 'تم قطع اتصال WhatsApp. يرجى تسجيل الدخول وإعادة مسح الـ QR Code.']);
+                $errorMessage = $remaining === 0
+                    ? "تجاوزت الحد المسموح للإرسال. الكوتا تتجدد بعد {$resetIn}."
+                    : "لا يمكنك إرسال لـ {$contactCount} مستلم. متبقي لك {$remaining} رسالة فقط. الكوتا تتجدد بعد {$resetIn}.";
+
+                return back()->withErrors(['quota' => $errorMessage])->withInput();
             }
 
-            // Other connection errors (e.g., server issues) - just show error message
-            return back()
-                ->withErrors(['connection' => $wakeResult['message'] ?? 'خطأ في الاتصال بـ WhatsApp. حاول مرة أخرى.'])
-                ->withInput();
+            // Get selected contacts that belong to the user
+            $contacts = $user->contacts()
+                ->whereIn('id', $validated['contacts'])
+                ->get();
+
+            if ($contacts->isEmpty()) {
+                return back()->withErrors(['contacts' => 'No valid contacts selected.']);
+            }
+
+            // Handle multiple image uploads and create collage
+            $imagePath = null;
+            if ($request->hasFile('images')) {
+                $imagePaths = [];
+                foreach ($request->file('images') as $image) {
+                    $storedPath = $image->store('campaign-images', 'public');
+                    // Normalize path for cross-platform compatibility
+                    $fullPath = storage_path('app' . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $storedPath));
+                    $imagePaths[] = $fullPath;
+                }
+
+                // Create collage if multiple images
+                if (count($imagePaths) > 1) {
+                    $collageService = new ImageCollageService();
+                    $imagePath = $collageService->createCollage($imagePaths);
+
+                    // Cleanup original images after collage creation (saves storage)
+                    foreach ($imagePaths as $originalPath) {
+                        if (file_exists($originalPath)) {
+                            @unlink($originalPath);
+                        }
+                    }
+                } elseif (count($imagePaths) === 1) {
+                    $imagePath = $imagePaths[0];
+                }
+            }
+
+            // Get the user's WhatsApp session and token
+            $userSession = $user->whatsapp_session;
+            $userToken = $user->whatsapp_token;
+
+            if (!$userSession) {
+                return back()->withErrors(['session' => 'يرجى ربط حساب WhatsApp الخاص بك أولاً من إعدادات الحساب.']);
+            }
+
+            // ====== ASYNC SESSION MANAGEMENT ======
+            // Session wake/validation is now handled in the job layer (SendWhatsappCampaign)
+            // This allows instant HTTP response instead of 5-30s blocking
+            // Only do a quick sanity check for known-disconnected users
+            if ($user->session_state === 'disconnected') {
+                return back()->withErrors([
+                    'session' => 'يرجى إعادة ربط حساب WhatsApp من صفحة الإعدادات.'
+                ])->withInput();
+            }
+
+            // Pre-mark session as intended-active (job will do the real validation)
+            $sessionManager = new \App\Services\SessionManager();
+            $sessionManager->markSessionActive($user->id, $userSession);
+
+            // Dispatch jobs with throttling (15 seconds delay per contact)
+            $delay = 0;
+            $totalContacts = $contacts->count();
+            $currentIndex = 0;
+
+            // SERIAL BATCH: Mark campaign as active BEFORE dispatching jobs
+            // TTL = estimated completion time + 60 seconds buffer
+            $estimatedDurationSeconds = ($totalContacts * 15) + 60;
+            Cache::put("campaign_active:{$user->id}", true, now()->addSeconds($estimatedDurationSeconds));
+            Cache::put("campaign_progress:{$user->id}", ['sent' => 0, 'total' => $totalContacts], now()->addSeconds($estimatedDurationSeconds));
+
+            foreach ($contacts as $contact) {
+                $currentIndex++;
+                $isLastInBatch = ($currentIndex === $totalContacts);
+
+                // Extract first name from contact name (first word)
+                $firstName = explode(' ', trim($contact->name))[0] ?? $contact->name;
+
+                // Replace placeholder with actual name
+                $personalizedMessage = str_replace('{{ اسم_المستلم }}', $firstName, $validated['message']);
+
+                SendWhatsappCampaign::dispatch(
+                    $contact->phone,
+                    $personalizedMessage,
+                    $imagePath,
+                    $userSession,
+                    $userToken,
+                    $user->id,           // Pass userId for session management
+                    $isLastInBatch       // Flag to close session after last message
+                )->delay(now()->addSeconds($delay));
+
+                $delay += 15; // Add 15 seconds delay for each subsequent message
+            }
+
+            // NOTE: Quota was already reserved atomically at the start of send()
+            // No need to record usage here - it was done during reservation
+            // $this->quotaService->recordUsage($user, $contacts->count());
+
+            $count = $contacts->count();
+            $estimatedTime = ceil($delay / 60);
+
+            // Get updated quota status for success message
+            $newStatus = $this->quotaService->getQuotaStatus($user);
+
+            return redirect()->route('campaigns.create')
+                ->with('success', "تم جدولة الحملة بنجاح! سيتم الإرسال إلى {$count} مستلم. الوقت المقدر: {$estimatedTime} دقيقة.")
+                ->with('quotaUpdate', $newStatus);
+        } finally {
+            // Always release the lock when done
+            $lock->release();
         }
-        // ====== End Session Wake & Connection Validation ======
-
-        // CRITICAL: Mark session as active BEFORE dispatching jobs
-        // This allows all campaign jobs to use the lightweight isSessionActive() check
-        $sessionManager = new \App\Services\SessionManager();
-        $sessionManager->markSessionActive($user->id, $userSession);
-        \Illuminate\Support\Facades\Log::info("Pre-marked session active for campaign dispatch", [
-            'user_id' => $user->id,
-            'session' => $userSession,
-        ]);
-
-        // Dispatch jobs with throttling (15 seconds delay per contact)
-        $delay = 0;
-        $totalContacts = $contacts->count();
-        $currentIndex = 0;
-
-        // SERIAL BATCH: Mark campaign as active BEFORE dispatching jobs
-        // TTL = estimated completion time + 60 seconds buffer
-        $estimatedDurationSeconds = ($totalContacts * 15) + 60;
-        Cache::put("campaign_active:{$user->id}", true, now()->addSeconds($estimatedDurationSeconds));
-        Cache::put("campaign_progress:{$user->id}", ['sent' => 0, 'total' => $totalContacts], now()->addSeconds($estimatedDurationSeconds));
-
-        foreach ($contacts as $contact) {
-            $currentIndex++;
-            $isLastInBatch = ($currentIndex === $totalContacts);
-
-            // Extract first name from contact name (first word)
-            $firstName = explode(' ', trim($contact->name))[0] ?? $contact->name;
-
-            // Replace placeholder with actual name
-            $personalizedMessage = str_replace('{{ اسم_المستلم }}', $firstName, $validated['message']);
-
-            SendWhatsappCampaign::dispatch(
-                $contact->phone,
-                $personalizedMessage,
-                $imagePath,
-                $userSession,
-                $userToken,
-                $user->id,           // Pass userId for session management
-                $isLastInBatch       // Flag to close session after last message
-            )->delay(now()->addSeconds($delay));
-
-            $delay += 15; // Add 15 seconds delay for each subsequent message
-        }
-
-        // NOTE: Quota was already reserved atomically at the start of send()
-        // No need to record usage here - it was done during reservation
-        // $this->quotaService->recordUsage($user, $contacts->count());
-
-        $count = $contacts->count();
-        $estimatedTime = ceil($delay / 60);
-
-        // Get updated quota status for success message
-        $newStatus = $this->quotaService->getQuotaStatus($user);
-
-        return redirect()->route('campaigns.create')
-            ->with('success', "تم جدولة الحملة بنجاح! سيتم الإرسال إلى {$count} مستلم. الوقت المقدر: {$estimatedTime} دقيقة.")
-            ->with('quotaUpdate', $newStatus);
     }
 
     /**

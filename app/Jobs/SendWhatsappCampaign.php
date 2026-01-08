@@ -57,60 +57,127 @@ class SendWhatsappCampaign implements ShouldQueue
         // Get user for session management
         $user = $this->userId ? User::find($this->userId) : null;
 
-        // CRITICAL FIX: First try lightweight check to see if session is ALREADY active
-        // This prevents race conditions when multiple jobs call wakeSession simultaneously
-        if ($user) {
-            // Try lightweight check first (no start attempt)
+        if (!$user) {
+            // Legacy fallback - process without session management
+            $this->processLegacyMessage();
+            return;
+        }
+
+        // ====== THUNDERING HERD PROTECTION ======
+        // Per-user campaign lock (prevents parallel job execution for same user)
+        $lock = Cache::lock("campaign_job_lock:{$this->userId}", 60);
+        if (!$lock->get()) {
+            Log::info("Job lock held for user {$this->userId}, releasing back to queue");
+            $this->release(5); // Try again in 5 seconds
+            return;
+        }
+
+        try {
+            // Check if our session is already active
             $activeCheck = $sessionManager->isSessionActive($user);
 
-            if ($activeCheck['active'] && $activeCheck['service']) {
-                // Session already active - just use it! No need to restart.
-                Log::info("Session already active for user {$this->userId} - reusing");
-                $whatsapp = $activeCheck['service'];
-            } else {
-                // Session not tracked as active - do full wake (this should only happen for first job in batch)
+            if (!$activeCheck['active']) {
+                // Our session is not running - check if we can start one
+                $currentCount = $sessionManager->getActiveSessionCount();
+
+                if ($currentCount >= SessionManager::MAX_CONCURRENT_SESSIONS) {
+                    Log::info("Session limit reached ({$currentCount}/3), releasing job for user {$this->userId}");
+                    $lock->release();
+                    $this->release(30); // Wait 30 seconds for a slot
+                    return;
+                }
+
+                // We have a slot available - do full wake
                 Log::info("Session not active for user {$this->userId}, performing full wake");
                 $wakeResult = $sessionManager->wakeSession($user);
 
                 if ($wakeResult['status'] === 'needs_qr') {
                     // User disconnected from phone - they need to reconnect
                     Log::warning("User {$this->userId} needs to re-scan QR code");
+                    $lock->release();
                     $this->handleDisconnection($user, $wakeResult['message'] ?? 'يجب إعادة مسح QR Code');
                     return;
                 }
 
                 if ($wakeResult['status'] !== 'connected' || !$wakeResult['service']) {
                     Log::error("Failed to wake session for user {$this->userId}: {$wakeResult['message']}");
+                    $lock->release();
                     $this->handleDisconnection($user, $wakeResult['message'] ?? 'فشل في الاتصال');
                     return;
                 }
 
                 $whatsapp = $wakeResult['service'];
+            } else {
+                // Session already active - just use it! No need to restart.
+                Log::info("Session already active for user {$this->userId} - reusing");
+                $whatsapp = $activeCheck['service'];
             }
 
-            // Quick connection verification (not the heavy deep check for every message)
+            // Quick connection verification
             $connectionStatus = $whatsapp->checkConnection();
             if (!($connectionStatus['connected'] ?? false)) {
                 Log::warning("Connection lost during campaign for user {$this->userId}");
+                $lock->release();
                 $this->handleDisconnection($user, 'تم فقدان الاتصال أثناء الإرسال');
                 return;
             }
-        } else {
-            // Fallback to legacy behavior if userId not provided
-            $whatsapp = new WhatsAppService($this->whatsappSession, $this->whatsappToken);
 
-            // Pre-flight deep connection check
-            $connectionStatus = $whatsapp->deepConnectionCheck();
-            if (!($connectionStatus['connected'] ?? false)) {
-                Log::warning("WhatsApp session {$this->whatsappSession} is disconnected");
-                $this->fail(new WhatsAppDisconnectedException(
-                    $connectionStatus['message'] ?? 'جلسة WhatsApp غير متصلة',
-                    $this->whatsappSession
-                ));
-                return;
-            }
+            // ====== SEND MESSAGE ======
+            $this->sendMessage($whatsapp, $sessionManager, $user);
+
+        } finally {
+            // Release the lock - safe to call even if we released early
+            $lock->forceRelease();
+        }
+    }
+
+    /**
+     * Legacy message processing without session management.
+     */
+    protected function processLegacyMessage(): void
+    {
+        $whatsapp = new WhatsAppService($this->whatsappSession, $this->whatsappToken);
+
+        // Pre-flight deep connection check
+        $connectionStatus = $whatsapp->deepConnectionCheck();
+        if (!($connectionStatus['connected'] ?? false)) {
+            Log::warning("WhatsApp session {$this->whatsappSession} is disconnected");
+            $this->fail(new WhatsAppDisconnectedException(
+                $connectionStatus['message'] ?? 'جلسة WhatsApp غير متصلة',
+                $this->whatsappSession
+            ));
+            return;
         }
 
+        $this->sendMessageCore($whatsapp);
+    }
+
+    /**
+     * Send message with session management.
+     */
+    protected function sendMessage(WhatsAppService $whatsapp, SessionManager $sessionManager, User $user): void
+    {
+        $this->sendMessageCore($whatsapp);
+
+        // Update campaign progress
+        $progress = Cache::get("campaign_progress:{$user->id}", ['sent' => 0, 'total' => 0]);
+        $progress['sent']++;
+        Cache::put("campaign_progress:{$user->id}", $progress, now()->addMinutes(30));
+
+        // Update session activity
+        $sessionManager->markSessionActive($user->id, $this->whatsappSession);
+
+        // If this is the last message in the batch, clean up resources
+        if ($this->isLastInBatch) {
+            $this->cleanupAfterBatch($sessionManager, $user);
+        }
+    }
+
+    /**
+     * Core message sending logic.
+     */
+    protected function sendMessageCore(WhatsAppService $whatsapp): void
+    {
         // Normalize image path and check if file exists
         $normalizedImagePath = $this->imagePath ? str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $this->imagePath) : null;
 
@@ -134,55 +201,41 @@ class SendWhatsappCampaign implements ShouldQueue
         // Check send result
         if (!($sendResult['success'] ?? false)) {
             $reason = $sendResult['reason'] ?? 'unknown';
-            $needsReauth = $sendResult['needs_reauth'] ?? false;
 
             Log::warning("Failed to send campaign to {$this->phone}", [
                 'reason' => $reason,
                 'message' => $sendResult['message'] ?? 'Unknown error',
             ]);
 
-            // If disconnection detected during send, handle it
-            if ($needsReauth && $user) {
-                $this->handleDisconnection($user, $sendResult['message'] ?? 'تم قطع الاتصال');
-                return;
-            }
-
-            $this->fail(new \Exception("Failed to send message to {$this->phone}: " . ($sendResult['message'] ?? 'Unknown error')));
-            return;
+            throw new \Exception("Failed to send message to {$this->phone}: " . ($sendResult['message'] ?? 'Unknown error'));
         }
 
         Log::info("Successfully sent campaign to {$this->phone}");
+    }
 
-        // SERIAL BATCH: Update campaign progress
-        if ($user) {
-            $progress = Cache::get("campaign_progress:{$user->id}", ['sent' => 0, 'total' => 0]);
-            $progress['sent']++;
-            Cache::put("campaign_progress:{$user->id}", $progress, now()->addMinutes(30));
+    /**
+     * Cleanup after batch completion.
+     */
+    protected function cleanupAfterBatch(SessionManager $sessionManager, User $user): void
+    {
+        // Normalize image path for cleanup check
+        $normalizedImagePath = $this->imagePath ? str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $this->imagePath) : null;
+
+        // Cleanup collage image after batch completion (saves storage)
+        if ($normalizedImagePath && file_exists($normalizedImagePath) && str_contains(basename($normalizedImagePath), 'collage_')) {
+            Log::info("Cleaning up collage image: {$normalizedImagePath}");
+            @unlink($normalizedImagePath);
         }
 
-        // Update session activity
-        if ($user) {
-            $sessionManager->markSessionActive($user->id, $this->whatsappSession);
-        }
+        // CRITICAL: Close session after batch completion to free RAM
+        // This prevents RAM accumulation with 50-70 concurrent users on KVM 2 VPS
+        Log::info("Last message in batch sent for user {$user->id}, closing session to free RAM");
+        $sessionManager->closeSession($user);
 
-        // If this is the last message in the batch, clean up resources
-        if ($this->isLastInBatch && $user) {
-            // Cleanup collage image after batch completion (saves storage)
-            if ($normalizedImagePath && file_exists($normalizedImagePath) && str_contains(basename($normalizedImagePath), 'collage_')) {
-                Log::info("Cleaning up collage image: {$normalizedImagePath}");
-                @unlink($normalizedImagePath);
-            }
-
-            // CRITICAL: Close session after batch completion to free RAM
-            // This prevents RAM accumulation with 50-70 concurrent users on KVM 2 VPS
-            Log::info("Last message in batch sent for user {$user->id}, closing session to free RAM");
-            $sessionManager->closeSession($user);
-
-            // SERIAL BATCH: Clear campaign active flag - allows user to send next batch
-            Cache::forget("campaign_active:{$user->id}");
-            Cache::forget("campaign_progress:{$user->id}");
-            Log::info("Campaign batch completed for user {$user->id}, active flag cleared");
-        }
+        // SERIAL BATCH: Clear campaign active flag - allows user to send next batch
+        Cache::forget("campaign_active:{$user->id}");
+        Cache::forget("campaign_progress:{$user->id}");
+        Log::info("Campaign batch completed for user {$user->id}, active flag cleared");
     }
 
     /**

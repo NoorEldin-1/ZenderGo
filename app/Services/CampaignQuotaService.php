@@ -42,19 +42,27 @@ class CampaignQuotaService
 
     /**
      * Check if Redis connection is available.
-     * First checks if the phpredis extension is installed, then tests connection.
+     * Works with both phpredis extension and predis pure PHP client.
      */
     protected function checkRedisConnection(): bool
     {
-        // First, check if the Redis extension is even installed
-        if (!extension_loaded('redis')) {
-            Log::info("Redis extension not installed, using database fallback for quota operations.");
-            return false;
-        }
-
         try {
-            Redis::ping();
-            return true;
+            // Test connection - works with both phpredis and predis
+            $client = config('database.redis.client', 'phpredis');
+
+            if ($client === 'predis') {
+                // Predis: ping returns string "PONG"
+                $result = Redis::connection()->client()->ping();
+                return $result === 'PONG' || $result === true;
+            } else {
+                // phpredis: check extension first
+                if (!extension_loaded('redis')) {
+                    Log::info("Redis extension not installed, using database fallback for quota operations.");
+                    return false;
+                }
+                Redis::ping();
+                return true;
+            }
         } catch (\Exception $e) {
             Log::warning("Redis unavailable, falling back to database for quota operations: " . $e->getMessage());
             return false;

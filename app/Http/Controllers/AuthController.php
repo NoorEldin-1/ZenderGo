@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\SessionManager;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -222,8 +223,13 @@ class AuthController extends Controller
                 Auth::login($user, true);
             }
 
-            // Set session state to active
-            $user->update(['session_state' => 'active']);
+            // CRITICAL: Close session after successful reconnect to save RAM
+            // Session will wake when user sends a campaign
+            $sessionManager = new SessionManager();
+            $sessionManager->closeSession($user);
+
+            // Set session state to sleeping (will wake on campaign send)
+            $user->update(['session_state' => 'sleeping']);
 
             session()->forget(['login_phone', 'login_user_id']);
 
@@ -344,12 +350,16 @@ class AuthController extends Controller
                 // Update existing user's session info and optionally password, then log them in
                 $existingUser->whatsapp_session = $sessionName;
                 $existingUser->whatsapp_token = $token;
-                $existingUser->session_state = 'active';
+                $existingUser->session_state = 'sleeping'; // Will wake on campaign send
                 // Update password if provided (re-registration updates password)
                 if ($hashedPassword) {
                     $existingUser->password = $hashedPassword;
                 }
                 $existingUser->save();
+
+                // CRITICAL: Close session after successful registration to save RAM
+                $sessionManager = new SessionManager();
+                $sessionManager->closeSession($existingUser);
 
                 Auth::login($existingUser, true);
                 session()->forget(['reg_session', 'reg_token', 'reg_password']);
@@ -369,11 +379,15 @@ class AuthController extends Controller
                 'password' => $hashedPassword,
                 'whatsapp_session' => $sessionName,
                 'whatsapp_token' => $token,
-                'session_state' => 'active',
+                'session_state' => 'sleeping', // Will wake on campaign send
             ]);
 
             // Create trial subscription for new user
             $user->createTrialSubscription();
+
+            // CRITICAL: Close session after successful registration to save RAM
+            $sessionManager = new SessionManager();
+            $sessionManager->closeSession($user);
 
             Auth::login($user, true);
             session()->forget(['reg_session', 'reg_token', 'reg_password']);
