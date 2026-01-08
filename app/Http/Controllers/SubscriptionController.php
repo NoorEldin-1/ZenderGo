@@ -18,6 +18,7 @@ class SubscriptionController extends Controller
         $subscription = $user->activeSubscription();
         $subscriptionPrice = SystemSetting::getSubscriptionPrice();
         $vodafoneCashNumber = SystemSetting::getVodafoneCashNumber();
+        $instapayNumber = SystemSetting::getInstapayNumber();
 
         // Get payment requests for this user
         $pendingRequest = PaymentRequest::where('user_id', $user->id)
@@ -45,6 +46,7 @@ class SubscriptionController extends Controller
             'subscription',
             'subscriptionPrice',
             'vodafoneCashNumber',
+            'instapayNumber',
             'pendingRequest',
             'lastRejectedRequest',
             'paymentHistory'

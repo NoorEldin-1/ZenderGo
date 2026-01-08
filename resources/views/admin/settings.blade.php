@@ -237,6 +237,34 @@
 
             <div class="setting-group">
                 <div class="d-flex align-items-start gap-3">
+                    <div class="icon-box bg-primary bg-opacity-10 text-primary">
+                        <i class="bi bi-bank"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="setting-label">رقم إنستاباي (InstaPay) <span class="badge bg-secondary">اختياري</span>
+                        </div>
+                        <div class="setting-description">
+                            رقم الهاتف أو IPA Handle الخاص بإنستاباي لتحويل قيمة الاشتراك عليه (اتركه فارغاً لإخفائه من صفحة
+                            الاشتراك)
+                        </div>
+                        <div class="input-group" style="max-width: 300px;">
+                            <span class="input-group-text" style="background: #0066b2; border-color: #0066b2;">
+                                <i class="bi bi-bank text-white"></i>
+                            </span>
+                            <input type="text" name="instapay_number"
+                                class="form-control @error('instapay_number') is-invalid @enderror"
+                                value="{{ old('instapay_number', $settings['instapay_number']) }}"
+                                placeholder="@username أو 01XXXXXXXXX" dir="ltr">
+                        </div>
+                        @error('instapay_number')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                    </div>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <div class="d-flex align-items-start gap-3">
                     <div class="icon-box bg-success bg-opacity-10 text-success">
                         <i class="bi bi-headset"></i>
                     </div>

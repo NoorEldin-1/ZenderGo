@@ -153,6 +153,13 @@ class SendWhatsappCampaign implements ShouldQueue
 
         Log::info("Successfully sent campaign to {$this->phone}");
 
+        // SERIAL BATCH: Update campaign progress
+        if ($user) {
+            $progress = Cache::get("campaign_progress:{$user->id}", ['sent' => 0, 'total' => 0]);
+            $progress['sent']++;
+            Cache::put("campaign_progress:{$user->id}", $progress, now()->addMinutes(30));
+        }
+
         // Update session activity
         if ($user) {
             $sessionManager->markSessionActive($user->id, $this->whatsappSession);
@@ -170,6 +177,11 @@ class SendWhatsappCampaign implements ShouldQueue
             // This prevents RAM accumulation with 50-70 concurrent users on KVM 2 VPS
             Log::info("Last message in batch sent for user {$user->id}, closing session to free RAM");
             $sessionManager->closeSession($user);
+
+            // SERIAL BATCH: Clear campaign active flag - allows user to send next batch
+            Cache::forget("campaign_active:{$user->id}");
+            Cache::forget("campaign_progress:{$user->id}");
+            Log::info("Campaign batch completed for user {$user->id}, active flag cleared");
         }
     }
 

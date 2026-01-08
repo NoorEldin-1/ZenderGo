@@ -7,6 +7,7 @@ use App\Services\CampaignQuotaService;
 use App\Services\ImageCollageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class CampaignController extends Controller
 {
@@ -33,7 +34,7 @@ class CampaignController extends Controller
                 });
             }
 
-            $contacts = $query->latest()->paginate(50);
+            $contacts = $query->latest()->paginate(10);
 
             return response()->json($contacts);
         }
@@ -58,19 +59,27 @@ class CampaignController extends Controller
      */
     public function send(Request $request)
     {
+        $user = Auth::user();
+
+        // BLOCKER RULE: Check if user has an active campaign
+        if (Cache::has("campaign_active:{$user->id}")) {
+            return back()->withErrors([
+                'campaign' => 'يرجى انتظار انتهاء الحملة الحالية قبل إرسال دفعة جديدة.'
+            ])->withInput();
+        }
+
         $validated = $request->validate([
-            'contacts' => 'required|array|min:1|max:50',
+            'contacts' => 'required|array|min:1|max:10',
             'contacts.*' => 'exists:contacts,id',
             'message' => 'required|string|max:4096',
             'images' => 'nullable|array|max:5', // Max 5 images
             'images.*' => 'image|max:5120', // Max 5MB each
         ], [
-            'contacts.max' => 'عفواً، لا يمكن إرسال الحملة لأكثر من 50 مستلم في المرة الواحدة.',
+            'contacts.max' => 'عفواً، لا يمكن إرسال الحملة لأكثر من 10 مستلم في المرة الواحدة.',
             'images.max' => 'عفواً، الحد الأقصى هو 5 صور فقط.',
             'images.*.max' => 'عفواً، حجم كل صورة يجب ألا يتجاوز 5MB.',
         ]);
 
-        $user = Auth::user();
         $contactCount = count($validated['contacts']);
 
         // ATOMIC quota reservation - prevents race conditions
@@ -185,6 +194,12 @@ class CampaignController extends Controller
         $totalContacts = $contacts->count();
         $currentIndex = 0;
 
+        // SERIAL BATCH: Mark campaign as active BEFORE dispatching jobs
+        // TTL = estimated completion time + 60 seconds buffer
+        $estimatedDurationSeconds = ($totalContacts * 15) + 60;
+        Cache::put("campaign_active:{$user->id}", true, now()->addSeconds($estimatedDurationSeconds));
+        Cache::put("campaign_progress:{$user->id}", ['sent' => 0, 'total' => $totalContacts], now()->addSeconds($estimatedDurationSeconds));
+
         foreach ($contacts as $contact) {
             $currentIndex++;
             $isLastInBatch = ($currentIndex === $totalContacts);
@@ -280,6 +295,24 @@ class CampaignController extends Controller
             'success' => true,
             'message' => 'تم تسجيل الخروج بسبب قطع اتصال WhatsApp',
             'redirect' => route('login'),
+        ]);
+    }
+
+    /**
+     * Get current campaign status via AJAX.
+     * Used for polling to check if a campaign is active.
+     */
+    public function campaignStatus(Request $request)
+    {
+        $user = Auth::user();
+        $isActive = Cache::has("campaign_active:{$user->id}");
+        $progress = Cache::get("campaign_progress:{$user->id}", ['sent' => 0, 'total' => 0]);
+
+        return response()->json([
+            'active' => $isActive,
+            'sent' => $progress['sent'],
+            'total' => $progress['total'],
+            'message' => $isActive ? 'جاري الإرسال...' : 'جاهز للإرسال',
         ]);
     }
 }

@@ -18,8 +18,8 @@
             <div class="col-lg-5">
                 <div class="card h-100">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
-                        <h6 class="mb-0 fw-bold small">اختر المستلمين <span class="text-danger small">(max 50)</span></h6>
-                        <span class="badge bg-primary" id="selectedCount">0 / 50</span>
+                        <h6 class="mb-0 fw-bold small">اختر المستلمين <span class="text-danger small">(max 10)</span></h6>
+                        <span class="badge bg-primary" id="selectedCount">0 / 10</span>
                     </div>
 
                     <div class="p-2 border-bottom">
@@ -805,16 +805,22 @@
                 lastPage: 1,
                 isLoading: false,
                 searchQuery: '',
-                limit: 50,
+                limit: 10,
                 // Quota tracking
                 quota: {
-                    limit: {{ $quotaStatus['limit'] ?? 50 }},
-                    remaining: {{ $quotaStatus['remaining'] ?? 50 }},
+                    limit: {{ $quotaStatus['limit'] ?? 100 }},
+                    remaining: {{ $quotaStatus['remaining'] ?? 100 }},
                     used: {{ $quotaStatus['used'] ?? 0 }},
                     percentageRemaining: {{ $quotaStatus['percentage_remaining'] ?? 100 }},
                     statusColor: '{{ $quotaStatus['status_color'] ?? 'success' }}',
                     resetIn: '{{ $quotaStatus['reset_in'] ?? '' }}',
                     isExpired: {{ $quotaStatus['is_window_expired'] ?? true ? 'true' : 'false' }}
+                },
+                // Serial Batch: Campaign status tracking
+                campaign: {
+                    active: false,
+                    sent: 0,
+                    total: 0
                 }
             };
 
@@ -942,6 +948,57 @@
                     updateSendButtonState();
                 } catch (error) {
                     console.error('Error refreshing quota:', error);
+                }
+            }
+
+            // --- SERIAL BATCH: Campaign Status Polling ---
+            async function pollCampaignStatus() {
+                try {
+                    const response = await fetch('{{ route('campaigns.status') }}', {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    });
+                    const data = await response.json();
+
+                    state.campaign.active = data.active;
+                    state.campaign.sent = data.sent;
+                    state.campaign.total = data.total;
+
+                    updateCampaignUI();
+
+                    // Continue polling while active
+                    if (data.active) {
+                        setTimeout(pollCampaignStatus, 5000);
+                    } else {
+                        // Campaign completed - refresh quota
+                        refreshQuota();
+                    }
+                } catch (error) {
+                    console.error('Error polling campaign status:', error);
+                }
+            }
+
+            function updateCampaignUI() {
+                if (state.campaign.active) {
+                    sendBtn.disabled = true;
+                    const progress = state.campaign.total > 0 ?
+                        `(${state.campaign.sent}/${state.campaign.total})` :
+                        '';
+                    sendBtn.innerHTML =
+                        `<i class="bi bi-hourglass-split me-1 spin-slow"></i>جاري الإرسال... ${progress}`;
+                    sendBtn.classList.remove('btn-whatsapp', 'btn-danger');
+                    sendBtn.classList.add('btn-secondary');
+                    sendBtn.title = 'يرجى انتظار انتهاء الحملة الحالية قبل إرسال دفعة جديدة';
+
+                    // Also disable contact selection during active campaign
+                    els.selectAllPage.disabled = true;
+                } else {
+                    // Restore normal button state
+                    els.selectAllPage.disabled = false;
+                    sendBtn.title = '';
+                    updateSendButtonState();
                 }
             }
 
@@ -1080,6 +1137,11 @@
             }
 
             function updateSendButtonState() {
+                // If campaign is active, don't touch button state - handled by updateCampaignUI
+                if (state.campaign.active) {
+                    return;
+                }
+
                 const hasMessage = messageTextarea.value.trim().length > 0;
                 const hasContacts = state.selectedContacts.size > 0;
                 const withinQuota = state.selectedContacts.size <= state.quota.remaining;
@@ -1173,6 +1235,9 @@
 
             // Initial Load
             fetchContacts();
+
+            // SERIAL BATCH: Check campaign status on page load
+            pollCampaignStatus();
 
             // === OLD LOGIC RE-INTEGRATION (Emojis, Templates, Message Area) === //
 

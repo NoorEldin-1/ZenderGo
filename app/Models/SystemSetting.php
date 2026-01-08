@@ -82,6 +82,14 @@ class SystemSetting extends Model
     }
 
     /**
+     * Get InstaPay number/handle setting.
+     */
+    public static function getInstapayNumber(): string
+    {
+        return (string) static::get('instapay_number', '');
+    }
+
+    /**
      * Get Support phone number setting.
      */
     public static function getSupportPhoneNumber(): string
@@ -94,7 +102,7 @@ class SystemSetting extends Model
      */
     public static function getCampaignQuotaLimit(): int
     {
-        return (int) static::get('campaign_quota_limit', 50);
+        return (int) static::get('campaign_quota_limit', 100);
     }
 
     /**

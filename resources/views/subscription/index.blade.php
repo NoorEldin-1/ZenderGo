@@ -228,6 +228,76 @@
             background: rgba(255, 255, 255, 0.3);
         }
 
+        /* InstaPay Styles */
+        .instapay-number {
+            background: linear-gradient(135deg, #0066b2 0%, #004d86 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .instapay-number .number {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            direction: ltr;
+        }
+
+        .instapay-number .copy-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .instapay-number .copy-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Payment Method Tabs */
+        .payment-methods-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .payment-tab {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .payment-tab:hover {
+            background: #f8f9fa;
+        }
+
+        .payment-tab.active.vodafone {
+            border-color: #e60000;
+            background: rgba(230, 0, 0, 0.1);
+        }
+
+        .payment-tab.active.instapay {
+            border-color: #0066b2;
+            background: rgba(0, 102, 178, 0.1);
+        }
+
+
         .upload-area {
             border: 2px dashed #dee2e6;
             border-radius: 12px;
@@ -560,29 +630,68 @@
                     @endif
 
                     {{-- Instructions --}}
+                    @php
+                        $hasVodafone = !empty($vodafoneCashNumber) && $vodafoneCashNumber !== '01XXXXXXXXX';
+                        $hasInstapay = !empty($instapayNumber);
+                    @endphp
                     <div class="alert alert-warning mb-3">
                         <div class="d-flex align-items-center gap-2 mb-2">
                             <i class="bi bi-exclamation-triangle fs-5"></i>
                             <strong>مطلوب تجديد الاشتراك:</strong>
                         </div>
                         <ol class="mb-0 pe-4">
-                            <li>حوّل المبلغ <strong>({{ number_format($subscriptionPrice) }} جنيه)</strong> على رقم فودافون
-                                كاش أدناه</li>
+                            <li>حوّل المبلغ <strong>({{ number_format($subscriptionPrice) }} جنيه)</strong> على أحد أرقام
+                                الدفع أدناه</li>
                             <li>بعد التحويل، ارفع صورة الوصل من هنا</li>
                             <li>انتظر مراجعة الطلب وإعادة تفعيل حسابك</li>
                         </ol>
                     </div>
 
-                    {{-- Vodafone Cash Number --}}
-                    <div class="vodafone-number">
-                        <div>
-                            <small class="d-block opacity-75">رقم فودافون كاش</small>
-                            <span class="number" id="vodafoneNumber">{{ $vodafoneCashNumber }}</span>
-                        </div>
-                        <button type="button" class="copy-btn" onclick="copyNumber()">
-                            <i class="bi bi-clipboard me-1"></i>نسخ
-                        </button>
-                    </div>
+                    {{-- Payment Method Tabs --}}
+                    @if ($hasVodafone || $hasInstapay)
+                        @if ($hasVodafone && $hasInstapay)
+                            <div class="payment-methods-tabs">
+                                <div class="payment-tab vodafone active" onclick="selectPaymentMethod('vodafone')">
+                                    <i class="bi bi-phone text-danger"></i>
+                                    <span>فودافون كاش</span>
+                                </div>
+                                <div class="payment-tab instapay" onclick="selectPaymentMethod('instapay')">
+                                    <i class="bi bi-bank text-primary"></i>
+                                    <span>إنستاباي</span>
+                                </div>
+                            </div>
+                        @endif
+
+                        {{-- Vodafone Cash Details --}}
+                        @if ($hasVodafone)
+                            <div id="vodafone-details" class="{{ $hasVodafone ? '' : 'd-none' }}">
+                                <div class="vodafone-number">
+                                    <div>
+                                        <small class="d-block opacity-75">رقم فودافون كاش</small>
+                                        <span class="number" id="vodafoneNumber">{{ $vodafoneCashNumber }}</span>
+                                    </div>
+                                    <button type="button" class="copy-btn" onclick="copyNumber('vodafoneNumber')">
+                                        <i class="bi bi-clipboard me-1"></i>نسخ
+                                    </button>
+                                </div>
+                            </div>
+                        @endif
+
+                        {{-- InstaPay Details --}}
+                        @if ($hasInstapay)
+                            <div id="instapay-details" class="{{ !$hasVodafone ? '' : 'd-none' }}">
+                                <div class="instapay-number">
+                                    <div>
+                                        <small class="d-block opacity-75">رقم إنستاباي</small>
+                                        <span class="number" id="instapayNumber">{{ $instapayNumber }}</span>
+                                    </div>
+                                    <button type="button" class="copy-btn" onclick="copyNumber('instapayNumber')">
+                                        <i class="bi bi-clipboard me-1"></i>نسخ
+                                    </button>
+                                </div>
+                            </div>
+                        @endif
+                    @endif
 
                     @if ($pendingRequest)
                         {{-- Pending Request Display --}}
@@ -671,7 +780,7 @@
                                     <ul class="mb-0 pe-3 small">
                                         <li><strong>سعر الاشتراك:</strong> {{ number_format($subscriptionPrice) }} جنيه /
                                             شهر</li>
-                                        <li><strong>طريقة الدفع:</strong> فودافون كاش</li>
+                                        <li><strong>طريقة الدفع:</strong> فودافون كاش أو إنستاباي</li>
                                         <li><strong>التفعيل:</strong> يتم مراجعة طلبك وتفعيل الاشتراك خلال ساعات</li>
                                     </ul>
                                 </div>
@@ -739,30 +848,68 @@
                     @endif
 
                     {{-- Instructions --}}
+                    @php
+                        $hasVodafone2 = !empty($vodafoneCashNumber) && $vodafoneCashNumber !== '01XXXXXXXXX';
+                        $hasInstapay2 = !empty($instapayNumber);
+                    @endphp
                     <div class="alert alert-info mb-3">
                         <div class="d-flex align-items-center gap-2 mb-2">
                             <i class="bi bi-info-circle fs-5"></i>
                             <strong>خطوات الاشتراك:</strong>
                         </div>
                         <ol class="mb-0 pe-4">
-                            <li>حوّل المبلغ <strong>({{ number_format($subscriptionPrice) }} جنيه)</strong> على رقم فودافون
-                                كاش
-                                أدناه</li>
+                            <li>حوّل المبلغ <strong>({{ number_format($subscriptionPrice) }} جنيه)</strong> على أحد أرقام
+                                الدفع أدناه</li>
                             <li>بعد التحويل، ارفع صورة الوصل من هنا</li>
                             <li>انتظر مراجعة الطلب وتفعيل اشتراكك</li>
                         </ol>
                     </div>
 
-                    {{-- Vodafone Cash Number --}}
-                    <div class="vodafone-number">
-                        <div>
-                            <small class="d-block opacity-75">رقم فودافون كاش</small>
-                            <span class="number" id="vodafoneNumber">{{ $vodafoneCashNumber }}</span>
-                        </div>
-                        <button type="button" class="copy-btn" onclick="copyNumber()">
-                            <i class="bi bi-clipboard me-1"></i>نسخ
-                        </button>
-                    </div>
+                    {{-- Payment Method Tabs --}}
+                    @if ($hasVodafone2 || $hasInstapay2)
+                        @if ($hasVodafone2 && $hasInstapay2)
+                            <div class="payment-methods-tabs">
+                                <div class="payment-tab vodafone active" onclick="selectPaymentMethod('vodafone')">
+                                    <i class="bi bi-phone text-danger"></i>
+                                    <span>فودافون كاش</span>
+                                </div>
+                                <div class="payment-tab instapay" onclick="selectPaymentMethod('instapay')">
+                                    <i class="bi bi-bank text-primary"></i>
+                                    <span>إنستاباي</span>
+                                </div>
+                            </div>
+                        @endif
+
+                        {{-- Vodafone Cash Details --}}
+                        @if ($hasVodafone2)
+                            <div id="vodafone-details" class="{{ $hasVodafone2 ? '' : 'd-none' }}">
+                                <div class="vodafone-number">
+                                    <div>
+                                        <small class="d-block opacity-75">رقم فودافون كاش</small>
+                                        <span class="number" id="vodafoneNumber">{{ $vodafoneCashNumber }}</span>
+                                    </div>
+                                    <button type="button" class="copy-btn" onclick="copyNumber('vodafoneNumber')">
+                                        <i class="bi bi-clipboard me-1"></i>نسخ
+                                    </button>
+                                </div>
+                            </div>
+                        @endif
+
+                        {{-- InstaPay Details --}}
+                        @if ($hasInstapay2)
+                            <div id="instapay-details" class="{{ !$hasVodafone2 ? '' : 'd-none' }}">
+                                <div class="instapay-number">
+                                    <div>
+                                        <small class="d-block opacity-75">رقم إنستاباي</small>
+                                        <span class="number" id="instapayNumber">{{ $instapayNumber }}</span>
+                                    </div>
+                                    <button type="button" class="copy-btn" onclick="copyNumber('instapayNumber')">
+                                        <i class="bi bi-clipboard me-1"></i>نسخ
+                                    </button>
+                                </div>
+                            </div>
+                        @endif
+                    @endif
 
                     @if ($pendingRequest)
                         {{-- Pending Request Display --}}
@@ -856,16 +1003,33 @@
 
 @push('scripts')
     <script>
-        // Copy Vodafone number
-        function copyNumber() {
-            const number = document.getElementById('vodafoneNumber').textContent;
+        // Copy number function - now accepts element ID
+        function copyNumber(elementId) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+
+            const number = element.textContent;
             navigator.clipboard.writeText(number).then(() => {
-                const btn = document.querySelector('.copy-btn');
+                const btn = element.closest('.vodafone-number, .instapay-number').querySelector('.copy-btn');
                 btn.innerHTML = '<i class="bi bi-check me-1"></i>تم النسخ';
                 setTimeout(() => {
                     btn.innerHTML = '<i class="bi bi-clipboard me-1"></i>نسخ';
                 }, 2000);
             });
+        }
+
+        // Payment method tab switching
+        function selectPaymentMethod(method) {
+            // Update tabs - remove active from all, add to selected
+            document.querySelectorAll('.payment-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.payment-tab.' + method).forEach(tab => tab.classList.add('active'));
+
+            // Hide all payment details
+            document.querySelectorAll('#vodafone-details').forEach(el => el.classList.add('d-none'));
+            document.querySelectorAll('#instapay-details').forEach(el => el.classList.add('d-none'));
+
+            // Show selected payment method details
+            document.querySelectorAll('#' + method + '-details').forEach(el => el.classList.remove('d-none'));
         }
 
         // File upload handling

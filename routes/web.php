@@ -82,6 +82,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/campaigns', [CampaignController::class, 'create'])->name('campaigns.create');
         Route::get('/campaigns/quota-status', [CampaignController::class, 'quotaStatus'])->name('campaigns.quota');
         Route::post('/campaigns/send', [CampaignController::class, 'send'])->name('campaigns.send');
+        Route::get('/campaigns/status', [CampaignController::class, 'campaignStatus'])->name('campaigns.status');
         Route::get('/campaigns/send', fn() => redirect()->route('campaigns.create')); // Redirect GET to form
         Route::get('/whatsapp/status', [CampaignController::class, 'whatsappStatus'])->name('whatsapp.status');
         Route::post('/whatsapp/force-logout', [CampaignController::class, 'forceLogout'])->name('whatsapp.force-logout');
