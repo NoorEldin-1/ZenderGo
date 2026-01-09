@@ -20,6 +20,7 @@ class Admin extends Authenticatable
         'name',
         'username',
         'password',
+        'theme_preference',
     ];
 
     /**

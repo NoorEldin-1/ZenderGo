@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminPaymentRequestsController;
 use App\Http\Controllers\Admin\AdminSettingsController;
+use App\Http\Controllers\Admin\AdminThemeController;
 use App\Http\Controllers\Admin\AdminUsersController;
 use Illuminate\Support\Facades\Route;
 
@@ -30,6 +31,9 @@ Route::middleware('admin.auth')->group(function () {
 
     // Logout
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('admin.logout');
+
+    // Theme Toggle (AJAX)
+    Route::post('/theme/toggle', [AdminThemeController::class, 'toggle'])->name('admin.theme.toggle');
 
     // Users Management
     Route::resource('users', AdminUsersController::class)

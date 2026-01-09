@@ -29,6 +29,7 @@ class User extends Authenticatable
         'is_suspended',
         'suspension_reason',
         'suspended_at',
+        'theme_preference',
     ];
 
     /**

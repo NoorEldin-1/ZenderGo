@@ -9,6 +9,7 @@ use App\Http\Controllers\ShareController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\TemplateShareController;
+use App\Http\Controllers\ThemeController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -48,6 +49,9 @@ Route::get('/login/reconnect/check', [AuthController::class, 'checkReconnect'])-
 // Protected routes (authenticated users only)
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+    // Theme Toggle (AJAX)
+    Route::post('/theme/toggle', [ThemeController::class, 'toggle'])->name('theme.toggle');
 
     // Dashboard
     Route::get('/dashboard', function () {
