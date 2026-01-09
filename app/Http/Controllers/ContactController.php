@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Contact;
 use App\Models\SystemSetting;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -77,6 +78,25 @@ class ContactController extends Controller
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('phone', 'like', "%{$search}%");
             });
+        }
+
+        // ====== LAST CONTACTED FILTER ======
+        if ($request->filled('contact_filter')) {
+            $filter = $request->contact_filter;
+
+            if ($filter === 'never') {
+                // Never contacted - last_sent_at is NULL
+                $query->whereNull('last_sent_at');
+            } elseif ($filter === 'range' && $request->filled(['date_from', 'date_to'])) {
+                // Contacted within date range
+                try {
+                    $dateFrom = Carbon::parse($request->date_from)->startOfDay();
+                    $dateTo = Carbon::parse($request->date_to)->endOfDay();
+                    $query->whereBetween('last_sent_at', [$dateFrom, $dateTo]);
+                } catch (\Exception $e) {
+                    // Invalid date format - ignore filter
+                }
+            }
         }
 
         $contacts = $query->latest()->paginate(20)->withQueryString();

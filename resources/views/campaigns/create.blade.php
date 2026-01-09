@@ -32,6 +32,22 @@
                         </div>
                     </div>
 
+                    <!-- Last Contacted Filter -->
+                    <div class="p-2 border-bottom bg-light">
+                        <div class="d-flex gap-2 align-items-center flex-wrap">
+                            <select class="form-select form-select-sm" id="contactFilter"
+                                style="width: auto; min-width: 140px;">
+                                <option value="">جميع الجهات</option>
+                                <option value="never">لم يتم التواصل</option>
+                                <option value="range">تم التواصل في فترة</option>
+                            </select>
+                            <div id="dateRangeContainer" class="d-none flex-grow-1">
+                                <input type="text" class="form-control form-control-sm flatpickr-input"
+                                    id="dateRangePicker" placeholder="اختر الفترة..." readonly>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="px-3 py-2 bg-light border-bottom d-flex justify-content-between align-items-center">
                         <div class="form-check">
                             <input type="checkbox" class="form-check-input" id="selectAllPage">
@@ -108,7 +124,8 @@
                             <button type="button" class="btn btn-sm btn-outline-secondary" id="italicBtn" title="مائل">
                                 <i class="bi bi-type-italic"></i>
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="strikeBtn" title="مشطوب">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="strikeBtn"
+                                title="مشطوب">
                                 <i class="bi bi-type-strikethrough"></i>
                             </button>
                             <div class="vr mx-1"></div>
@@ -443,7 +460,89 @@
 @endsection
 
 @push('styles')
+    <!-- Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
+        /* Flatpickr Dark Mode Styles */
+        [data-bs-theme="dark"] .flatpickr-input {
+            background-color: #2b3035 !important;
+            color: #e9ecef !important;
+            border-color: #495057 !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-input::placeholder {
+            color: #6c757d !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-calendar {
+            background: #1a1d21 !important;
+            border-color: #495057 !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-months .flatpickr-month {
+            background: #212529 !important;
+            color: #e9ecef !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-current-month .flatpickr-monthDropdown-months,
+        [data-bs-theme="dark"] .flatpickr-current-month input.cur-year {
+            background: #212529 !important;
+            color: #e9ecef !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-weekdays {
+            background: #212529 !important;
+        }
+
+        [data-bs-theme="dark"] span.flatpickr-weekday {
+            color: #adb5bd !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-day {
+            color: #e9ecef !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-day:hover {
+            background: #343a40 !important;
+            border-color: #495057 !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-day.inRange,
+        [data-bs-theme="dark"] .flatpickr-day.prevMonthDay.inRange,
+        [data-bs-theme="dark"] .flatpickr-day.nextMonthDay.inRange {
+            background: rgba(37, 211, 102, 0.2) !important;
+            border-color: rgba(37, 211, 102, 0.2) !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-day.selected,
+        [data-bs-theme="dark"] .flatpickr-day.startRange,
+        [data-bs-theme="dark"] .flatpickr-day.endRange {
+            background: #25d366 !important;
+            border-color: #25d366 !important;
+            color: #fff !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-day.today {
+            border-color: #25d366 !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-day.disabled,
+        [data-bs-theme="dark"] .flatpickr-day.prevMonthDay,
+        [data-bs-theme="dark"] .flatpickr-day.nextMonthDay {
+            color: #6c757d !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-months .flatpickr-prev-month,
+        [data-bs-theme="dark"] .flatpickr-months .flatpickr-next-month {
+            fill: #e9ecef !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-months .flatpickr-prev-month:hover,
+        [data-bs-theme="dark"] .flatpickr-months .flatpickr-next-month:hover {
+            fill: #25d366 !important;
+        }
+
         .contact-item {
             cursor: pointer;
             transition: background 0.15s;
@@ -459,6 +558,33 @@
 
         .contact-item.hidden {
             display: none !important;
+        }
+
+        /* Last Sent Badge Styles */
+        .last-sent-badge .badge {
+            font-size: 0.7rem;
+            padding: 0.25em 0.5em;
+            font-weight: 500;
+        }
+
+        .last-sent-badge .badge.bg-success-subtle {
+            background-color: rgba(37, 211, 102, 0.15) !important;
+        }
+
+        .last-sent-badge .badge.bg-secondary-subtle {
+            background-color: rgba(108, 117, 125, 0.15) !important;
+        }
+
+        [data-bs-theme="dark"] .last-sent-badge .badge.bg-success-subtle {
+            background-color: rgba(37, 211, 102, 0.25) !important;
+        }
+
+        [data-bs-theme="dark"] .last-sent-badge .badge.bg-secondary-subtle {
+            background-color: rgba(108, 117, 125, 0.25) !important;
+        }
+
+        [data-bs-theme="dark"] .contact-item:hover {
+            background-color: #2b3035 !important;
         }
 
         /* Template Selection Styling - Enhanced Visibility */
@@ -786,6 +912,9 @@
 @endpush
 
 @push('scripts')
+    <!-- Flatpickr JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/ar.js"></script>
     <script>
         (function() {
             const csrf = document.querySelector('meta[name="csrf-token"]').content;
@@ -1019,6 +1148,28 @@
                         q: state.searchQuery
                     });
 
+                    // Add contact filter parameters
+                    const contactFilter = document.getElementById('contactFilter')?.value || '';
+                    if (contactFilter) {
+                        params.set('contact_filter', contactFilter);
+                        if (contactFilter === 'range' && window.flatpickrInstance?.selectedDates?.length >= 1) {
+                            const dates = window.flatpickrInstance.selectedDates;
+                            // Handle both single date and date range
+                            // IMPORTANT: Use local date format, NOT toISOString() which converts to UTC
+                            // This prevents timezone issues where '2026-01-09' becomes '2026-01-08' in UTC
+                            const formatLocalDate = (date) => {
+                                const year = date.getFullYear();
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const day = String(date.getDate()).padStart(2, '0');
+                                return `${year}-${month}-${day}`;
+                            };
+                            const dateFrom = formatLocalDate(dates[0]);
+                            const dateTo = dates.length >= 2 ? formatLocalDate(dates[1]) : dateFrom;
+                            params.set('date_from', dateFrom);
+                            params.set('date_to', dateTo);
+                        }
+                    }
+
                     const response = await fetch(`{{ route('campaigns.create') }}?${params.toString()}`, {
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest',
@@ -1051,7 +1202,32 @@
                     return;
                 }
 
-                els.contactsList.innerHTML = contacts.map(contact => `
+                els.contactsList.innerHTML = contacts.map(contact => {
+                    // Format last_sent_at for display
+                    let lastSentHtml = '';
+                    if (contact.last_sent_at) {
+                        const lastSentDate = new Date(contact.last_sent_at);
+                        const now = new Date();
+                        const diffMs = now - lastSentDate;
+                        const diffMins = Math.floor(diffMs / 60000);
+                        const diffHours = Math.floor(diffMs / 3600000);
+                        const diffDays = Math.floor(diffMs / 86400000);
+
+                        let timeAgo = '';
+                        if (diffMins < 1) timeAgo = 'الآن';
+                        else if (diffMins < 60) timeAgo = `منذ ${diffMins} دقيقة`;
+                        else if (diffHours < 24) timeAgo = `منذ ${diffHours} ساعة`;
+                        else if (diffDays < 7) timeAgo = `منذ ${diffDays} يوم`;
+                        else timeAgo = lastSentDate.toLocaleDateString('ar-EG');
+
+                        lastSentHtml =
+                            `<div class="last-sent-badge mt-1"><span class="badge bg-success-subtle text-success"><i class="bi bi-check2-circle me-1"></i>${timeAgo}</span></div>`;
+                    } else {
+                        lastSentHtml =
+                            `<div class="last-sent-badge mt-1"><span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-dash-circle me-1"></i>لم يتم التواصل</span></div>`;
+                    }
+
+                    return `
                     <label class="contact-item d-block px-3 py-2 border-bottom m-0">
                         <div class="form-check d-flex align-items-center gap-2 m-0">
                             <input type="checkbox" class="form-check-input contact-checkbox mt-0"
@@ -1060,10 +1236,12 @@
                             <div class="flex-grow-1 min-w-0">
                                 <div class="fw-medium small text-truncate">${escapeHtml(contact.name)}</div>
                                 <small class="text-muted" dir="ltr">${escapeHtml(contact.phone)}</small>
+                                ${lastSentHtml}
                             </div>
                         </div>
                     </label>
-                `).join('');
+                `;
+                }).join('');
 
                 // Attach event listeners to new checkboxes
                 document.querySelectorAll('.contact-checkbox').forEach(cb => {
@@ -1765,6 +1943,50 @@
             // Editor input handler
             messageEditor?.addEventListener('input', () => {
                 updateUIState();
+            });
+
+            // ========== FLATPICKR & CONTACT FILTER ==========
+            // Initialize Flatpickr date range picker
+            const dateRangePicker = document.getElementById('dateRangePicker');
+            const dateRangeContainer = document.getElementById('dateRangeContainer');
+            const contactFilterEl = document.getElementById('contactFilter');
+
+            if (dateRangePicker && typeof flatpickr !== 'undefined') {
+                window.flatpickrInstance = flatpickr(dateRangePicker, {
+                    mode: 'range',
+                    dateFormat: 'Y-m-d',
+                    locale: 'ar',
+                    maxDate: 'today',
+                    onChange: function(selectedDates, dateStr) {
+                        // Fetch when at least 1 date selected (single date = same day filter)
+                        if (selectedDates.length >= 1) {
+                            fetchContacts(1);
+                        }
+                    },
+                    onReady: function(selectedDates, dateStr, instance) {
+                        instance.calendarContainer.classList.add('flatpickr-rtl');
+                    }
+                });
+            }
+
+            // Contact filter change handler
+            contactFilterEl?.addEventListener('change', function() {
+                const value = this.value;
+
+                if (value === 'range') {
+                    // Show date range picker
+                    dateRangeContainer.classList.remove('d-none');
+                    // Don't fetch until dates are selected
+                } else {
+                    // Hide date range picker
+                    dateRangeContainer.classList.add('d-none');
+                    // Clear date selection
+                    if (window.flatpickrInstance) {
+                        window.flatpickrInstance.clear();
+                    }
+                    // Fetch contacts for 'never' or 'all'
+                    fetchContacts(1);
+                }
             });
 
             showEmojis('popular');

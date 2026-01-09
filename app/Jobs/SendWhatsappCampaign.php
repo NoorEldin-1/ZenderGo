@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Exceptions\WhatsAppDisconnectedException;
+use App\Models\Contact;
 use App\Models\User;
 use App\Services\SessionManager;
 use App\Services\WhatsAppService;
@@ -158,6 +159,15 @@ class SendWhatsappCampaign implements ShouldQueue
     protected function sendMessage(WhatsAppService $whatsapp, SessionManager $sessionManager, User $user): void
     {
         $this->sendMessageCore($whatsapp);
+
+        // ====== UPDATE LAST CONTACTED TIMESTAMP ======
+        // Record the successful send time for the contact
+        if ($this->userId && $this->phone) {
+            Contact::where('user_id', $this->userId)
+                ->where('phone', $this->phone)
+                ->update(['last_sent_at' => now()]);
+            Log::debug("Updated last_sent_at for contact {$this->phone} (user {$this->userId})");
+        }
 
         // Update campaign progress
         $progress = Cache::get("campaign_progress:{$user->id}", ['sent' => 0, 'total' => 0]);

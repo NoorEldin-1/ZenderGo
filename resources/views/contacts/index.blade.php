@@ -77,6 +77,18 @@
                         </button>
                     </div>
                 </div>
+                <!-- Last Contacted Filter -->
+                <div class="d-flex gap-2 align-items-center flex-wrap">
+                    <select class="form-select form-select-sm" id="contactFilter" style="width: auto; min-width: 150px;">
+                        <option value="">جميع جهات الاتصال</option>
+                        <option value="never">لم يتم التواصل</option>
+                        <option value="range">تم التواصل في فترة</option>
+                    </select>
+                    <div id="dateRangeContainer" class="d-none">
+                        <input type="text" class="form-control form-control-sm flatpickr-input" id="dateRangePicker"
+                            placeholder="اختر الفترة..." style="min-width: 200px;" readonly>
+                    </div>
+                </div>
                 <!-- Bulk Actions -->
                 <div class="d-flex gap-2 align-items-center" id="bulkActions" style="display: none;">
                     <span class="text-muted small">
@@ -116,7 +128,8 @@
                                 </th>
                                 <th>الاسم</th>
                                 <th class="d-none d-md-table-cell">الهاتف</th>
-                                <th class="d-none d-lg-table-cell">التاريخ</th>
+                                <th class="d-none d-lg-table-cell">آخر إرسال</th>
+                                <th class="d-none d-xl-table-cell">التاريخ</th>
                                 <th style="width: 90px;" class="text-center">إجراءات</th>
                             </tr>
                         </thead>
@@ -149,7 +162,19 @@
                                     <td class="d-none d-md-table-cell">
                                         <code class="contact-phone" dir="ltr">{{ $contact->phone }}</code>
                                     </td>
-                                    <td class="text-muted small d-none d-lg-table-cell">
+                                    <td class="d-none d-lg-table-cell">
+                                        @if ($contact->last_sent_at)
+                                            <span class="badge bg-success-subtle text-success">
+                                                <i
+                                                    class="bi bi-check2-circle me-1"></i>{{ $contact->last_sent_at->diffForHumans() }}
+                                            </span>
+                                        @else
+                                            <span class="badge bg-secondary-subtle text-secondary">
+                                                <i class="bi bi-dash-circle me-1"></i>لم يتم التواصل
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td class="text-muted small d-none d-xl-table-cell">
                                         {{ $contact->created_at->diffForHumans() }}
                                     </td>
                                     <td class="text-center">
@@ -412,7 +437,113 @@
     </div>
 @endsection
 
+@push('styles')
+    <!-- Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <style>
+        /* Flatpickr Dark Mode Styles */
+        [data-bs-theme="dark"] .flatpickr-input {
+            background-color: #2b3035 !important;
+            color: #e9ecef !important;
+            border-color: #495057 !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-input::placeholder {
+            color: #6c757d !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-calendar {
+            background: #1a1d21 !important;
+            border-color: #495057 !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-months .flatpickr-month {
+            background: #212529 !important;
+            color: #e9ecef !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-current-month .flatpickr-monthDropdown-months,
+        [data-bs-theme="dark"] .flatpickr-current-month input.cur-year {
+            background: #212529 !important;
+            color: #e9ecef !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-weekdays {
+            background: #212529 !important;
+        }
+
+        [data-bs-theme="dark"] span.flatpickr-weekday {
+            color: #adb5bd !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-day {
+            color: #e9ecef !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-day:hover {
+            background: #343a40 !important;
+            border-color: #495057 !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-day.inRange,
+        [data-bs-theme="dark"] .flatpickr-day.prevMonthDay.inRange,
+        [data-bs-theme="dark"] .flatpickr-day.nextMonthDay.inRange {
+            background: rgba(37, 211, 102, 0.2) !important;
+            border-color: rgba(37, 211, 102, 0.2) !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-day.selected,
+        [data-bs-theme="dark"] .flatpickr-day.startRange,
+        [data-bs-theme="dark"] .flatpickr-day.endRange {
+            background: #25d366 !important;
+            border-color: #25d366 !important;
+            color: #fff !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-day.today {
+            border-color: #25d366 !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-day.disabled,
+        [data-bs-theme="dark"] .flatpickr-day.prevMonthDay,
+        [data-bs-theme="dark"] .flatpickr-day.nextMonthDay {
+            color: #6c757d !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-months .flatpickr-prev-month,
+        [data-bs-theme="dark"] .flatpickr-months .flatpickr-next-month {
+            fill: #e9ecef !important;
+        }
+
+        [data-bs-theme="dark"] .flatpickr-months .flatpickr-prev-month:hover,
+        [data-bs-theme="dark"] .flatpickr-months .flatpickr-next-month:hover {
+            fill: #25d366 !important;
+        }
+
+        /* Last Sent Badge Styles */
+        .badge.bg-success-subtle {
+            background-color: rgba(37, 211, 102, 0.15) !important;
+        }
+
+        .badge.bg-secondary-subtle {
+            background-color: rgba(108, 117, 125, 0.15) !important;
+        }
+
+        [data-bs-theme="dark"] .badge.bg-success-subtle {
+            background-color: rgba(37, 211, 102, 0.25) !important;
+        }
+
+        [data-bs-theme="dark"] .badge.bg-secondary-subtle {
+            background-color: rgba(108, 117, 125, 0.25) !important;
+        }
+    </style>
+@endpush
+
 @push('scripts')
+    <!-- Flatpickr JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/ar.js"></script>
     <script>
         // ========== SELECTION MANAGER (Singleton Pattern with SessionStorage) ==========
         const SelectionManager = {
@@ -570,13 +701,37 @@
         function performSearch(query) {
             // Show loading state
             contactsBody.innerHTML =
-                '<tr><td colspan="5" class="text-center py-4"><div class="spinner-border spinner-border-sm text-success me-2"></div>جاري البحث...</td></tr>';
+                '<tr><td colspan="6" class="text-center py-4"><div class="spinner-border spinner-border-sm text-success me-2"></div>جاري البحث...</td></tr>';
             noResults.classList.add('d-none');
 
-            // Build URL with search query
+            // Build URL with search query and filters
             const url = new URL(window.location.href);
             url.searchParams.set('q', query);
             url.searchParams.delete('page'); // Reset to page 1 on search
+
+            // Add contact filter parameters
+            const contactFilter = document.getElementById('contactFilter')?.value || '';
+            if (contactFilter) {
+                url.searchParams.set('contact_filter', contactFilter);
+                if (contactFilter === 'range' && window.flatpickrInstance?.selectedDates?.length >= 1) {
+                    const dates = window.flatpickrInstance.selectedDates;
+                    // IMPORTANT: Use local date format, NOT toISOString() which converts to UTC
+                    const formatLocalDate = (date) => {
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                    };
+                    const dateFrom = formatLocalDate(dates[0]);
+                    const dateTo = dates.length >= 2 ? formatLocalDate(dates[1]) : dateFrom;
+                    url.searchParams.set('date_from', dateFrom);
+                    url.searchParams.set('date_to', dateTo);
+                }
+            } else {
+                url.searchParams.delete('contact_filter');
+                url.searchParams.delete('date_from');
+                url.searchParams.delete('date_to');
+            }
 
             fetch(url.toString(), {
                     headers: {
@@ -596,7 +751,7 @@
                 .catch(err => {
                     console.error('Search error:', err);
                     contactsBody.innerHTML =
-                        '<tr><td colspan="5" class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>حدث خطأ أثناء البحث</td></tr>';
+                        '<tr><td colspan="6" class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>حدث خطأ أثناء البحث</td></tr>';
                 });
         }
 
@@ -614,14 +769,19 @@
                     `<small class="d-block mt-1">
                         <i class="bi bi-share-fill text-info me-1" style="font-size: 0.7rem;"></i>
                         ${contact.share_history.map(s => `
-                                            <span class="badge ${s.status === 'accepted' ? 'bg-success' : (s.status === 'pending' ? 'bg-warning text-dark' : 'bg-secondary')}" 
-                                                  style="font-size: 0.65rem;" dir="ltr"
-                                                  title="${s.status === 'accepted' ? 'مقبول' : (s.status === 'pending' ? 'قيد الانتظار' : 'مرفوض')}">
-                                                ${s.shared_with}
-                                            </span>
-                                        `).join('')}
+                                                        <span class="badge ${s.status === 'accepted' ? 'bg-success' : (s.status === 'pending' ? 'bg-warning text-dark' : 'bg-secondary')}" 
+                                                              style="font-size: 0.65rem;" dir="ltr"
+                                                              title="${s.status === 'accepted' ? 'مقبول' : (s.status === 'pending' ? 'قيد الانتظار' : 'مرفوض')}">
+                                                            ${s.shared_with}
+                                                        </span>
+                                                    `).join('')}
                        </small>` :
                     '';
+
+                // Format last_sent_at
+                const lastSentHtml = contact.last_sent_at ?
+                    `<span class="badge bg-success-subtle text-success"><i class="bi bi-check2-circle me-1"></i>${formatDate(contact.last_sent_at)}</span>` :
+                    `<span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-dash-circle me-1"></i>لم يتم التواصل</span>`;
 
                 return `
                 <tr id="contact-row-${contact.id}" data-name="${escapeHtml(contact.name.toLowerCase())}" data-phone="${escapeHtml(contact.phone)}">
@@ -636,7 +796,8 @@
                     <td class="d-none d-md-table-cell">
                         <code class="contact-phone" dir="ltr">${escapeHtml(contact.phone)}</code>
                     </td>
-                    <td class="text-muted small d-none d-lg-table-cell">${formatDate(contact.created_at)}</td>
+                    <td class="d-none d-lg-table-cell">${lastSentHtml}</td>
+                    <td class="text-muted small d-none d-xl-table-cell">${formatDate(contact.created_at)}</td>
                     <td class="text-center">
                         <div class="btn-group btn-group-sm">
                             <button type="button" class="btn btn-outline-primary edit-btn"
@@ -966,6 +1127,51 @@
         // ========== IMPORT FORM - BLOCK UI ==========
         document.getElementById('importForm')?.addEventListener('submit', function() {
             showLoadingOverlay('جاري تحميل الملف...', 'يرجى الانتظار حتى يتم قراءة البيانات');
+        });
+
+        // ========== FLATPICKR & CONTACT FILTER ==========
+        // Initialize Flatpickr date range picker
+        const dateRangePicker = document.getElementById('dateRangePicker');
+        const dateRangeContainer = document.getElementById('dateRangeContainer');
+        const contactFilter = document.getElementById('contactFilter');
+
+        if (dateRangePicker && typeof flatpickr !== 'undefined') {
+            window.flatpickrInstance = flatpickr(dateRangePicker, {
+                mode: 'range',
+                dateFormat: 'Y-m-d',
+                locale: 'ar',
+                maxDate: 'today',
+                onChange: function(selectedDates, dateStr) {
+                    if (selectedDates.length === 2) {
+                        // Both dates selected - trigger search
+                        performSearch(searchInput.value.trim());
+                    }
+                },
+                onReady: function(selectedDates, dateStr, instance) {
+                    // Apply RTL styling fix
+                    instance.calendarContainer.classList.add('flatpickr-rtl');
+                }
+            });
+        }
+
+        // Contact filter change handler
+        contactFilter?.addEventListener('change', function() {
+            const value = this.value;
+
+            if (value === 'range') {
+                // Show date range picker
+                dateRangeContainer.classList.remove('d-none');
+                // Don't search until dates are selected
+            } else {
+                // Hide date range picker
+                dateRangeContainer.classList.add('d-none');
+                // Clear date selection
+                if (window.flatpickrInstance) {
+                    window.flatpickrInstance.clear();
+                }
+                // Trigger search for 'never' or 'all'
+                performSearch(searchInput.value.trim());
+            }
         });
     </script>
 @endpush
