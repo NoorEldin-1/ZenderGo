@@ -196,7 +196,8 @@
 
                         <!-- Quota Status Widget -->
                         <div class="p-3 border-top bg-light">
-                            <div class="quota-widget">
+                            <div class="quota-widget" id="quotaWidget"
+                                data-reset-at="{{ $quotaStatus['window_ends_at'] ?? '' }}">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <div class="d-flex align-items-center gap-2">
                                         <i class="bi bi-speedometer2 text-primary"></i>
@@ -2067,6 +2068,50 @@
 
             showEmojis('popular');
             updateUIState();
+
+            // ========== QUOTA TIMER ==========
+            function startQuotaTimer() {
+                const widget = document.getElementById('quotaWidget');
+                const resetTimeEl = document.getElementById('quotaResetTime');
+                if (!widget || !resetTimeEl) return;
+
+                const resetAtStr = widget.getAttribute('data-reset-at');
+                // If empty or null, it means window is effectively expired or not started
+                if (!resetAtStr) return;
+
+                const resetAt = new Date(resetAtStr).getTime();
+
+                // Avoid running if date is invalid
+                if (isNaN(resetAt)) return;
+
+                const updateTicker = () => {
+                    const now = new Date().getTime();
+                    const distance = resetAt - now;
+
+                    if (distance < 0) {
+                        // Expired
+                        if (typeof timerInterval !== 'undefined') clearInterval(timerInterval);
+                        resetTimeEl.innerHTML = '<i class="bi bi-clock me-1"></i> الكوتا متاحة (لم تبدأ بعد)';
+                        return;
+                    }
+
+                    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                    let timeText = '';
+                    if (hours > 0) timeText += `${hours} ساعة `;
+                    timeText += `${minutes} دقيقة `;
+                    timeText += `و ${seconds} ثانية`;
+
+                    resetTimeEl.innerHTML = `<i class="bi bi-clock me-1"></i> تتجدد بعد: ${timeText}`;
+                };
+
+                updateTicker(); // Run immediately
+                const timerInterval = setInterval(updateTicker, 1000);
+            }
+
+            startQuotaTimer();
         })();
     </script>
 @endpush

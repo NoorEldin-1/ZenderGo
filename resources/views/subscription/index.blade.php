@@ -525,27 +525,36 @@
                 @php
                     $timeRemaining = $subscription->detailedTimeRemaining();
                 @endphp
-                <div class="info-cards" style="grid-template-columns: repeat(3, 1fr);">
+                <div id="paid-timer-container" data-ends-at="{{ $subscription->ends_at->toIso8601String() }}"
+                    data-starts-at="{{ $subscription->starts_at->toIso8601String() }}" class="info-cards"
+                    style="grid-template-columns: repeat(3, 1fr);">
                     <div class="info-card">
                         <div class="icon text-primary">
                             <i class="bi bi-calendar-day"></i>
                         </div>
-                        <div class="value">{{ $timeRemaining['days'] }}</div>
+                        <div class="value" id="paid-timer-days">{{ $timeRemaining['days'] }}</div>
                         <div class="label">يوم</div>
                     </div>
                     <div class="info-card">
                         <div class="icon text-info">
                             <i class="bi bi-clock"></i>
                         </div>
-                        <div class="value">{{ $timeRemaining['hours'] }}</div>
+                        <div class="value" id="paid-timer-hours">{{ $timeRemaining['hours'] }}</div>
                         <div class="label">ساعة</div>
                     </div>
                     <div class="info-card">
                         <div class="icon text-warning">
                             <i class="bi bi-stopwatch"></i>
                         </div>
-                        <div class="value">{{ $timeRemaining['minutes'] }}</div>
+                        <div class="value" id="paid-timer-minutes">{{ $timeRemaining['minutes'] }}</div>
                         <div class="label">دقيقة</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="icon text-danger">
+                            <i class="bi bi-stopwatch-fill"></i>
+                        </div>
+                        <div class="value" id="paid-timer-seconds">{{ $timeRemaining['seconds'] }}</div>
+                        <div class="label">ثانية</div>
                     </div>
                 </div>
                 <div class="text-center mt-2 mb-3">
@@ -568,10 +577,11 @@
                 <div class="progress-section">
                     <div class="progress-label">
                         <span>المدة المتبقية</span>
-                        <span>{{ $percentage }}%</span>
+                        <span id="paid-progress-text">{{ $percentage }}%</span>
                     </div>
                     <div class="progress-bar-custom">
-                        <div class="progress-fill {{ $progressClass }}" style="width: {{ $percentage }}%"></div>
+                        <div id="paid-progress-fill" class="progress-fill {{ $progressClass }}"
+                            style="width: {{ $percentage }}%"></div>
                     </div>
                 </div>
             @else
@@ -754,16 +764,25 @@
                             @php
                                 $trialTimeRemaining = $subscription->detailedTimeRemaining();
                             @endphp
-                            <div class="trial-countdown mb-3">
+                            <div class="trial-countdown mb-3" id="trial-timer-container"
+                                data-ends-at="{{ $subscription->ends_at->toIso8601String() }}">
                                 <div class="d-flex justify-content-center align-items-center gap-3 flex-wrap">
                                     <span class="badge bg-info px-3 py-2">
-                                        <i class="bi bi-calendar-day me-1"></i>{{ $trialTimeRemaining['days'] }} يوم
+                                        <i class="bi bi-calendar-day me-1"></i><span
+                                            id="trial-timer-days">{{ $trialTimeRemaining['days'] }}</span> يوم
                                     </span>
                                     <span class="badge bg-primary px-3 py-2">
-                                        <i class="bi bi-clock me-1"></i>{{ $trialTimeRemaining['hours'] }} ساعة
+                                        <i class="bi bi-clock me-1"></i><span
+                                            id="trial-timer-hours">{{ $trialTimeRemaining['hours'] }}</span> ساعة
                                     </span>
                                     <span class="badge bg-warning text-dark px-3 py-2">
-                                        <i class="bi bi-stopwatch me-1"></i>{{ $trialTimeRemaining['minutes'] }} دقيقة
+                                        <i class="bi bi-stopwatch me-1"></i><span
+                                            id="trial-timer-minutes">{{ $trialTimeRemaining['minutes'] }}</span> دقيقة
+                                    </span>
+                                    <span class="badge bg-danger px-3 py-2">
+                                        <i class="bi bi-stopwatch-fill me-1"></i><span
+                                            id="trial-timer-seconds">{{ $trialTimeRemaining['seconds'] ?? 0 }}</span>
+                                        ثانية
                                     </span>
                                 </div>
                                 <small class="text-muted d-block mt-2">
@@ -1000,6 +1019,116 @@
         @endif
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            /**
+             * Update Timer Logic
+             */
+            function updateTimer(containerId, daysId, hoursId, minutesId, secondsId) {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+
+                const endsAtStr = container.getAttribute('data-ends-at');
+                if (!endsAtStr) return;
+
+                const endsAt = new Date(endsAtStr).getTime();
+                const now = new Date().getTime();
+                const distance = endsAt - now;
+
+                if (distance < 0) {
+                    // Expired - set all to 0
+                    const ids = [daysId, hoursId, minutesId, secondsId];
+                    ids.forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.textContent = "0";
+                    });
+                    return;
+                }
+
+                // Calculate time components
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                // Update DOM
+                const daysEl = document.getElementById(daysId);
+                const hoursEl = document.getElementById(hoursId);
+                const minutesEl = document.getElementById(minutesId);
+                const secondsEl = document.getElementById(secondsId);
+
+                if (daysEl) daysEl.textContent = days;
+                if (hoursEl) hoursEl.textContent = hours;
+                if (minutesEl) minutesEl.textContent = minutes;
+                if (secondsEl) secondsEl.textContent = seconds;
+            }
+
+            /**
+             * Update Progress Bar
+             */
+            function updateProgressBar() {
+                const container = document.getElementById('paid-timer-container');
+                if (!container) return; // Only for paid subscription
+
+                const startsAtStr = container.getAttribute('data-starts-at');
+                const endsAtStr = container.getAttribute('data-ends-at');
+
+                if (!startsAtStr || !endsAtStr) return;
+
+                const startsAt = new Date(startsAtStr).getTime();
+                const endsAt = new Date(endsAtStr).getTime();
+                const now = new Date().getTime();
+
+                const totalDuration = endsAt - startsAt;
+                const timeRemaining = endsAt - now;
+
+                if (totalDuration <= 0) return;
+
+                let percentage = Math.round((timeRemaining / totalDuration) * 100);
+
+                // Cap percentage between 0 and 100
+                if (percentage < 0) percentage = 0;
+                if (percentage > 100) percentage = 100;
+
+                const textEl = document.getElementById('paid-progress-text');
+                const fillEl = document.getElementById('paid-progress-fill');
+
+                if (textEl) textEl.textContent = percentage + '%';
+                if (fillEl) {
+                    fillEl.style.width = percentage + '%';
+
+                    // Update color class dynamically
+                    fillEl.classList.remove('critical', 'low', 'paid');
+                    if (percentage <= 20) {
+                        fillEl.classList.add('critical');
+                    } else if (percentage <= 40) {
+                        fillEl.classList.add('low');
+                    } else {
+                        fillEl.classList.add('paid');
+                    }
+                }
+            }
+
+            // Initial Run
+            updateTimer('paid-timer-container', 'paid-timer-days', 'paid-timer-hours', 'paid-timer-minutes',
+                'paid-timer-seconds');
+            updateProgressBar();
+            updateTimer('trial-timer-container', 'trial-timer-days', 'trial-timer-hours', 'trial-timer-minutes',
+                'trial-timer-seconds');
+
+            // Set Interval (every 1 second)
+            setInterval(function() {
+                updateTimer('paid-timer-container', 'paid-timer-days', 'paid-timer-hours',
+                    'paid-timer-minutes', 'paid-timer-seconds');
+                updateProgressBar();
+                updateTimer('trial-timer-container', 'trial-timer-days', 'trial-timer-hours',
+                    'trial-timer-minutes', 'trial-timer-seconds');
+            }, 1000);
+        });
+    </script>
+@endpush
 
 @push('scripts')
     <script>

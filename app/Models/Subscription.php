@@ -73,10 +73,13 @@ class Subscription extends Model
         $now = now();
         $end = $this->ends_at;
 
-        $totalMinutes = (int) $now->diffInMinutes($end, false);
-        $days = (int) floor($totalMinutes / (60 * 24));
-        $hours = (int) floor(($totalMinutes % (60 * 24)) / 60);
-        $minutes = (int) ($totalMinutes % 60);
+        // Use Carbon's diff methods for better precision
+        $diff = $now->diff($end);
+
+        $days = $diff->days;
+        $hours = $diff->h;
+        $minutes = $diff->i;
+        $seconds = $diff->s;
 
         // Build formatted string
         $parts = [];
@@ -86,16 +89,20 @@ class Subscription extends Model
         if ($hours > 0) {
             $parts[] = "{$hours} ساعة";
         }
-        // Show minutes only when less than 1 day remaining
-        if ($minutes > 0 && $days < 1) {
+        if ($minutes > 0) {
             $parts[] = "{$minutes} دقيقة";
+        }
+        // Only show seconds if less than 1 hour remaining
+        if ($days == 0 && $hours == 0) {
+            $parts[] = "{$seconds} ثانية";
         }
 
         return [
             'days' => $days,
             'hours' => $hours,
             'minutes' => $minutes,
-            'formatted' => implode('، ', $parts) ?: 'أقل من دقيقة'
+            'seconds' => $seconds,
+            'formatted' => implode('، ', $parts) ?: 'الآن'
         ];
     }
 
