@@ -39,7 +39,11 @@ class CampaignController extends Controller
             if ($request->filled('contact_filter')) {
                 $filter = $request->contact_filter;
 
-                if ($filter === 'never') {
+                if ($filter === 'featured') {
+                    $query->where('is_featured', true);
+                } elseif ($filter === 'normal') {
+                    $query->where('is_featured', false);
+                } elseif ($filter === 'never') {
                     // Never contacted - last_sent_at is NULL
                     $query->whereNull('last_sent_at');
                 } elseif ($filter === 'range' && $request->filled(['date_from', 'date_to'])) {

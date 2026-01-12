@@ -38,6 +38,8 @@
                             <select class="form-select form-select-sm" id="contactFilter"
                                 style="width: auto; min-width: 140px;">
                                 <option value="">جميع الجهات</option>
+                                <option value="featured">جهات مميزة ⭐</option>
+                                <option value="normal">جهات عادية</option>
                                 <option value="never">لم يتم التواصل</option>
                                 <option value="range">تم التواصل في فترة</option>
                             </select>
@@ -121,7 +123,8 @@
                             <button type="button" class="btn btn-sm btn-outline-secondary" id="boldBtn" title="عريض">
                                 <i class="bi bi-type-bold"></i>
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="italicBtn" title="مائل">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="italicBtn"
+                                title="مائل">
                                 <i class="bi bi-type-italic"></i>
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-secondary" id="strikeBtn"
@@ -1227,12 +1230,17 @@
                             `<div class="last-sent-badge mt-1"><span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-dash-circle me-1"></i>لم يتم التواصل</span></div>`;
                     }
 
+                    const starIcon = contact.is_featured ?
+                        `<i class="bi bi-star-fill text-warning star-btn fs-5" data-id="${contact.id}" style="cursor: pointer; transition: transform 0.2s;" title="إزالة من المميزة"></i>` :
+                        `<i class="bi bi-star text-muted star-btn fs-5" data-id="${contact.id}" style="cursor: pointer; transition: transform 0.2s;" title="إضافة للمميزة"></i>`;
+
                     return `
                     <label class="contact-item d-block px-3 py-2 border-bottom m-0">
                         <div class="form-check d-flex align-items-center gap-2 m-0">
                             <input type="checkbox" class="form-check-input contact-checkbox mt-0"
                                 value="${contact.id}" 
                                 ${state.selectedContacts.has(String(contact.id)) ? 'checked' : ''}>
+                            ${starIcon}
                             <div class="flex-grow-1 min-w-0">
                                 <div class="fw-medium small text-truncate">${escapeHtml(contact.name)}</div>
                                 <small class="text-muted" dir="ltr">${escapeHtml(contact.phone)}</small>
@@ -1355,6 +1363,74 @@
                 els.prevBtn.disabled = data.current_page === 1;
                 els.nextBtn.disabled = data.current_page === data.last_page;
                 els.pageInfo.textContent = `صفحة ${data.current_page} من ${data.last_page}`;
+            }
+
+            // --- Toggle Featured Logic ---
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('star-btn')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleFeatured(e.target);
+                }
+            });
+
+            function toggleFeatured(btn) {
+                const id = btn.dataset.id;
+                const isFeatured = btn.classList.contains('bi-star-fill');
+
+                // Optimistic UI update
+                if (isFeatured) {
+                    btn.classList.replace('bi-star-fill', 'bi-star');
+                    btn.classList.remove('text-warning');
+                    btn.classList.add('text-muted');
+                    btn.title = 'إضافة للمميزة';
+                } else {
+                    btn.classList.replace('bi-star', 'bi-star-fill');
+                    btn.classList.remove('text-muted');
+                    btn.classList.add('text-warning');
+                    btn.title = 'إزالة من المميزة';
+                }
+
+                // Animate
+                btn.style.transform = 'scale(1.2)';
+                setTimeout(() => btn.style.transform = 'scale(1)', 200);
+
+                fetch(`/contacts/${id}/toggle-featured`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (!data.success) {
+                            // Revert on error
+                            if (isFeatured) {
+                                btn.classList.replace('bi-star', 'bi-star-fill');
+                                btn.classList.add('text-warning');
+                                btn.classList.remove('text-muted');
+                            } else {
+                                btn.classList.replace('bi-star-fill', 'bi-star');
+                                btn.classList.add('text-muted');
+                                btn.classList.remove('text-warning');
+                            }
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        // Revert on error
+                        if (isFeatured) {
+                            btn.classList.replace('bi-star', 'bi-star-fill');
+                            btn.classList.add('text-warning');
+                            btn.classList.remove('text-muted');
+                        } else {
+                            btn.classList.replace('bi-star-fill', 'bi-star');
+                            btn.classList.add('text-muted');
+                            btn.classList.remove('text-warning');
+                        }
+                    });
             }
 
             // --- Event Listeners ---

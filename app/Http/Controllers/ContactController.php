@@ -84,7 +84,11 @@ class ContactController extends Controller
         if ($request->filled('contact_filter')) {
             $filter = $request->contact_filter;
 
-            if ($filter === 'never') {
+            if ($filter === 'featured') {
+                $query->where('is_featured', true);
+            } elseif ($filter === 'normal') {
+                $query->where('is_featured', false);
+            } elseif ($filter === 'never') {
                 // Never contacted - last_sent_at is NULL
                 $query->whereNull('last_sent_at');
             } elseif ($filter === 'range' && $request->filled(['date_from', 'date_to'])) {
@@ -121,17 +125,12 @@ class ContactController extends Controller
             $contact->share_history = $shareHistory->get($contact->id, collect())->toArray();
         }
 
-        // Return JSON for AJAX requests
+        // Return JSON with HTML for AJAX requests
         if ($request->ajax()) {
             return response()->json([
-                'contacts' => $contacts->items(),
-                'pagination' => [
-                    'current_page' => $contacts->currentPage(),
-                    'last_page' => $contacts->lastPage(),
-                    'total' => $contacts->total(),
-                    'first_item' => $contacts->firstItem(),
-                    'last_item' => $contacts->lastItem(),
-                ]
+                'html' => view('contacts.partials.rows', compact('contacts'))->render(),
+                'pagination' => $contacts->links()->toHtml(),
+                'total' => $contacts->total(),
             ]);
         }
 
@@ -724,5 +723,25 @@ class ContactController extends Controller
 
         return redirect()->route('contacts.index')
             ->with('success', "تم حذف {$deleted} جهة اتصال بنجاح!");
+    }
+
+    /**
+     * Toggle the featured status of a contact.
+     */
+    public function toggleFeatured(Request $request, Contact $contact)
+    {
+        // Ensure user owns the contact
+        if ($contact->user_id !== Auth::id()) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح'], 403);
+        }
+
+        $contact->is_featured = !$contact->is_featured;
+        $contact->save();
+
+        return response()->json([
+            'success' => true,
+            'is_featured' => $contact->is_featured,
+            'message' => $contact->is_featured ? 'تم إضافة جهة الاتصال للمميزة' : 'تم إزالة جهة الاتصال من المميزة'
+        ]);
     }
 }

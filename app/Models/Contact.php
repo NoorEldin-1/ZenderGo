@@ -18,6 +18,7 @@ class Contact extends Model
         'phone',
         'store_name',
         'last_sent_at',
+        'is_featured',
     ];
 
     /**
@@ -27,6 +28,7 @@ class Contact extends Model
      */
     protected $casts = [
         'last_sent_at' => 'datetime',
+        'is_featured' => 'boolean',
     ];
 
     /**

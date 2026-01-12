@@ -71,8 +71,9 @@
                             <i class="bi bi-search text-muted"></i>
                         </span>
                         <input type="text" class="form-control border-start-0" id="searchInput"
-                            placeholder="بحث بالاسم أو الرقم..." autocomplete="off">
-                        <button class="btn btn-outline-secondary d-none" type="button" id="clearSearch">
+                            placeholder="بحث بالاسم أو الرقم..." autocomplete="off" value="{{ request('q') }}">
+                        <button class="btn btn-outline-secondary {{ request('q') ? '' : 'd-none' }}" type="button"
+                            id="clearSearch">
                             <i class="bi bi-x"></i>
                         </button>
                     </div>
@@ -80,13 +81,22 @@
                 <!-- Last Contacted Filter -->
                 <div class="d-flex gap-2 align-items-center flex-wrap">
                     <select class="form-select form-select-sm" id="contactFilter" style="width: auto; min-width: 150px;">
-                        <option value="">جميع جهات الاتصال</option>
-                        <option value="never">لم يتم التواصل</option>
-                        <option value="range">تم التواصل في فترة</option>
+                        <option value="" {{ request('contact_filter') == '' ? 'selected' : '' }}>جميع جهات الاتصال
+                        </option>
+                        <option value="featured" {{ request('contact_filter') == 'featured' ? 'selected' : '' }}>جهات مميزة
+                            ⭐</option>
+                        <option value="normal" {{ request('contact_filter') == 'normal' ? 'selected' : '' }}>جهات عادية
+                        </option>
+                        <option value="never" {{ request('contact_filter') == 'never' ? 'selected' : '' }}>لم يتم التواصل
+                        </option>
+                        <option value="range" {{ request('contact_filter') == 'range' ? 'selected' : '' }}>تم التواصل في
+                            فترة</option>
                     </select>
-                    <div id="dateRangeContainer" class="d-none">
+                    <div id="dateRangeContainer" class="{{ request('contact_filter') == 'range' ? '' : 'd-none' }}">
                         <input type="text" class="form-control form-control-sm flatpickr-input" id="dateRangePicker"
-                            placeholder="اختر الفترة..." style="min-width: 200px;" readonly>
+                            placeholder="اختر الفترة..." style="min-width: 200px;" readonly
+                            value="{{ request('date_from') && request('date_to') ? request('date_from') . ' إلى ' . request('date_to') : '' }}"
+                            data-default-from="{{ request('date_from') }}" data-default-to="{{ request('date_to') }}">
                     </div>
                 </div>
                 <!-- Bulk Actions -->
@@ -134,65 +144,7 @@
                             </tr>
                         </thead>
                         <tbody id="contactsBody">
-                            @foreach ($contacts as $contact)
-                                <tr id="contact-row-{{ $contact->id }}" data-name="{{ strtolower($contact->name) }}"
-                                    data-phone="{{ $contact->phone }}">
-                                    <td class="ps-3">
-                                        <input type="checkbox" class="form-check-input contact-checkbox"
-                                            value="{{ $contact->id }}">
-                                    </td>
-                                    <td>
-                                        <div class="fw-semibold contact-name">{{ $contact->name }}</div>
-                                        @if (!empty($contact->share_history))
-                                            <small class="d-block mt-1">
-                                                <i class="bi bi-share-fill text-info me-1" style="font-size: 0.7rem;"></i>
-                                                @foreach ($contact->share_history as $share)
-                                                    <span
-                                                        class="badge {{ $share->status === 'accepted' ? 'bg-success' : ($share->status === 'pending' ? 'bg-warning text-dark' : 'bg-secondary') }}"
-                                                        style="font-size: 0.65rem;" dir="ltr"
-                                                        title="{{ $share->status === 'accepted' ? 'مقبول' : ($share->status === 'pending' ? 'قيد الانتظار' : 'مرفوض') }}">
-                                                        {{ $share->shared_with }}
-                                                    </span>
-                                                @endforeach
-                                            </small>
-                                        @endif
-                                        <small class="text-muted d-md-none contact-phone"
-                                            dir="ltr">{{ $contact->phone }}</small>
-                                    </td>
-                                    <td class="d-none d-md-table-cell">
-                                        <code class="contact-phone" dir="ltr">{{ $contact->phone }}</code>
-                                    </td>
-                                    <td class="d-none d-lg-table-cell">
-                                        @if ($contact->last_sent_at)
-                                            <span class="badge bg-success-subtle text-success">
-                                                <i
-                                                    class="bi bi-check2-circle me-1"></i>{{ $contact->last_sent_at->diffForHumans() }}
-                                            </span>
-                                        @else
-                                            <span class="badge bg-secondary-subtle text-secondary">
-                                                <i class="bi bi-dash-circle me-1"></i>لم يتم التواصل
-                                            </span>
-                                        @endif
-                                    </td>
-                                    <td class="text-muted small d-none d-xl-table-cell">
-                                        {{ $contact->created_at->diffForHumans() }}
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="btn-group btn-group-sm">
-                                            <button type="button" class="btn btn-outline-primary edit-btn"
-                                                data-id="{{ $contact->id }}" data-name="{{ $contact->name }}"
-                                                data-phone="{{ $contact->phone }}" title="تعديل">
-                                                <i class="bi bi-pencil"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-outline-danger delete-btn"
-                                                data-id="{{ $contact->id }}" data-name="{{ $contact->name }}"
-                                                title="حذف">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
+                            @include('contacts.partials.rows')
                         </tbody>
                     </table>
                 </div>
@@ -678,6 +630,76 @@
         }
 
         // ========== SEARCH (Server-Side for All Pages) ==========
+
+        // Toggle Featured Logic
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('star-btn')) {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleFeatured(e.target);
+            }
+        });
+
+        function toggleFeatured(btn) {
+            const id = btn.dataset.id;
+            const isFeatured = btn.classList.contains('bi-star-fill');
+
+            // Optimistic UI update
+            if (isFeatured) {
+                btn.classList.replace('bi-star-fill', 'bi-star');
+                btn.classList.remove('text-warning');
+                btn.classList.add('text-muted');
+                btn.title = 'إضافة للمميزة';
+            } else {
+                btn.classList.replace('bi-star', 'bi-star-fill');
+                btn.classList.remove('text-muted');
+                btn.classList.add('text-warning');
+                btn.title = 'إزالة من المميزة';
+            }
+
+            // Animate
+            btn.style.transform = 'scale(1.2)';
+            setTimeout(() => btn.style.transform = 'scale(1)', 200);
+
+            fetch(`/contacts/${id}/toggle-featured`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success) {
+                        // Revert on error
+                        if (isFeatured) {
+                            btn.classList.replace('bi-star', 'bi-star-fill');
+                            btn.classList.add('text-warning');
+                            btn.classList.remove('text-muted');
+                        } else {
+                            btn.classList.replace('bi-star-fill', 'bi-star');
+                            btn.classList.add('text-muted');
+                            btn.classList.remove('text-warning');
+                        }
+                        // alert(data.message || 'Error updating status');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    // Revert on error
+                    if (isFeatured) {
+                        btn.classList.replace('bi-star', 'bi-star-fill');
+                        btn.classList.add('text-warning');
+                        btn.classList.remove('text-muted');
+                    } else {
+                        btn.classList.replace('bi-star-fill', 'bi-star');
+                        btn.classList.add('text-muted');
+                        btn.classList.remove('text-warning');
+                    }
+                });
+        }
+
         let searchDebounceTimer = null;
 
         searchInput.addEventListener('input', function() {
@@ -741,146 +763,53 @@
                 })
                 .then(r => r.json())
                 .then(data => {
-                    renderContacts(data.contacts);
-                    renderPagination(data.pagination, query);
+                    // Update URL
+                    history.pushState(null, '', url.toString());
+
+                    if (data.html) {
+                        contactsBody.innerHTML = data.html;
+                        noResults.classList.add('d-none');
+                    } else {
+                        contactsBody.innerHTML = '';
+                        noResults.classList.remove('d-none');
+                    }
+
+                    if (data.pagination) {
+                        // Wrap pagination HTML in the expected container structure
+                        // The server returns just the nav/ul/links, we might need to preserve the wrapper 
+                        // effectively just replacing the content of #pagination
+                        // Actually, let's see what links() returns. It usually returns the whole <nav>.
+                        // Our current view expects: 
+                        // <div ... id="pagination"> <div class="text-muted...">...</div> <nav>...</nav> </div>
+                        // We can just replace the innerHTML of #pagination div with the new pagination if we want
+                        // But wait, the standard links() output is just the <nav>. 
+                        // Our current view has custom structure. 
+                        // Let's just put the data.pagination into the container, but we might lose the "Show X-Y of Z" text
+                        // unless we rebuild it or the server sends it.
+                        // For simplicity and standard behavior, let's dump the server pagination.
+                        // But the user likes the "Show X-Y of Z".
+                        // The server data.total can be used to update the badge.
+                        // Let's just update the pagination container with the server HTML.
+                        pagination.innerHTML = data.pagination;
+
+                        // Fix bootstrap pagination classes if needed (Laravel usually does this well)
+                    } else {
+                        pagination.innerHTML = '';
+                    }
+
                     updateBulkActions();
+                    attachContactEventListeners();
 
                     // Update total badge
-                    document.getElementById('totalBadge').textContent = data.pagination.total;
+                    if (data.total !== undefined) {
+                        document.getElementById('totalBadge').textContent = data.total;
+                    }
                 })
                 .catch(err => {
                     console.error('Search error:', err);
                     contactsBody.innerHTML =
                         '<tr><td colspan="6" class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>حدث خطأ أثناء البحث</td></tr>';
                 });
-        }
-
-        function renderContacts(contacts) {
-            if (contacts.length === 0) {
-                contactsBody.innerHTML = '';
-                noResults.classList.remove('d-none');
-                return;
-            }
-
-            noResults.classList.add('d-none');
-
-            contactsBody.innerHTML = contacts.map(contact => {
-                const shareHistoryHtml = contact.share_history && contact.share_history.length > 0 ?
-                    `<small class="d-block mt-1">
-                        <i class="bi bi-share-fill text-info me-1" style="font-size: 0.7rem;"></i>
-                        ${contact.share_history.map(s => `
-                                                        <span class="badge ${s.status === 'accepted' ? 'bg-success' : (s.status === 'pending' ? 'bg-warning text-dark' : 'bg-secondary')}" 
-                                                              style="font-size: 0.65rem;" dir="ltr"
-                                                              title="${s.status === 'accepted' ? 'مقبول' : (s.status === 'pending' ? 'قيد الانتظار' : 'مرفوض')}">
-                                                            ${s.shared_with}
-                                                        </span>
-                                                    `).join('')}
-                       </small>` :
-                    '';
-
-                // Format last_sent_at
-                const lastSentHtml = contact.last_sent_at ?
-                    `<span class="badge bg-success-subtle text-success"><i class="bi bi-check2-circle me-1"></i>${formatDate(contact.last_sent_at)}</span>` :
-                    `<span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-dash-circle me-1"></i>لم يتم التواصل</span>`;
-
-                return `
-                <tr id="contact-row-${contact.id}" data-name="${escapeHtml(contact.name.toLowerCase())}" data-phone="${escapeHtml(contact.phone)}">
-                    <td class="ps-3">
-                        <input type="checkbox" class="form-check-input contact-checkbox" value="${contact.id}"
-                            ${SelectionManager.has(String(contact.id)) ? 'checked' : ''}>
-                    </td>
-                    <td>
-                        <div class="fw-semibold contact-name">${escapeHtml(contact.name)}</div>
-                        ${shareHistoryHtml}
-                    </td>
-                    <td class="d-none d-md-table-cell">
-                        <code class="contact-phone" dir="ltr">${escapeHtml(contact.phone)}</code>
-                    </td>
-                    <td class="d-none d-lg-table-cell">${lastSentHtml}</td>
-                    <td class="text-muted small d-none d-xl-table-cell">${formatDate(contact.created_at)}</td>
-                    <td class="text-center">
-                        <div class="btn-group btn-group-sm">
-                            <button type="button" class="btn btn-outline-primary edit-btn"
-                                data-id="${contact.id}" data-name="${escapeHtml(contact.name)}" data-phone="${escapeHtml(contact.phone)}" title="تعديل">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-danger delete-btn"
-                                data-id="${contact.id}" data-name="${escapeHtml(contact.name)}" title="حذف">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `
-            }).join('');
-
-            // Re-attach event listeners
-            attachContactEventListeners();
-        }
-
-        function renderPagination(paginationData, query) {
-            if (!pagination) return;
-
-            const {
-                current_page,
-                last_page,
-                total,
-                first_item,
-                last_item
-            } = paginationData;
-
-            if (last_page <= 1) {
-                pagination.innerHTML = '';
-                return;
-            }
-
-            // Build base URL with search query if present
-            const baseUrl = new URL(window.location.pathname, window.location.origin);
-            if (query) baseUrl.searchParams.set('q', query);
-
-            let paginationHtml = '<nav><ul class="pagination pagination-sm justify-content-center mb-0">';
-
-            // Previous button
-            if (current_page > 1) {
-                const prevUrl = new URL(baseUrl);
-                prevUrl.searchParams.set('page', current_page - 1);
-                paginationHtml += `<li class="page-item"><a class="page-link" href="${prevUrl.toString()}">السابق</a></li>`;
-            } else {
-                paginationHtml += '<li class="page-item disabled"><span class="page-link">السابق</span></li>';
-            }
-
-            // Page numbers (show max 5 pages)
-            let startPage = Math.max(1, current_page - 2);
-            let endPage = Math.min(last_page, startPage + 4);
-            if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
-
-            for (let i = startPage; i <= endPage; i++) {
-                const pageUrl = new URL(baseUrl);
-                pageUrl.searchParams.set('page', i);
-                if (i === current_page) {
-                    paginationHtml += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
-                } else {
-                    paginationHtml +=
-                        `<li class="page-item"><a class="page-link" href="${pageUrl.toString()}">${i}</a></li>`;
-                }
-            }
-
-            // Next button
-            if (current_page < last_page) {
-                const nextUrl = new URL(baseUrl);
-                nextUrl.searchParams.set('page', current_page + 1);
-                paginationHtml += `<li class="page-item"><a class="page-link" href="${nextUrl.toString()}">التالي</a></li>`;
-            } else {
-                paginationHtml += '<li class="page-item disabled"><span class="page-link">التالي</span></li>';
-            }
-
-            paginationHtml += '</ul></nav>';
-
-            // Add info text
-            paginationHtml +=
-                `<div class="text-center text-muted small mt-2">عرض ${first_item || 0}-${last_item || 0} من ${total} جهة اتصال</div>`;
-
-            pagination.innerHTML = paginationHtml;
         }
 
         function escapeHtml(str) {
@@ -890,21 +819,8 @@
             return div.innerHTML;
         }
 
-        function formatDate(dateStr) {
-            if (!dateStr) return '';
-            const date = new Date(dateStr);
-            const now = new Date();
-            const diffMs = now - date;
-            const diffMins = Math.floor(diffMs / 60000);
-            const diffHours = Math.floor(diffMs / 3600000);
-            const diffDays = Math.floor(diffMs / 86400000);
-
-            if (diffMins < 1) return 'الآن';
-            if (diffMins < 60) return `منذ ${diffMins} دقيقة`;
-            if (diffHours < 24) return `منذ ${diffHours} ساعة`;
-            if (diffDays < 7) return `منذ ${diffDays} يوم`;
-            return date.toLocaleDateString('ar-EG');
-        }
+        // Removed manual renderContacts and renderPagination - using server-side HTML now
+        // Removed formatDate - handled server-side
 
         function attachContactEventListeners() {
             // Re-attach checkbox listeners
@@ -1136,11 +1052,16 @@
         const contactFilter = document.getElementById('contactFilter');
 
         if (dateRangePicker && typeof flatpickr !== 'undefined') {
+            const defaultDate = dateRangePicker.dataset.defaultFrom && dateRangePicker.dataset.defaultTo ? [dateRangePicker
+                .dataset.defaultFrom, dateRangePicker.dataset.defaultTo
+            ] : null;
+
             window.flatpickrInstance = flatpickr(dateRangePicker, {
                 mode: 'range',
                 dateFormat: 'Y-m-d',
                 locale: 'ar',
                 maxDate: 'today',
+                defaultDate: defaultDate,
                 onChange: function(selectedDates, dateStr) {
                     if (selectedDates.length === 2) {
                         // Both dates selected - trigger search
