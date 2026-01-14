@@ -7,6 +7,9 @@
         <a href="{{ route('contacts.index') }}" class="btn btn-outline-secondary btn-sm mb-3">
             <i class="bi bi-arrow-right me-1"></i>العودة للقائمة
         </a>
+        <a href="{{ route('contacts.remap') }}" class="btn btn-outline-primary btn-sm mb-3 ms-2">
+            <i class="bi bi-gear me-1"></i>تعديل الأعمدة
+        </a>
         <h2 class="fw-bold mb-1">
             <i class="bi bi-file-earmark-spreadsheet text-success me-2"></i>معاينة الاستيراد
         </h2>

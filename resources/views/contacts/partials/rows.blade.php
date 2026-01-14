@@ -32,7 +32,7 @@
         <td class="d-none d-lg-table-cell">
             @if ($contact->last_sent_at)
                 <span class="badge bg-success-subtle text-success">
-                    <i class="bi bi-check2-circle me-1"></i>{{ $contact->last_sent_at->diffForHumans() }}
+                    <i class="bi bi-check2-circle me-1"></i>{{ $contact->last_sent_at->locale('ar')->diffForHumans() }}
                 </span>
             @else
                 <span class="badge bg-secondary-subtle text-secondary">
@@ -41,7 +41,7 @@
             @endif
         </td>
         <td class="text-muted small d-none d-xl-table-cell">
-            {{ $contact->created_at->diffForHumans() }}
+            {{ $contact->created_at->locale('ar')->diffForHumans() }}
         </td>
         <td class="text-center">
             <div class="btn-group btn-group-sm">

@@ -80,6 +80,8 @@ Route::middleware('auth')->group(function () {
         Route::delete('/contacts/bulk-delete', [ContactController::class, 'bulkDelete'])->middleware('rate.heavy:bulk_delete')->name('contacts.bulk-delete');
         Route::post('/contacts/preview', [ContactController::class, 'previewImport'])->middleware('rate.heavy:import')->name('contacts.preview');
         Route::post('/contacts/confirm-import', [ContactController::class, 'confirmImport'])->middleware('rate.heavy:import')->name('contacts.confirm-import');
+        Route::post('/contacts/process-mapping', [ContactController::class, 'processMapping'])->name('contacts.process-mapping');
+        Route::get('/contacts/remap', [ContactController::class, 'remap'])->name('contacts.remap');
         Route::post('/contacts/{contact}/toggle-featured', [ContactController::class, 'toggleFeatured'])->name('contacts.toggle-featured');
         Route::resource('contacts', ContactController::class)->except(['show', 'edit']);
 

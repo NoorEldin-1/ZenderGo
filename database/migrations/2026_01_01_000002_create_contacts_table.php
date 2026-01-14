@@ -15,6 +15,9 @@ return new class extends Migration {
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('name');
             $table->string('phone');
+            $table->string('store_name')->nullable();
+            $table->timestamp('last_sent_at')->nullable()->index();
+            $table->boolean('is_featured')->default(false)->index();
             $table->timestamps();
 
             // Prevent duplicate contacts per user

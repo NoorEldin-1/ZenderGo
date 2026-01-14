@@ -75,8 +75,8 @@ class ContactController extends Controller
         if ($request->filled('q')) {
             $search = $request->q;
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%");
+                $q->where('contacts.name', 'like', "%{$search}%")
+                    ->orWhere('contacts.phone', 'like', "%{$search}%");
             });
         }
 
@@ -85,25 +85,25 @@ class ContactController extends Controller
             $filter = $request->contact_filter;
 
             if ($filter === 'featured') {
-                $query->where('is_featured', true);
+                $query->where('contacts.is_featured', true);
             } elseif ($filter === 'normal') {
-                $query->where('is_featured', false);
+                $query->where('contacts.is_featured', false);
             } elseif ($filter === 'never') {
                 // Never contacted - last_sent_at is NULL
-                $query->whereNull('last_sent_at');
+                $query->whereNull('contacts.last_sent_at');
             } elseif ($filter === 'range' && $request->filled(['date_from', 'date_to'])) {
                 // Contacted within date range
                 try {
                     $dateFrom = Carbon::parse($request->date_from)->startOfDay();
                     $dateTo = Carbon::parse($request->date_to)->endOfDay();
-                    $query->whereBetween('last_sent_at', [$dateFrom, $dateTo]);
+                    $query->whereBetween('contacts.last_sent_at', [$dateFrom, $dateTo]);
                 } catch (\Exception $e) {
                     // Invalid date format - ignore filter
                 }
             }
         }
 
-        $contacts = $query->latest()->paginate(20)->withQueryString();
+        $contacts = $query->latest('contacts.created_at')->paginate(20)->withQueryString();
 
         // Get share history for displayed contacts
         $contactIds = $contacts->pluck('id')->toArray();
@@ -189,8 +189,9 @@ class ContactController extends Controller
     }
 
     /**
-     * Preview import - validate file and show report.
-     * Optimized for memory efficiency with large files.
+     * Preview import - First step: Upload and Detect.
+     * If columns are found, shows preview directly (legacy behavior).
+     * If not found, redirects to mapping page.
      */
     public function previewImport(Request $request)
     {
@@ -198,14 +199,12 @@ class ContactController extends Controller
             'file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
         ]);
 
-        // Set memory limit for import operations (prevents runaway memory usage)
         ini_set('memory_limit', '256M');
 
         try {
             $file = $request->file('file');
             $extension = strtolower($file->getClientOriginalExtension());
 
-            // Use appropriate reader based on file type for better performance
             $readerType = match ($extension) {
                 'xlsx' => \PhpOffice\PhpSpreadsheet\IOFactory::READER_XLSX,
                 'xls' => \PhpOffice\PhpSpreadsheet\IOFactory::READER_XLS,
@@ -214,15 +213,11 @@ class ContactController extends Controller
             };
 
             $reader = IOFactory::createReader($readerType);
-
-            // Optimization: Read data only, skip formatting (50% memory savings)
             $reader->setReadDataOnly(true);
-
             $spreadsheet = $reader->load($file->getPathname());
             $worksheet = $spreadsheet->getActiveSheet();
             $rows = $worksheet->toArray();
 
-            // Free memory immediately
             $spreadsheet->disconnectWorksheets();
             unset($spreadsheet);
 
@@ -230,134 +225,218 @@ class ContactController extends Controller
                 return back()->withErrors(['file' => 'الملف فارغ أو لا يحتوي على بيانات']);
             }
 
-            // Get headers (first row) - normalize to lowercase and trim
+            // Get headers
             $headers = array_map(function ($h) {
-                return strtolower(trim(str_replace('_', '', $h ?? '')));
+                return trim($h ?? '');
             }, $rows[0]);
 
-            // Find column indexes - support both new and legacy column names
-            // New format: Store_Name, Cust_FullName, Cust_Mobile
-            // Legacy format: name, phone
-            $storeNameIndex = $this->findColumnIndex($headers, ['storename', 'store_name', 'store']);
-            $nameIndex = $this->findColumnIndex($headers, ['custfullname', 'cust_fullname', 'fullname', 'name', 'customername', 'customer']);
-            $phoneIndex = $this->findColumnIndex($headers, ['custmobile', 'cust_mobile', 'mobile', 'phone', 'telephone', 'tel']);
+            // Try to auto-detect columns
+            $storeNameIndex = $this->findColumnIndex($headers, ['storename', 'store_name', 'store', 'الفرع', 'اسم الفرع']);
+            $nameIndex = $this->findColumnIndex($headers, ['custfullname', 'cust_fullname', 'fullname', 'name', 'customername', 'customer', 'الاسم', 'اسم العميل', 'لعميل']);
+            $phoneIndex = $this->findColumnIndex($headers, ['custmobile', 'cust_mobile', 'mobile', 'phone', 'telephone', 'tel', 'p_h_o_n_e', 'الهاتف', 'الموبايل', 'رقم الهاتف']);
 
-            if ($nameIndex === false || $phoneIndex === false) {
-                return back()->withErrors(['file' => 'الملف يجب أن يحتوي على أعمدة: Cust_FullName (أو name) و Cust_Mobile (أو phone)']);
-            }
-
-            // Optimization: Use flip() for O(1) lookup instead of in_array() O(n)
-            $existingPhones = Auth::user()->contacts()->pluck('phone')->flip()->toArray();
-
-            // Track phones in file for duplicate detection (also using flip for O(1))
-            $phonesInFile = [];
-
-            // Process rows
-            $preview = [
+            // Cache raw data for either flow
+            $rawCacheKey = 'raw_import_' . Auth::id() . '_' . session()->getId();
+            Cache::put($rawCacheKey, [
                 'filename' => $file->getClientOriginalName(),
-                'has_store_name' => $storeNameIndex !== false,
-                'rows' => [],
-                'summary' => [
-                    'total' => 0,
-                    'valid' => 0,
-                    'errors' => 0,
-                    'duplicates' => 0,
-                ]
-            ];
+                'headers' => $headers,
+                'rows' => $rows,
+            ], now()->addMinutes(30));
 
-            $rowCount = count($rows);
-            for ($i = 1; $i < $rowCount; $i++) {
-                $row = $rows[$i];
-                $storeName = ($storeNameIndex !== false && isset($row[$storeNameIndex])) ? trim($row[$storeNameIndex]) : '';
-                $name = isset($row[$nameIndex]) ? trim($row[$nameIndex]) : '';
-                $phone = isset($row[$phoneIndex]) ? trim($row[$phoneIndex]) : '';
-
-                // Normalize phone number (add leading zero if missing)
-                if (!empty($phone)) {
-                    $phone = $this->normalizePhone($phone);
-                }
-
-                // Skip completely empty rows
-                if (empty($name) && empty($phone)) {
-                    continue;
-                }
-
-                $preview['summary']['total']++;
-
-                $errors = [];
-                $status = 'valid';
-
-                // Validate name
-                if (empty($name)) {
-                    $errors[] = 'الاسم مطلوب';
-                } elseif (strlen($name) > 255) {
-                    $errors[] = 'الاسم طويل جداً (أقصى 255 حرف)';
-                }
-
-                // Validate phone
-                if (empty($phone)) {
-                    $errors[] = 'رقم الهاتف مطلوب';
-                } elseif (strlen($phone) < 10) {
-                    $errors[] = 'رقم الهاتف قصير جداً (أقل من 10 أرقام)';
-                } elseif (strlen($phone) > 20) {
-                    $errors[] = 'رقم الهاتف طويل جداً (أكثر من 20 رقم)';
-                }
-
-                // Check for duplicate in file (O(1) instead of O(n))
-                if (!empty($phone) && isset($phonesInFile[$phone])) {
-                    $errors[] = 'رقم مكرر في الملف';
-                    $status = 'duplicate';
-                }
-
-                // Check for duplicate in database (O(1) instead of O(n))
-                if (!empty($phone) && isset($existingPhones[$phone])) {
-                    $errors[] = 'الرقم موجود مسبقاً في جهات الاتصال';
-                    $status = 'duplicate';
-                }
-
-                // Set status based on errors
-                if (!empty($errors) && $status !== 'duplicate') {
-                    $status = 'error';
-                }
-
-                // Add to phones in file for duplicate tracking (using key for O(1))
-                if (!empty($phone)) {
-                    $phonesInFile[$phone] = true;
-                }
-
-                // Update summary
-                if ($status === 'valid') {
-                    $preview['summary']['valid']++;
-                } elseif ($status === 'error') {
-                    $preview['summary']['errors']++;
-                } else {
-                    $preview['summary']['duplicates']++;
-                }
-
-                $preview['rows'][] = [
-                    'row_number' => $i + 1,
-                    'store_name' => $storeName,
-                    'name' => $name,
-                    'phone' => $phone,
-                    'status' => $status,
-                    'errors' => $errors,
-                ];
+            // If we are confident (found Name AND Phone), proceed directly to preview
+            if ($nameIndex !== false && $phoneIndex !== false) {
+                return $this->processImportData($rows, [
+                    'name_index' => $nameIndex,
+                    'phone_index' => $phoneIndex,
+                    'store_index' => $storeNameIndex,
+                ], $file->getClientOriginalName());
             }
 
-            // Store in cache instead of session (expires in 30 minutes)
-            Cache::put($this->getImportCacheKey(), $preview, now()->addMinutes(30));
-
-            // Get contact limit data
-            $user = Auth::user();
-            $contactLimit = SystemSetting::getContactLimit();
-            $contactCount = $user->contact_count;
-            $remainingSlots = $user->remaining_contact_slots;
-
-            return view('contacts.preview', compact('preview', 'contactLimit', 'contactCount', 'remainingSlots'));
+            // Otherwise, go to mapping page
+            return view('contacts.map_columns', [
+                'headers' => $headers,
+                'filename' => $file->getClientOriginalName(),
+                'suggested_name' => $nameIndex !== false ? $nameIndex : '',
+                'suggested_phone' => $phoneIndex !== false ? $phoneIndex : '',
+                'suggested_store' => $storeNameIndex !== false ? $storeNameIndex : '',
+            ]);
 
         } catch (\Exception $e) {
             return back()->withErrors(['file' => 'خطأ في قراءة الملف: ' . $e->getMessage()]);
         }
+    }
+
+    /**
+     * Step 2: Process Mapping
+     * Takes user mapping and generates the preview.
+     */
+    /**
+     * Step 2: Process Mapping
+     * Takes user mapping and generates the preview.
+     */
+    public function processMapping(Request $request)
+    {
+        $request->validate([
+            'name_column' => 'required',
+            'phone_column' => 'required',
+        ]);
+
+        $rawCacheKey = 'raw_import_' . Auth::id() . '_' . session()->getId();
+        $rawData = Cache::get($rawCacheKey);
+
+        if (!$rawData) {
+            return redirect()->route('contacts.index')->withErrors(['file' => 'انتهت صلاحية الجلسة. يرجى رفع الملف مرة أخرى.']);
+        }
+
+        $headers = $rawData['headers'];
+
+        // Helper to find index by name (or "Column X" fallback)
+        $findIndex = function ($value) use ($headers) {
+            // Try exact match with header
+            $idx = array_search($value, $headers);
+            if ($idx !== false)
+                return $idx;
+
+            // Try "Column X" format ("عمود 1", "عمود 2" etc)
+            if (preg_match('/^عمود (\d+)$/', $value, $matches)) {
+                $colNum = (int) $matches[1];
+                if ($colNum > 0 && $colNum <= count($headers)) {
+                    return $colNum - 1;
+                }
+            }
+
+            return false;
+        };
+
+        $nameIndex = $findIndex($request->name_column);
+        $phoneIndex = $findIndex($request->phone_column);
+        $storeIndex = $request->filled('store_column') ? $findIndex($request->store_column) : false;
+
+        if ($nameIndex === false) {
+            return back()->withErrors(['name_column' => 'العمود غير موجود في الملف'])->withInput();
+        }
+        if ($phoneIndex === false) {
+            return back()->withErrors(['phone_column' => 'العمود غير موجود في الملف'])->withInput();
+        }
+
+        $mapping = [
+            'name_index' => $nameIndex,
+            'phone_index' => $phoneIndex,
+            'store_index' => $storeIndex,
+        ];
+
+        return $this->processImportData($rawData['rows'], $mapping, $rawData['filename']);
+    }
+
+    /**
+     * Core logic to process rows into preview data
+     */
+    private function processImportData(array $rows, array $mapping, string $filename)
+    {
+        $nameIndex = $mapping['name_index'];
+        $phoneIndex = $mapping['phone_index'];
+        $storeNameIndex = $mapping['store_index'];
+
+        // Optimization: Use flip() for O(1) lookup
+        $existingPhones = Auth::user()->contacts()->pluck('phone')->flip()->toArray();
+        $phonesInFile = [];
+
+        $preview = [
+            'filename' => $filename,
+            'has_store_name' => $storeNameIndex !== false,
+            'rows' => [],
+            'summary' => [
+                'total' => 0,
+                'valid' => 0,
+                'errors' => 0,
+                'duplicates' => 0,
+            ]
+        ];
+
+        $rowCount = count($rows);
+        for ($i = 1; $i < $rowCount; $i++) {
+            $row = $rows[$i];
+            $storeName = ($storeNameIndex !== false && isset($row[$storeNameIndex])) ? trim($row[$storeNameIndex]) : '';
+            $name = isset($row[$nameIndex]) ? trim($row[$nameIndex]) : '';
+            $phone = isset($row[$phoneIndex]) ? trim($row[$phoneIndex]) : '';
+
+            // Normalize phone number
+            if (!empty($phone)) {
+                $phone = $this->normalizePhone($phone);
+            }
+
+            // Skip completely empty rows
+            if (empty($name) && empty($phone)) {
+                continue;
+            }
+
+            $preview['summary']['total']++;
+
+            $errors = [];
+            $status = 'valid';
+
+            // Validate name
+            if (empty($name)) {
+                $errors[] = 'الاسم مطلوب';
+            } elseif (strlen($name) > 255) {
+                $errors[] = 'الاسم طويل جداً (أقصى 255 حرف)';
+            }
+
+            // Validate phone
+            if (empty($phone)) {
+                $errors[] = 'رقم الهاتف مطلوب';
+            } elseif (strlen($phone) < 10) {
+                $errors[] = 'رقم الهاتف قصير جداً ({$phone})';
+            } elseif (strlen($phone) > 20) {
+                $errors[] = 'رقم الهاتف طويل جداً';
+            }
+
+            // Check for duplicate in file
+            if (!empty($phone) && isset($phonesInFile[$phone])) {
+                $errors[] = 'رقم مكرر في الملف';
+                $status = 'duplicate';
+            }
+
+            // Check for duplicate in database
+            if (!empty($phone) && isset($existingPhones[$phone])) {
+                $errors[] = 'الرقم موجود مسبقاً';
+                $status = 'duplicate';
+            }
+
+            if (!empty($errors) && $status !== 'duplicate') {
+                $status = 'error';
+            }
+
+            if (!empty($phone)) {
+                $phonesInFile[$phone] = true;
+            }
+
+            if ($status === 'valid') {
+                $preview['summary']['valid']++;
+            } elseif ($status === 'error') {
+                $preview['summary']['errors']++;
+            } else {
+                $preview['summary']['duplicates']++;
+            }
+
+            $preview['rows'][] = [
+                'row_number' => $i + 1,
+                'store_name' => $storeName,
+                'name' => $name,
+                'phone' => $phone,
+                'status' => $status,
+                'errors' => $errors,
+            ];
+        }
+
+        Cache::put($this->getImportCacheKey(), $preview, now()->addMinutes(30));
+
+        $user = Auth::user();
+        $contactLimit = SystemSetting::getContactLimit();
+        $contactCount = $user->contact_count;
+        $remainingSlots = $user->remaining_contact_slots;
+
+        return view('contacts.preview', compact('preview', 'contactLimit', 'contactCount', 'remainingSlots'));
     }
 
 
@@ -454,6 +533,33 @@ class ContactController extends Controller
         $name = preg_replace('/\d+$/', '', $name);
 
         return $name;
+    }
+
+    /**
+     * Show the mapping screen again using cached raw data.
+     */
+    public function remap()
+    {
+        $rawCacheKey = 'raw_import_' . Auth::id() . '_' . session()->getId();
+        $rawData = Cache::get($rawCacheKey);
+
+        if (!$rawData) {
+            return redirect()->route('contacts.index')->withErrors(['file' => 'انتهت صلاحية الجلسة. يرجى رفع الملف مرة أخرى.']);
+        }
+
+        // Try to auto-detect columns again to provide suggestions
+        $headers = $rawData['headers'];
+        $storeNameIndex = $this->findColumnIndex($headers, ['storename', 'store_name', 'store', 'الفرع', 'اسم الفرع']);
+        $nameIndex = $this->findColumnIndex($headers, ['custfullname', 'cust_fullname', 'fullname', 'name', 'customername', 'customer', 'الاسم', 'اسم العميل', 'لعميل']);
+        $phoneIndex = $this->findColumnIndex($headers, ['custmobile', 'cust_mobile', 'mobile', 'phone', 'telephone', 'tel', 'p_h_o_n_e', 'الهاتف', 'الموبايل', 'رقم الهاتف']);
+
+        return view('contacts.map_columns', [
+            'headers' => $headers,
+            'filename' => $rawData['filename'],
+            'suggested_name' => $nameIndex !== false ? $nameIndex : '',
+            'suggested_phone' => $phoneIndex !== false ? $phoneIndex : '',
+            'suggested_store' => $storeNameIndex !== false ? $storeNameIndex : '',
+        ]);
     }
 
     /**
@@ -645,10 +751,21 @@ class ContactController extends Controller
     {
         // Ensure user owns the contact
         if ($contact->user_id !== Auth::id()) {
+            if (request()->ajax()) {
+                return response()->json(['success' => false, 'message' => 'غير مصرح'], 403);
+            }
             abort(403);
         }
 
         $contact->delete();
+
+        if (request()->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'تم حذف جهة الاتصال بنجاح',
+                'id' => $contact->id
+            ]);
+        }
 
         return redirect()->route('contacts.index')->with('success', 'تم حذف جهة الاتصال بنجاح!');
     }
@@ -718,7 +835,7 @@ class ContactController extends Controller
 
         // Delete only contacts owned by the authenticated user
         $deleted = Auth::user()->contacts()
-            ->whereIn('id', $ids)
+            ->whereIn('contacts.id', $ids)
             ->delete();
 
         return redirect()->route('contacts.index')

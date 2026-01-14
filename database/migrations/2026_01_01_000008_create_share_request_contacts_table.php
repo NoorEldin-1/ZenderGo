@@ -14,6 +14,7 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('share_request_id')->constrained()->onDelete('cascade');
             // Store contact data directly (snapshot at time of request)
+            $table->foreignId('contact_id')->nullable()->constrained()->nullOnDelete();
             $table->string('name');
             $table->string('phone');
             $table->string('store_name')->nullable();

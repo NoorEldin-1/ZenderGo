@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -14,9 +13,25 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('email')->unique();
+            // Phone-based auth support
+            $table->string('email')->nullable(); // Made nullable
             $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
+            $table->string('password')->nullable(); // Made nullable
+
+            // Added columns
+            $table->string('phone')->unique()->nullable();
+
+            // WhatsApp Session
+            $table->string('whatsapp_session')->nullable();
+            $table->text('whatsapp_token')->nullable();
+            $table->enum('session_state', ['active', 'sleeping', 'none', 'disconnected'])->default('none');
+
+            $table->boolean('is_suspended')->default(false);
+            $table->enum('suspension_reason', ['security', 'subscription'])->nullable();
+            $table->timestamp('suspended_at')->nullable();
+
+            $table->enum('theme_preference', ['light', 'dark'])->default('light');
+
             $table->rememberToken();
             $table->timestamps();
         });

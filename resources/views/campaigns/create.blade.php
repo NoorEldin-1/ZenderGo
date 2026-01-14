@@ -461,6 +461,59 @@
             </div>
         </div>
     </div>
+
+    <!-- Edit Contact Modal -->
+    <div class="modal fade" id="editContactModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="editContactForm">
+                    <div class="modal-header py-2">
+                        <h6 class="modal-title fw-bold">
+                            <i class="bi bi-pencil text-primary me-2"></i>تعديل جهة الاتصال
+                        </h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="editContactId">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">الاسم</label>
+                            <input type="text" class="form-control" id="editContactName" name="name" required>
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label small fw-semibold">رقم الهاتف</label>
+                            <input type="tel" class="form-control" id="editContactPhone" name="phone"
+                                dir="ltr" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer py-2">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-check-lg me-1"></i>حفظ
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Contact Modal -->
+    <div class="modal fade" id="deleteContactModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4">
+                    <i class="bi bi-trash text-danger" style="font-size: 2.5rem;"></i>
+                    <p class="mt-3 mb-0" id="deleteContactMessage">حذف جهة الاتصال؟</p>
+                </div>
+                <div class="modal-footer justify-content-center border-0 pt-0">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إلغاء</button>
+                    <form id="deleteContactForm" class="d-inline">
+                        <input type="hidden" id="deleteContactId">
+                        <button type="submit" class="btn btn-danger btn-sm">حذف</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('styles')
@@ -930,6 +983,8 @@
             const deleteTemplateModal = bootstrap.Modal.getOrCreateInstance(document.getElementById(
                 'deleteTemplateModal'));
             const alertModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('alertModal'));
+            const editContactModal = new bootstrap.Modal(document.getElementById('editContactModal'));
+            const deleteContactModal = new bootstrap.Modal(document.getElementById('deleteContactModal'));
 
             // --- State Management ---
             const state = {
@@ -1024,7 +1079,16 @@
                 quotaUsed.className = `text-${state.quota.statusColor} fw-semibold`;
 
                 // Update reset time
-                if (state.quota.isExpired) {
+                const widget = document.getElementById('quotaWidget');
+                if (widget) {
+                    widget.setAttribute('data-reset-at', state.quota.window_ends_at ||
+                        ''); // Ensure we save the ISO string
+                }
+
+                // Restart timer with new time
+                if (typeof startQuotaTimer === 'function') {
+                    startQuotaTimer(state.quota.window_ends_at);
+                } else if (state.quota.isExpired) {
                     quotaResetTime.innerHTML = '<i class="bi bi-clock me-1"></i>الكوتا متاحة (لم تبدأ بعد)';
                 } else {
                     quotaResetTime.innerHTML = `<i class="bi bi-clock me-1"></i>تتجدد بعد: ${state.quota.resetIn}`;
@@ -1074,7 +1138,8 @@
                         percentageRemaining: data.percentage_remaining,
                         statusColor: data.status_color,
                         resetIn: data.reset_in,
-                        isExpired: data.is_window_expired
+                        isExpired: data.is_window_expired,
+                        window_ends_at: data.window_ends_at
                     };
 
                     updateQuotaUI();
@@ -1236,9 +1301,9 @@
                         `<i class="bi bi-star text-muted star-btn fs-5" data-id="${contact.id}" style="cursor: pointer; transition: transform 0.2s;" title="إضافة للمميزة"></i>`;
 
                     return `
-                    <label class="contact-item d-block px-3 py-2 border-bottom m-0">
-                        <div class="form-check d-flex align-items-center gap-2 m-0">
-                            <input type="checkbox" class="form-check-input contact-checkbox mt-0"
+                    <div class="contact-item d-flex align-items-center px-3 py-2 border-bottom m-0 w-100">
+                        <label class="d-flex align-items-center gap-2 flex-grow-1 min-w-0 m-0" style="cursor: pointer; user-select: none;">
+                            <input type="checkbox" class="form-check-input contact-checkbox mt-0 bg-transparent"
                                 value="${contact.id}" 
                                 ${state.selectedContacts.has(String(contact.id)) ? 'checked' : ''}>
                             ${starIcon}
@@ -1247,8 +1312,19 @@
                                 <small class="text-muted" dir="ltr">${escapeHtml(contact.phone)}</small>
                                 ${lastSentHtml}
                             </div>
+                        </label>
+                        
+                        <div class="dropdown ms-2">
+                            <button class="btn btn-sm text-muted border-0 p-1 rounded-circle action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation()">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li><a class="dropdown-item edit-contact-btn small" href="#" data-id="${contact.id}" data-name="${escapeHtml(contact.name)}" data-phone="${escapeHtml(contact.phone)}"><i class="bi bi-pencil me-2 text-primary"></i>تعديل</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item delete-contact-btn small text-danger" href="#" data-id="${contact.id}"><i class="bi bi-trash me-2"></i>حذف</a></li>
+                            </ul>
                         </div>
-                    </label>
+                    </div>
                 `;
                 }).join('');
 
@@ -1368,10 +1444,35 @@
 
             // --- Toggle Featured Logic ---
             document.addEventListener('click', function(e) {
+                // Feature Star
                 if (e.target.classList.contains('star-btn')) {
                     e.preventDefault();
                     e.stopPropagation();
                     toggleFeatured(e.target);
+                    return;
+                }
+
+                // Edit Button
+                const editBtn = e.target.closest('.edit-contact-btn');
+                if (editBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openEditContactModal(editBtn.dataset);
+                    return;
+                }
+
+                // Delete Button
+                const deleteBtn = e.target.closest('.delete-contact-btn');
+                if (deleteBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openDeleteContactModal(deleteBtn.dataset.id);
+                    return;
+                }
+
+                // Prevent row click when clicking dropdown or buttons
+                if (e.target.closest('.dropdown') || e.target.closest('.btn')) {
+                    e.stopPropagation();
                 }
             });
 
@@ -1433,6 +1534,141 @@
                         }
                     });
             }
+
+            // --- Edit & Delete Contact Logic ---
+
+            function escapeHtml(text) {
+                if (!text) return '';
+                const map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return text.toString().replace(/[&<>"']/g, function(m) {
+                    return map[m];
+                });
+            }
+
+            // Open Edit Modal
+            function openEditContactModal(data) {
+                document.getElementById('editContactId').value = data.id;
+                document.getElementById('editContactName').value = data.name;
+                document.getElementById('editContactPhone').value = data.phone;
+                editContactModal.show();
+            }
+
+            // Handle Edit Submit
+            document.getElementById('editContactForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const id = document.getElementById('editContactId').value;
+                const formData = new FormData(this);
+                // Laravel PUT method spoofing
+                formData.append('_method', 'PUT');
+
+                fetch(`/contacts/${id}`, {
+                        method: 'POST', // Use POST with _method=PUT
+                        body: formData,
+                        headers: {
+                            'X-CSRF-TOKEN': csrf,
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            editContactModal.hide();
+                            showAlert('تم تحديث جهة الاتصال بنجاح', 'success');
+
+                            // Update DOM directly
+                            const row = document.querySelector(`.contact-item input[value="${id}"]`)
+                                .closest('.contact-item');
+                            if (row) {
+                                // Update name and phone visible text
+                                const infoContainer = row.querySelector('.flex-grow-1');
+                                if (infoContainer) {
+                                    infoContainer.querySelector('.fw-medium').textContent = data.contact
+                                        .name;
+                                    infoContainer.querySelector('small.text-muted').textContent = data
+                                        .contact.phone;
+                                }
+
+                                // Update data attributes on edit button
+                                const editBtn = row.querySelector('.edit-contact-btn');
+                                if (editBtn) {
+                                    editBtn.dataset.name = data.contact.name;
+                                    editBtn.dataset.phone = data.contact.phone;
+                                }
+                            }
+                        } else {
+                            showAlert(data.message || 'حدث خطأ أثناء التحديث', 'error');
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        showAlert('حدث خطأ أثناء الاتصال بالخادم', 'error');
+                    });
+            });
+
+            // Open Delete Modal
+            function openDeleteContactModal(id) {
+                document.getElementById('deleteContactId').value = id;
+                deleteContactModal.show();
+            }
+
+            // Handle Delete Submit
+            document.getElementById('deleteContactForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const id = document.getElementById('deleteContactId').value;
+
+                fetch(`/contacts/${id}`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrf,
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest', // Force AJAX response
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            _method: 'DELETE'
+                        })
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            deleteContactModal.hide();
+                            showAlert('تم حذف جهة الاتصال بنجاح', 'success');
+
+                            // Remove from selection if selected
+                            if (state.selectedContacts.has(String(id))) {
+                                state.selectedContacts.delete(String(id));
+                            }
+
+                            // Remove from DOM
+                            const row = document.querySelector(`.contact-item input[value="${id}"]`)
+                                .closest('.contact-item');
+                            if (row) {
+                                row.remove();
+                            }
+
+                            // If list becomes empty, show empty state or refresh
+                            if (document.querySelectorAll('.contact-item').length === 0) {
+                                fetchContacts(state.currentPage);
+                            } else {
+                                // Recalculate selection UI
+                                updateUIState();
+                            }
+                        } else {
+                            showAlert(data.message || 'حدث خطأ أثناء الحذف', 'error');
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        showAlert('حدث خطأ أثناء الاتصال بالخادم', 'error');
+                    });
+            });
 
             // --- Event Listeners ---
 
@@ -1582,16 +1818,18 @@
             // Format
             ['bold', 'italic', 'strike'].forEach((type, i) => {
                 const chars = ['*', '_', '~'];
-                document.getElementById(type + 'Btn')?.addEventListener('click', () => {
-                    const c = chars[i],
-                        start = messageTextarea.selectionStart,
-                        end = messageTextarea.selectionEnd;
-                    const val = messageTextarea.value,
-                        sel = val.slice(start, end);
-                    messageTextarea.value = val.slice(0, start) + c + sel + c + val.slice(end);
-                    messageTextarea.selectionStart = start;
-                    messageTextarea.selectionEnd = end + 2;
-                    messageTextarea.focus();
+                document.getElementById(type + 'Btn')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    messageEditor.focus();
+
+                    const selection = window.getSelection();
+                    if (!selection.rangeCount) return;
+
+                    const text = selection.toString();
+                    const char = chars[i];
+                    const newValue = `${char}${text}${char}`;
+
+                    document.execCommand('insertText', false, newValue);
                     updateUIState();
                 });
             });
@@ -2070,14 +2308,28 @@
             updateUIState();
 
             // ========== QUOTA TIMER ==========
-            function startQuotaTimer() {
+            // ========== QUOTA TIMER ==========
+            let timerInterval; // Global variable to store interval ID
+
+            function startQuotaTimer(resetAtStr) {
                 const widget = document.getElementById('quotaWidget');
                 const resetTimeEl = document.getElementById('quotaResetTime');
+
+                // Clear any existing timer
+                if (timerInterval) clearInterval(timerInterval);
+
                 if (!widget || !resetTimeEl) return;
 
-                const resetAtStr = widget.getAttribute('data-reset-at');
-                // If empty or null, it means window is effectively expired or not started
-                if (!resetAtStr) return;
+                // If no time provided, try getting from attribute
+                if (!resetAtStr) {
+                    resetAtStr = widget.getAttribute('data-reset-at');
+                }
+
+                // If still empty or null, it means window is effectively expired or not started
+                if (!resetAtStr) {
+                    resetTimeEl.innerHTML = '<i class="bi bi-clock me-1"></i> الكوتا متاحة (لم تبدأ بعد)';
+                    return;
+                }
 
                 const resetAt = new Date(resetAtStr).getTime();
 
@@ -2090,7 +2342,7 @@
 
                     if (distance < 0) {
                         // Expired
-                        if (typeof timerInterval !== 'undefined') clearInterval(timerInterval);
+                        if (timerInterval) clearInterval(timerInterval);
                         resetTimeEl.innerHTML = '<i class="bi bi-clock me-1"></i> الكوتا متاحة (لم تبدأ بعد)';
                         return;
                     }
@@ -2108,10 +2360,29 @@
                 };
 
                 updateTicker(); // Run immediately
-                const timerInterval = setInterval(updateTicker, 1000);
+                timerInterval = setInterval(updateTicker, 1000);
             }
 
+            // Start initially
             startQuotaTimer();
         })();
     </script>
+@endpush
+
+@push('styles')
+    <style>
+        .action-btn:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            color: var(--bs-primary) !important;
+        }
+
+        [data-bs-theme="dark"] .action-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--bs-primary) !important;
+        }
+
+        .contact-item:hover {
+            background-color: var(--bs-tertiary-bg);
+        }
+    </style>
 @endpush

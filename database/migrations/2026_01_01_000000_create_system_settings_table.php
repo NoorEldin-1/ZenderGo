@@ -21,6 +21,7 @@ return new class extends Migration {
         DB::table('system_settings')->insert([
             ['key' => 'trial_days', 'value' => '7', 'created_at' => now(), 'updated_at' => now()],
             ['key' => 'subscription_price', 'value' => '100', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'instapay_number', 'value' => '', 'created_at' => now(), 'updated_at' => now()],
         ]);
     }
 

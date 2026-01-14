@@ -31,32 +31,76 @@
     </div>
 
     <!-- Contact Usage Indicator -->
-    <div class="card mb-3 border-0 shadow-sm">
-        <div class="card-body py-2 px-3">
+    <!-- Contact Usage Indicator -->
+    <div class="card mb-4 border-0 shadow-sm overflow-hidden position-relative">
+        <div class="card-body p-4">
+            <!-- Background Gradient (Subtle) -->
             <div
-                class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-people text-primary"></i>
-                    <span class="small">جهات الاتصال:</span>
-                    <strong
-                        class="@if ($usagePercent > 90) text-danger @elseif($usagePercent > 70) text-warning @else text-success @endif">
-                        {{ number_format($contactCount) }} / {{ number_format($contactLimit) }}
-                    </strong>
+                style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #20c997, #ffc107, #dc3545);">
+            </div>
+
+            <div class="row align-items-end mb-2">
+                <div class="col-8">
+                    <h5 class="fw-bold mb-1">إحصائيات جهات الاتصال</h5>
+                    <p class="text-muted small mb-0">متابعة استهلاك الحد المسموح به</p>
                 </div>
-                <div class="flex-grow-1" style="max-width: 200px; min-width: 120px;">
-                    <div class="progress" style="height: 8px;">
-                        <div class="progress-bar @if ($usagePercent > 90) bg-danger @elseif($usagePercent > 70) bg-warning @else bg-success @endif"
-                            role="progressbar" style="width: {{ min(100, $usagePercent) }}%"
-                            aria-valuenow="{{ $usagePercent }}" aria-valuemin="0" aria-valuemax="100">
-                        </div>
+                <div class="col-4 text-end">
+                    <div class="d-inline-block text-center">
+                        <span
+                            class="display-6 fw-bold @if ($usagePercent > 90) text-danger @elseif($usagePercent > 70) text-warning @else text-success @endif">
+                            {{ $usagePercent }}<span class="fs-4">%</span>
+                        </span>
                     </div>
                 </div>
-                @if ($remainingSlots <= 0)
-                    <span class="badge bg-danger">وصلت للحد الأقصى</span>
-                @elseif($remainingSlots <= 10)
-                    <span class="badge bg-warning text-dark">متبقي {{ $remainingSlots }} فقط</span>
-                @endif
             </div>
+
+            <!-- Progress Bar -->
+            <div class="progress mb-3"
+                style="height: 14px; border-radius: 10px; background-color: rgba(var(--bs-secondary-rgb), 0.1);">
+                <div class="progress-bar @if ($usagePercent > 90) bg-danger @elseif($usagePercent > 70) bg-warning @else bg-success @endif progress-bar-striped progress-bar-animated"
+                    role="progressbar" style="width: {{ min(100, $usagePercent) }}%; transition: width 1s ease-in-out;"
+                    aria-valuenow="{{ $usagePercent }}" aria-valuemin="0" aria-valuemax="100">
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="badge bg-light text-dark border p-2 rounded-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-people-fill text-primary"></i>
+                        <span>
+                            <strong>{{ number_format($contactCount) }}</strong>
+                            <span class="text-muted small ms-1">مستخدم</span>
+                        </span>
+                    </div>
+                    <span class="text-muted small">من أصل</span>
+                    <strong class="text-body">{{ number_format($contactLimit) }}</strong>
+                </div>
+
+                <div class="">
+                    @if ($remainingSlots <= 0)
+                        <span class="badge bg-danger p-2">
+                            <i class="bi bi-x-circle me-1"></i> ممتلئ
+                        </span>
+                    @elseif($remainingSlots <= 10)
+                        <span class="badge bg-warning p-2" style="color: #000 !important;">
+                            <i class="bi bi-exclamation-circle me-1"></i> متبقي {{ $remainingSlots }} فقط
+                        </span>
+                    @else
+                        <span class="badge bg-success-subtle text-success p-2 border border-success-subtle">
+                            <i class="bi bi-check-circle me-1"></i> حالة جيدة
+                        </span>
+                    @endif
+                </div>
+            </div>
+
+            @if ($usagePercent > 90)
+                <div class="alert alert-danger d-flex align-items-center p-2 mt-3 mb-0 small" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2"></i>
+                    <div>
+                        <strong>تنبيه هام!</strong> لقد قاربت على الوصول للحد الأقصى المسموح به لجهات الاتصال.
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 
@@ -103,7 +147,8 @@
                 <div class="d-flex gap-2 align-items-center" id="bulkActions" style="display: none;">
                     <span class="text-muted small">
                         محدد: <strong id="selectedCount">0</strong>
-                        <span id="crossPageIndicator" class="badge bg-info ms-1 d-none" title="إجمالي المحدد من كل الصفحات">
+                        <span id="crossPageIndicator" class="badge bg-info ms-1 d-none"
+                            title="إجمالي المحدد من كل الصفحات">
                             الكل: <span id="totalSelectedCount">0</span>
                         </span>
                     </span>
@@ -156,9 +201,10 @@
                 </div>
 
                 <!-- Pagination -->
-                @if ($contacts->hasPages())
-                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center p-3 border-top gap-3"
-                        id="pagination">
+                {{-- Pagination Container - Always Rendered to prevent JS Error --}}
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center p-3 border-top gap-3"
+                    id="pagination">
+                    @if ($contacts->hasPages())
                         <div class="text-muted small d-none d-sm-block">
                             عرض {{ $contacts->firstItem() }}-{{ $contacts->lastItem() }} من {{ $contacts->total() }} جهة
                             اتصال
@@ -166,8 +212,8 @@
                         <nav aria-label="Page navigation">
                             {{ $contacts->links() }}
                         </nav>
-                    </div>
-                @endif
+                    @endif
+                </div>
             @else
                 <div class="text-center py-5 px-3">
                     <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
@@ -244,8 +290,22 @@
 
                         <div class="mb-0">
                             <label class="form-label small fw-semibold">اختر ملف Excel أو CSV:</label>
-                            <input type="file" class="form-control" name="file" accept=".xlsx,.xls,.csv" required>
-                            <div class="form-text">الحد الأقصى: 10MB | الصيغ المدعومة: xlsx, xls, csv</div>
+
+                            <!-- Custom File Input -->
+                            <div class="file-upload-wrapper">
+                                <input type="file" class="file-upload-input" name="file" id="fileInput"
+                                    accept=".xlsx,.xls,.csv" required onchange="updateFileName(this)">
+                                <div class="file-upload-box">
+                                    <div class="text-center p-4">
+                                        <i class="bi bi-cloud-arrow-up text-primary" style="font-size: 2.5rem;"></i>
+                                        <h5 class="mt-3 mb-1 fw-bold text-dark-emphasis">اضغط لاختيار الملف</h5>
+                                        <p class="text-muted small mb-0" id="fileNameDisplay">أو اسحب الملف وأفلته هنا</p>
+                                        <div class="mt-2 text-muted" style="font-size: 0.75rem;">
+                                            الحد الأقصى: 10MB | الصيغ: xlsx, xls, csv
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer py-2">
@@ -482,12 +542,67 @@
             background-color: rgba(108, 117, 125, 0.15) !important;
         }
 
-        [data-bs-theme="dark"] .badge.bg-success-subtle {
-            background-color: rgba(37, 211, 102, 0.25) !important;
-        }
-
         [data-bs-theme="dark"] .badge.bg-secondary-subtle {
             background-color: rgba(108, 117, 125, 0.25) !important;
+        }
+
+        /* File Upload Styles */
+        .file-upload-wrapper {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            margin-top: 0.5rem;
+        }
+
+        .file-upload-input {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .file-upload-box {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background-color: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .file-upload-wrapper:hover .file-upload-box {
+            background-color: #e9ecef;
+            border-color: #adb5bd;
+        }
+
+        .file-upload-input:focus+.file-upload-box {
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+
+        /* Dark Mode for File Upload */
+        [data-bs-theme="dark"] .file-upload-box {
+            background-color: #212529;
+            border-color: #495057;
+        }
+
+        [data-bs-theme="dark"] .file-upload-wrapper:hover .file-upload-box {
+            background-color: #2b3035;
+            border-color: #6c757d;
+        }
+
+        [data-bs-theme="dark"] .text-dark-emphasis {
+            color: #f8f9fa !important;
         }
     </style>
 @endpush
@@ -600,17 +715,18 @@
 
         // ========== INITIALIZATION - Restore Selection State ==========
         (function initializeSelectionState() {
-            // Restore checkbox states from SelectionManager
+            restoreCheckboxStates();
+            setupRowClickHandlers();
+            updateBulkActions();
+        })();
+
+        function restoreCheckboxStates() {
             document.querySelectorAll('.contact-checkbox').forEach(cb => {
                 if (SelectionManager.has(cb.value)) {
                     cb.checked = true;
                 }
             });
-            // Setup row click handlers for initial page load
-            setupRowClickHandlers();
-            // Update UI to reflect restored state
-            updateBulkActions();
-        })();
+        }
 
         // Setup row click handlers (for initial load)
         function setupRowClickHandlers() {
@@ -769,32 +885,19 @@
                     if (data.html) {
                         contactsBody.innerHTML = data.html;
                         noResults.classList.add('d-none');
+                        // RESTORE CHECKBOX STATES AFTER RENDER
+                        restoreCheckboxStates();
                     } else {
                         contactsBody.innerHTML = '';
                         noResults.classList.remove('d-none');
                     }
 
-                    if (data.pagination) {
-                        // Wrap pagination HTML in the expected container structure
-                        // The server returns just the nav/ul/links, we might need to preserve the wrapper 
-                        // effectively just replacing the content of #pagination
-                        // Actually, let's see what links() returns. It usually returns the whole <nav>.
-                        // Our current view expects: 
-                        // <div ... id="pagination"> <div class="text-muted...">...</div> <nav>...</nav> </div>
-                        // We can just replace the innerHTML of #pagination div with the new pagination if we want
-                        // But wait, the standard links() output is just the <nav>. 
-                        // Our current view has custom structure. 
-                        // Let's just put the data.pagination into the container, but we might lose the "Show X-Y of Z" text
-                        // unless we rebuild it or the server sends it.
-                        // For simplicity and standard behavior, let's dump the server pagination.
-                        // But the user likes the "Show X-Y of Z".
-                        // The server data.total can be used to update the badge.
-                        // Let's just update the pagination container with the server HTML.
-                        pagination.innerHTML = data.pagination;
-
-                        // Fix bootstrap pagination classes if needed (Laravel usually does this well)
-                    } else {
-                        pagination.innerHTML = '';
+                    if (pagination) {
+                        if (data.pagination) {
+                            pagination.innerHTML = data.pagination;
+                        } else {
+                            pagination.innerHTML = '';
+                        }
                     }
 
                     updateBulkActions();
@@ -808,8 +911,33 @@
                 .catch(err => {
                     console.error('Search error:', err);
                     contactsBody.innerHTML =
-                        '<tr><td colspan="6" class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>حدث خطأ أثناء البحث</td></tr>';
+                        `<tr><td colspan="6" class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>حدث خطأ أثناء البحث: ${err.message}</td></tr>`;
                 });
+        }
+
+        // File Upload Name Update
+        function updateFileName(input) {
+            const fileNameDisplay = document.getElementById('fileNameDisplay');
+            const fileBox = input.nextElementSibling;
+
+            if (input.files && input.files[0]) {
+                const name = input.files[0].name;
+                // Clear and rebuild safely
+                fileNameDisplay.innerHTML = '';
+                const span = document.createElement('span');
+                span.className = 'text-success fw-bold';
+                const icon = document.createElement('i');
+                icon.className = 'bi bi-check-circle me-1';
+                span.appendChild(icon);
+                span.appendChild(document.createTextNode(name));
+                fileNameDisplay.appendChild(span);
+                fileBox.style.borderColor = '#198754';
+                fileBox.style.backgroundColor = 'rgba(25, 135, 84, 0.05)';
+            } else {
+                fileNameDisplay.textContent = 'أو اسحب الملف وأفلته هنا';
+                fileBox.style.borderColor = ''; // reset
+                fileBox.style.backgroundColor = ''; // reset
+            }
         }
 
         function escapeHtml(str) {
@@ -921,20 +1049,14 @@
             // Get total from SelectionManager (all pages)
             const totalSelected = SelectionManager.count();
 
-            // Count selections from other pages
-            const currentPageIds = new Set(visibleCheckboxes.map(cb => cb.value));
-            const otherPagesCount = SelectionManager.getAll().filter(id => !currentPageIds.has(id)).length;
+            // Update UI - Use LOCAL count for "Selected" to allow per-page selection, OR GLOBAL?
+            // User requested: "When I move to another page... number returns to 0".
+            // Fix: Show GLOBAL count in main badge.
+            selectedCountEl.textContent = totalSelected; // CHANGED FROM currentPageChecked
 
-            // Update UI
-            selectedCountEl.textContent = currentPageChecked;
-            totalSelectedCountEl.textContent = totalSelected;
-
-            // Show/hide cross-page indicator
-            if (otherPagesCount > 0) {
-                crossPageIndicator.classList.remove('d-none');
-            } else {
-                crossPageIndicator.classList.add('d-none');
-            }
+            // Note: crossPageIndicator is now redundant if we show totalSelected in main badge. 
+            // We can hide it or keep it for emphasis. I will hide it to reduce clutter.
+            crossPageIndicator.classList.add('d-none'); // ALWAYS HIDDEN
 
             // Show/hide bulk actions
             bulkActionsEl.style.display = totalSelected > 0 ? 'flex' : 'none';
