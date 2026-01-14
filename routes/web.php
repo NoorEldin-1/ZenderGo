@@ -78,6 +78,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware(['subscription.active'])->group(function () {
         // Contacts - Custom routes BEFORE resource
         Route::delete('/contacts/bulk-delete', [ContactController::class, 'bulkDelete'])->middleware('rate.heavy:bulk_delete')->name('contacts.bulk-delete');
+        Route::get('/contacts/preview', [ContactController::class, 'showPreview'])->name('contacts.preview.get');
         Route::post('/contacts/preview', [ContactController::class, 'previewImport'])->middleware('rate.heavy:import')->name('contacts.preview');
         Route::post('/contacts/confirm-import', [ContactController::class, 'confirmImport'])->middleware('rate.heavy:import')->name('contacts.confirm-import');
         Route::post('/contacts/process-mapping', [ContactController::class, 'processMapping'])->name('contacts.process-mapping');

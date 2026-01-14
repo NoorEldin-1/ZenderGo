@@ -189,6 +189,26 @@ class ContactController extends Controller
     }
 
     /**
+     * Show the preview page (for GET requests/refreshes).
+     * Retrieves data from cache.
+     */
+    public function showPreview()
+    {
+        $preview = Cache::get($this->getImportCacheKey());
+
+        if (!$preview) {
+            return redirect()->route('contacts.index')->withErrors(['file' => 'انتهت صلاحية المعاينة. يرجى رفع الملف مرة أخرى.']);
+        }
+
+        $user = Auth::user();
+        $contactLimit = SystemSetting::getContactLimit();
+        $contactCount = $user->contact_count;
+        $remainingSlots = $user->remaining_contact_slots;
+
+        return view('contacts.preview', compact('preview', 'contactLimit', 'contactCount', 'remainingSlots'));
+    }
+
+    /**
      * Preview import - First step: Upload and Detect.
      * If columns are found, shows preview directly (legacy behavior).
      * If not found, redirects to mapping page.
