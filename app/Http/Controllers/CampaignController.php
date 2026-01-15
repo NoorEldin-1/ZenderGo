@@ -180,13 +180,57 @@ class CampaignController extends Controller
             // This allows instant HTTP response instead of 5-30s blocking
             // Only do a quick sanity check for known-disconnected users
             if ($user->session_state === 'disconnected') {
-                return back()->withErrors([
-                    'session' => 'يرجى إعادة ربط حساب WhatsApp من صفحة الإعدادات.'
-                ])->withInput();
+                return redirect()->route('login.reconnect')
+                    ->with('warning', 'يرجى إعادة ربط حساب WhatsApp للاستمرار في الإرسال.');
+            }
+
+            // ====== SESSION WAKE & CONNECTION CHECK ======
+            // For sleeping sessions, we need to wake them first before checking connection
+            // This handles the case where session was closed after reconnect to save RAM
+            $sessionManager = new \App\Services\SessionManager();
+
+            if ($user->session_state === 'sleeping' || $user->session_state === 'none' || !$user->session_state) {
+                // Wake the session first
+                $wakeResult = $sessionManager->wakeSession($user);
+
+                if ($wakeResult['status'] === 'needs_qr') {
+                    // User logged out from mobile - needs to re-scan QR
+                    $user->update(['session_state' => 'disconnected']);
+                    $this->quotaService->releaseReservedQuota($user, $contactCount);
+
+                    return redirect()->route('login.reconnect')
+                        ->with('warning', 'تم فقدان اتصال WhatsApp من الموبايل. يرجى إعادة الربط.');
+                }
+
+                if ($wakeResult['status'] !== 'connected') {
+                    // Session couldn't be woken - might be a server issue
+                    $this->quotaService->releaseReservedQuota($user, $contactCount);
+
+                    return back()->withErrors([
+                        'session' => $wakeResult['message'] ?? 'خطأ في تشغيل جلسة WhatsApp. حاول مرة أخرى.'
+                    ]);
+                }
+
+                // Session is now awake and connected
+                $user->update(['session_state' => 'active']);
+            } else {
+                // Session should be active - do a quick live check
+                $whatsapp = new \App\Services\WhatsAppService($userSession, $userToken);
+                $connectionStatus = $whatsapp->checkConnection();
+
+                if (!($connectionStatus['connected'] ?? false)) {
+                    // Update session_state to prevent stale data on next request
+                    $user->update(['session_state' => 'disconnected']);
+
+                    // Rollback the quota reservation since we won't be sending
+                    $this->quotaService->releaseReservedQuota($user, $contactCount);
+
+                    return redirect()->route('login.reconnect')
+                        ->with('warning', 'تم فقدان اتصال WhatsApp. يرجى إعادة الربط للاستمرار.');
+                }
             }
 
             // Pre-mark session as intended-active (job will do the real validation)
-            $sessionManager = new \App\Services\SessionManager();
             $sessionManager->markSessionActive($user->id, $userSession);
 
             // Dispatch jobs with throttling (15 seconds delay per contact)
@@ -257,11 +301,27 @@ class CampaignController extends Controller
             ]);
         }
 
+        // For sleeping sessions, report as connected without waking
+        // The session will wake when user actually sends a campaign
+        if ($user->session_state === 'sleeping') {
+            return response()->json([
+                'connected' => true,
+                'status' => 'sleeping',
+                'message' => 'متصل (الجلسة خاملة)',
+            ]);
+        }
+
         try {
             $whatsapp = new \App\Services\WhatsAppService($user->whatsapp_session, $user->whatsapp_token);
             $status = $whatsapp->checkConnection();
 
             $connected = $status['connected'] ?? false;
+
+            // Only mark as disconnected if session was supposed to be active
+            // Don't overwrite sleeping or none states - they will be handled on campaign send
+            if (!$connected && $user->session_state === 'active') {
+                $user->update(['session_state' => 'disconnected']);
+            }
 
             return response()->json([
                 'connected' => $connected,

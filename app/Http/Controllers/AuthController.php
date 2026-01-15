@@ -141,17 +141,18 @@ class AuthController extends Controller
             ], 404);
         }
 
-        // Use existing session name or generate new one
-        if (!$user->whatsapp_session) {
-            $user->whatsapp_session = 'user-' . $user->id;
-            $user->save();
-        }
+        // ALWAYS generate a NEW session for reconnect
+        // The old session might be in a broken/closed state which prevents QR generation
+        // WPPConnect needs a fresh session to generate a new QR code properly
+        $newSessionName = 'user-' . $user->id . '-' . time();
+        $user->whatsapp_session = $newSessionName;
+        $user->save();
 
         Log::info("Starting reconnect session for user {$user->id}: {$user->whatsapp_session}");
 
         $whatsapp = new WhatsAppService($user->whatsapp_session);
 
-        // Generate token
+        // Generate token for the NEW session
         $tokenResult = $whatsapp->generateToken();
         if (!empty($tokenResult['token'])) {
             $user->whatsapp_token = $tokenResult['token'];
@@ -179,15 +180,43 @@ class AuthController extends Controller
             ]);
         }
 
-        // Try to get QR code separately
-        usleep(1000000);
-        $qrResult = $whatsapp->getQrCode();
-        if (!empty($qrResult['qrcode'])) {
-            $result['qrcode'] = $qrResult['qrcode'];
-            $result['success'] = true;
+        // Poll for QR code - WPPConnect might take a few seconds to generate it
+        // Try up to 5 times with 2-second intervals
+        for ($attempt = 1; $attempt <= 5; $attempt++) {
+            usleep(2000000); // Wait 2 seconds
+
+            Log::info("Polling for QR code, attempt {$attempt}/5 for user {$user->id}");
+
+            $qrResult = $whatsapp->getQrCode();
+            if (!empty($qrResult['qrcode'])) {
+                Log::info("QR code obtained on attempt {$attempt} for user {$user->id}");
+                return response()->json([
+                    'success' => true,
+                    'status' => 'qrcode',
+                    'qrcode' => $qrResult['qrcode'],
+                ]);
+            }
+
+            // Also check if connected during polling
+            $connectionCheck = $whatsapp->checkConnection();
+            if ($connectionCheck['connected'] ?? false) {
+                Auth::login($user, true);
+                session()->forget(['login_phone', 'login_user_id']);
+                return response()->json([
+                    'success' => true,
+                    'status' => 'CONNECTED',
+                    'redirect' => route('guide'),
+                ]);
+            }
         }
 
-        return response()->json($result);
+        // If still no QR after 5 attempts, return with retry message
+        Log::warning("Failed to get QR code after 5 attempts for user {$user->id}");
+        return response()->json([
+            'success' => false,
+            'status' => 'initializing',
+            'message' => 'جاري بدء الجلسة، يرجى المحاولة مرة أخرى...',
+        ]);
     }
 
     /**
@@ -298,15 +327,31 @@ class AuthController extends Controller
             return response()->json($result);
         }
 
-        // Try to get QR code separately
-        usleep(1000000);
-        $qrResult = $whatsapp->getQrCode();
-        if (!empty($qrResult['qrcode'])) {
-            $result['qrcode'] = $qrResult['qrcode'];
-            $result['success'] = true;
+        // Poll for QR code - WPPConnect might take a few seconds to generate it
+        // Try up to 5 times with 2-second intervals
+        for ($attempt = 1; $attempt <= 5; $attempt++) {
+            usleep(2000000); // Wait 2 seconds
+
+            Log::info("Polling for QR code, attempt {$attempt}/5 for registration session {$sessionName}");
+
+            $qrResult = $whatsapp->getQrCode();
+            if (!empty($qrResult['qrcode'])) {
+                Log::info("QR code obtained on attempt {$attempt} for registration session {$sessionName}");
+                return response()->json([
+                    'success' => true,
+                    'status' => 'qrcode',
+                    'qrcode' => $qrResult['qrcode'],
+                ]);
+            }
         }
 
-        return response()->json($result);
+        // If still no QR after 5 attempts, return with retry message
+        Log::warning("Failed to get QR code after 5 attempts for registration session {$sessionName}");
+        return response()->json([
+            'success' => false,
+            'status' => 'initializing',
+            'message' => 'جاري بدء الجلسة، يرجى المحاولة مرة أخرى...',
+        ]);
     }
 
     /**

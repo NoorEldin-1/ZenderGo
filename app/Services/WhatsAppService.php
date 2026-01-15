@@ -100,9 +100,9 @@ class WhatsAppService
             $response = Http::withToken($authToken)
                 ->timeout(60)
                 ->post("{$this->baseUrl}/api/{$this->session}/start-session", [
-                    'webhook' => null,
-                    'waitQrCode' => true,
-                ]);
+                        'webhook' => null,
+                        'waitQrCode' => true,
+                    ]);
 
             $data = $response->json();
             Log::info("WhatsApp start session response for {$this->session}", [
@@ -163,20 +163,56 @@ class WhatsAppService
 
     /**
      * Get QR code for session authentication.
+     * Uses status-session endpoint which returns JSON with qrcode field.
      */
     public function getQrCode(): array
     {
         try {
+            // Use status-session endpoint which returns JSON with qrcode as base64
+            // (qrcode-session returns binary PNG image which doesn't work for our use case)
             $response = Http::withToken($this->token)
                 ->timeout(15)
-                ->get("{$this->baseUrl}/api/{$this->session}/qrcode-session");
+                ->get("{$this->baseUrl}/api/{$this->session}/status-session");
+
+            Log::info("QR code API response for {$this->session}", [
+                'status' => $response->status(),
+                'body_preview' => substr($response->body(), 0, 300),
+            ]);
 
             if ($response->successful()) {
                 $data = $response->json();
-                return [
-                    'success' => true,
-                    'qrcode' => $data['qrcode'] ?? null,
-                ];
+
+                // WPPConnect returns qrcode as base64 data URL
+                $qrcode = $data['qrcode'] ?? null;
+
+                // Also check urlcode which might need conversion
+                if (!$qrcode && !empty($data['urlcode'])) {
+                    // urlcode is raw text, we can return it for QR generation
+                    Log::info("Got urlcode for {$this->session}, converting to QR");
+                    $qrcode = $data['urlcode'];
+                }
+
+                if ($qrcode) {
+                    Log::info("QR code found for {$this->session}, length: " . strlen($qrcode));
+                    return [
+                        'success' => true,
+                        'qrcode' => $qrcode,
+                        'status' => $data['status'] ?? 'qrcode',
+                    ];
+                }
+
+                // Check if connected (no QR needed)
+                $status = strtoupper($data['status'] ?? '');
+                if (in_array($status, ['CONNECTED', 'ISLOGGED', 'INCHAT'])) {
+                    return [
+                        'success' => true,
+                        'connected' => true,
+                        'status' => $status,
+                        'message' => 'الجلسة متصلة بالفعل',
+                    ];
+                }
+
+                Log::warning("QR code API returned success but no QR code for {$this->session}", $data);
             }
 
             return [
@@ -436,12 +472,12 @@ class WhatsAppService
             $response = Http::withToken($this->token)
                 ->timeout(30)
                 ->post("{$this->baseUrl}/api/{$this->session}/send-message", [
-                    'phone' => $this->formatPhone($phone),
-                    'message' => $message,
-                    'isGroup' => false,
-                    'isNewsletter' => false,
-                    'isLid' => false,
-                ]);
+                        'phone' => $this->formatPhone($phone),
+                        'message' => $message,
+                        'isGroup' => false,
+                        'isNewsletter' => false,
+                        'isLid' => false,
+                    ]);
 
             if ($response->successful()) {
                 $data = $response->json();

@@ -146,23 +146,46 @@ class SessionManager
 
             Log::debug("Wake attempt {$attempt} for user {$user->id}: status={$status}");
 
-            // Handle "STARTING" state - wait and check connection
+            // Handle "STARTING" state - dedicated polling loop
             if (in_array($upperStatus, ['STARTING', 'INITIALIZING', 'OPENING'])) {
-                Log::info("Session starting for user {$user->id}, waiting...");
-                sleep(3); // Wait for session to start
+                Log::info("Session initializing for user {$user->id}, entering polling mode...");
 
-                // Check connection again
-                $connectionStatus = $whatsapp->checkConnection();
-                if ($connectionStatus['connected'] ?? false) {
+                // Poll for up to 15 seconds (5 checks × 3 seconds)
+                for ($poll = 1; $poll <= 5; $poll++) {
+                    sleep(3); // Wait 3 seconds between each poll
+
+                    // Check connection
+                    $connectionStatus = $whatsapp->checkConnection();
+                    if ($connectionStatus['connected'] ?? false) {
+                        $this->markSessionActive($user->id, $user->whatsapp_session);
+                        $user->update(['session_state' => 'active']);
+                        Log::info("Session woken after {$poll} polls for user {$user->id}");
+                        return [
+                            'status' => 'connected',
+                            'service' => $whatsapp,
+                            'message' => 'تم تفعيل الجلسة.',
+                        ];
+                    }
+
+                    Log::debug("Connection poll {$poll}/5 for user {$user->id}: not yet connected");
+                }
+
+                // After max polls, do one final check
+                $finalCheck = $whatsapp->checkConnection();
+                if ($finalCheck['connected'] ?? false) {
                     $this->markSessionActive($user->id, $user->whatsapp_session);
                     $user->update(['session_state' => 'active']);
-                    Log::info("Session woken after wait for user {$user->id}");
+                    Log::info("Session woken on final check for user {$user->id}");
                     return [
                         'status' => 'connected',
                         'service' => $whatsapp,
                         'message' => 'تم تفعيل الجلسة.',
                     ];
                 }
+
+                // If still not connected after all polls, it needs QR or has an error
+                Log::warning("Session failed to connect after 15s of polling for user {$user->id}");
+                // Don't return error yet - let the outer loop try another startSession
             }
 
             // Check if session needs QR code (means phone disconnected)

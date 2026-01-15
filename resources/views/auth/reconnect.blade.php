@@ -143,9 +143,23 @@
                         connectSection.style.display = 'none';
                         startStatusCheck();
                     } else if (data.message) {
-                        showError(data.message);
-                        connectBtn.disabled = false;
-                        connectBtn.innerHTML = '<i class="bi bi-qr-code me-2"></i>عرض QR Code';
+                        // Translate common WPPConnect messages
+                        const translatedMsg = translateMessage(data.message);
+
+                        // If session is starting, show loading and auto-retry
+                        if (data.message.toLowerCase().includes('starting up') ||
+                            data.message.toLowerCase().includes('initializing')) {
+                            loadingState.style.display = 'block';
+                            loadingText.textContent = translatedMsg;
+                            // Auto-retry after 3 seconds
+                            setTimeout(() => {
+                                startReconnect();
+                            }, 3000);
+                        } else {
+                            showError(translatedMsg);
+                            connectBtn.disabled = false;
+                            connectBtn.innerHTML = '<i class="bi bi-qr-code me-2"></i>عرض QR Code';
+                        }
                     }
                 } catch (error) {
                     console.error('Error:', error);
@@ -154,6 +168,31 @@
                     connectBtn.disabled = false;
                     connectBtn.innerHTML = '<i class="bi bi-qr-code me-2"></i>عرض QR Code';
                 }
+            }
+
+            // Translate common WPPConnect messages to Arabic
+            function translateMessage(msg) {
+                const translations = {
+                    'session is starting up, please wait': 'جاري بدء الجلسة، يرجى الانتظار...',
+                    'session is closing': 'جاري إغلاق الجلسة...',
+                    'session not connected': 'الجلسة غير متصلة',
+                    'session already exists': 'الجلسة موجودة بالفعل',
+                    'initializing': 'جاري التهيئة...',
+                    'please wait': 'يرجى الانتظار...',
+                    'starting': 'جاري البدء...',
+                    'connecting': 'جاري الاتصال...',
+                    'scan the qr code': 'امسح رمز QR',
+                    'browser is open': 'المتصفح مفتوح',
+                    'browser closed': 'تم إغلاق المتصفح',
+                };
+
+                const lowerMsg = msg.toLowerCase();
+                for (const [eng, ar] of Object.entries(translations)) {
+                    if (lowerMsg.includes(eng.toLowerCase())) {
+                        return ar;
+                    }
+                }
+                return msg; // Return original if no translation found
             }
 
             function startStatusCheck() {

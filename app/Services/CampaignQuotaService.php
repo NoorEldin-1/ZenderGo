@@ -416,6 +416,79 @@ class CampaignQuotaService
     }
 
     /**
+     * Release reserved quota when campaign send is aborted.
+     * This is used to rollback quota when WhatsApp disconnection is detected
+     * after reservation but before dispatching jobs.
+     */
+    public function releaseReservedQuota(User $user, int $contactCount): void
+    {
+        Log::info("Releasing reserved quota for user {$user->id}: {$contactCount} contacts");
+
+        if ($this->redisAvailable) {
+            $this->atomicReleaseReservedQuota($user->id, $contactCount);
+        } else {
+            $this->databaseReleaseReservedQuota($user, $contactCount);
+        }
+    }
+
+    /**
+     * Atomic release using Redis DECRBY.
+     */
+    protected function atomicReleaseReservedQuota(int $userId, int $contactCount): void
+    {
+        $key = $this->getRedisKey($userId);
+
+        try {
+            // Atomic decrement in Redis
+            $newTotal = Redis::decrby($key, $contactCount);
+
+            // Ensure we don't go below 0
+            if ($newTotal < 0) {
+                Redis::set($key, 0);
+                $newTotal = 0;
+            }
+
+            Log::info("Quota release SUCCESS for user {$userId} (atomic)", [
+                'released' => $contactCount,
+                'new_total' => $newTotal,
+            ]);
+
+            // Sync to DB
+            $this->syncDbFromRedis($userId, $newTotal);
+
+        } catch (\Exception $e) {
+            Log::error("Redis atomicReleaseReservedQuota failed: " . $e->getMessage());
+            // Fall back to database
+            $user = User::find($userId);
+            if ($user) {
+                $this->databaseReleaseReservedQuota($user, $contactCount);
+            }
+        }
+    }
+
+    /**
+     * Database-based quota release.
+     */
+    protected function databaseReleaseReservedQuota(User $user, int $contactCount): void
+    {
+        \DB::transaction(function () use ($user, $contactCount) {
+            $quota = CampaignQuota::where('user_id', $user->id)->lockForUpdate()->first();
+
+            if ($quota) {
+                $quota->contacts_sent = max(0, $quota->contacts_sent - $contactCount);
+                $quota->save();
+
+                Log::info("Quota release SUCCESS for user {$user->id} (DB)", [
+                    'released' => $contactCount,
+                    'new_total' => $quota->contacts_sent,
+                ]);
+
+                Cache::put($this->getCacheKey($user->id), $quota, $this->cacheTtl);
+            }
+        });
+    }
+
+    /**
      * Reset Redis counter for user.
      */
     protected function resetRedisCounter(int $userId): void

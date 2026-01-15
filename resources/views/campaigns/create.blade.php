@@ -600,6 +600,12 @@
             fill: #25d366 !important;
         }
 
+        /* Checkbox Customization */
+        .form-check-input:checked {
+            background-color: #25d366 !important;
+            border-color: #25d366 !important;
+        }
+
         .contact-item {
             cursor: pointer;
             transition: background 0.15s;
@@ -609,8 +615,15 @@
             background-color: #f8f9fa;
         }
 
+        /* Light Theme Selection - Stronger visibility */
         .contact-item:has(.form-check-input:checked) {
-            background-color: rgba(37, 211, 102, 0.08);
+            background-color: rgba(37, 211, 102, 0.25) !important;
+            border: 1px solid #25d366 !important;
+        }
+
+        /* Dark Theme Selection - Keep it subtle */
+        [data-bs-theme="dark"] .contact-item:has(.form-check-input:checked) {
+            background-color: rgba(37, 211, 102, 0.15) !important;
         }
 
         .contact-item.hidden {
@@ -2301,6 +2314,59 @@
                     }
                     // Fetch contacts for 'never' or 'all'
                     fetchContacts(1);
+                }
+            });
+
+            // ========== PRE-SUBMIT CONNECTION CHECK ==========
+            // Intercept form submission to verify WhatsApp is connected before sending
+            const campaignForm = document.getElementById('campaignForm');
+            campaignForm?.addEventListener('submit', async function(e) {
+                // Prevent default form submission
+                e.preventDefault();
+
+                // Show loading overlay
+                showLoadingOverlay('جاري التحقق من اتصال WhatsApp...', 'يرجى الانتظار');
+
+                try {
+                    // Check WhatsApp connection status
+                    const response = await fetch('{{ route('whatsapp.status') }}', {
+                        method: 'GET',
+                        headers: {
+                            'X-CSRF-TOKEN': csrf,
+                            'Accept': 'application/json',
+                        }
+                    });
+
+                    const status = await response.json();
+
+                    if (!status.connected) {
+                        // Connection lost - auto-redirect to reconnect page
+                        showLoadingOverlay('تم فقدان اتصال WhatsApp...',
+                            'جاري إعادة التوجيه لصفحة إعادة الربط');
+
+                        // Auto-redirect to QR code reconnect page after 1.5 seconds
+                        setTimeout(() => {
+                            window.location.href = '{{ route('login.reconnect') }}';
+                        }, 1500);
+
+                        return false;
+                    }
+
+                    // Connection OK - update loading text and submit the form
+                    showLoadingOverlay('جاري إرسال الحملة...', 'يرجى الانتظار وعدم إغلاق الصفحة');
+
+                    // Submit the form normally
+                    campaignForm.removeEventListener('submit', arguments.callee);
+                    campaignForm.submit();
+
+                } catch (error) {
+                    console.error('Connection check failed:', error);
+                    hideLoadingOverlay();
+                    showAlert(
+                        'حدث خطأ أثناء التحقق من الاتصال. يرجى المحاولة مرة أخرى.',
+                        'error'
+                    );
+                    return false;
                 }
             });
 
