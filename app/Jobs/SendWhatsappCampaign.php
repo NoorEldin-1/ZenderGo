@@ -90,7 +90,7 @@ class SendWhatsappCampaign implements ShouldQueue
 
                 // We have a slot available - do full wake
                 Log::info("Session not active for user {$this->userId}, performing full wake");
-                $wakeResult = $sessionManager->wakeSession($user);
+                $wakeResult = $sessionManager->wakeSession($user, 'job');
 
                 if ($wakeResult['status'] === 'needs_qr') {
                     // User disconnected from phone - they need to reconnect

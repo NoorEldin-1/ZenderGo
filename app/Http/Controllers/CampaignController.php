@@ -24,6 +24,9 @@ class CampaignController extends Controller
      */
     public function create(Request $request)
     {
+        // Increase execution time for this request as session status checks can be slow
+        set_time_limit(180);
+
         if ($request->ajax()) {
             $query = Auth::user()->contacts();
 
@@ -83,6 +86,9 @@ class CampaignController extends Controller
      */
     public function send(Request $request)
     {
+        // Increase execution time for campaign sending validation
+        set_time_limit(180);
+
         $user = Auth::user();
 
         // BLOCKER RULE: Check if user has an active campaign
@@ -219,14 +225,32 @@ class CampaignController extends Controller
                 $connectionStatus = $whatsapp->checkConnection();
 
                 if (!($connectionStatus['connected'] ?? false)) {
-                    // Update session_state to prevent stale data on next request
-                    $user->update(['session_state' => 'disconnected']);
+                    // Connection check failed - session might be sleeping (browser closed)
+                    // Try waking the session before declaring it disconnected
+                    \Illuminate\Support\Facades\Log::info("Quick live check failed for user {$user->id}, attempting wake...");
 
-                    // Rollback the quota reservation since we won't be sending
-                    $this->quotaService->releaseReservedQuota($user, $contactCount);
+                    $wakeResult = $sessionManager->wakeSession($user);
 
-                    return redirect()->route('login.reconnect')
-                        ->with('warning', 'تم فقدان اتصال WhatsApp. يرجى إعادة الربط للاستمرار.');
+                    if ($wakeResult['status'] === 'needs_qr') {
+                        // User logged out from mobile - needs to re-scan QR
+                        $user->update(['session_state' => 'disconnected']);
+                        $this->quotaService->releaseReservedQuota($user, $contactCount);
+
+                        return redirect()->route('login.reconnect')
+                            ->with('warning', 'تم فقدان اتصال WhatsApp من الموبايل. يرجى إعادة الربط.');
+                    }
+
+                    if ($wakeResult['status'] !== 'connected') {
+                        // Session couldn't be woken - might be a server issue
+                        $this->quotaService->releaseReservedQuota($user, $contactCount);
+
+                        return back()->withErrors([
+                            'session' => $wakeResult['message'] ?? 'خطأ في تشغيل جلسة WhatsApp. حاول مرة أخرى.'
+                        ]);
+                    }
+
+                    // Session is now awake and connected
+                    $user->update(['session_state' => 'active']);
                 }
             }
 

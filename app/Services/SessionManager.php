@@ -62,7 +62,7 @@ class SessionManager
         $whatsapp = new WhatsAppService($user->whatsapp_session, $user->whatsapp_token);
         $connectionStatus = $whatsapp->checkConnection();
 
-        if ($connectionStatus['connected'] ?? false) {
+        if (($connectionStatus['connected'] ?? false) && ($connectionStatus['status'] ?? '') === 'CONNECTED') {
             // Update last activity
             $this->markSessionActive($user->id, $user->whatsapp_session);
             return ['active' => true, 'service' => $whatsapp, 'reason' => null];
@@ -79,8 +79,21 @@ class SessionManager
      * - 'service': WhatsAppService instance if connected, null otherwise
      * - 'message': Human-readable message
      */
-    public function wakeSession(User $user): array
+    public function wakeSession(User $user, string $source = 'job'): array
     {
+        // STRICT WAKE POLICY: Background jobs cannot start a disconnected session
+        if ($source === 'job') {
+            // Check DB status first
+            if (in_array($user->session_state, ['disconnected', 'requires_reconnect'])) {
+                Log::warning("Strict Wake: Blocking background job for disconnected user {$user->id}");
+                return [
+                    'status' => 'needs_qr', // Use existing status that implies disconnect
+                    'service' => null,
+                    'message' => 'الجلسة مفصولة. يرجى إعادة الربط من لوحة التحكم.',
+                ];
+            }
+        }
+
         if (!$user->whatsapp_session || !$user->whatsapp_token) {
             Log::warning("Cannot wake session for user {$user->id}: missing session or token");
             return [
@@ -95,7 +108,7 @@ class SessionManager
         // Check if session is already connected
         $connectionStatus = $whatsapp->checkConnection();
 
-        if ($connectionStatus['connected'] ?? false) {
+        if (($connectionStatus['connected'] ?? false) && ($connectionStatus['status'] ?? '') === 'CONNECTED') {
             $this->markSessionActive($user->id, $user->whatsapp_session);
             $user->update(['session_state' => 'active']);
             Log::info("Session already connected for user {$user->id}");
@@ -139,8 +152,12 @@ class SessionManager
         $maxRetries = 3;
         $retryDelay = 2; // seconds between retries
 
+        // STRICT WAKE: If source is 'job', DO NOT wait for QR code
+        // If the session needs QR, it should fail fast so we can mark it disconnected
+        $shouldWaitQr = ($source === 'web');
+
         for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
-            $result = $whatsapp->startSession();
+            $result = $whatsapp->startSession($shouldWaitQr);
             $status = $result['status'] ?? '';
             $upperStatus = strtoupper($status);
 
@@ -150,8 +167,8 @@ class SessionManager
             if (in_array($upperStatus, ['STARTING', 'INITIALIZING', 'OPENING'])) {
                 Log::info("Session initializing for user {$user->id}, entering polling mode...");
 
-                // Poll for up to 15 seconds (5 checks × 3 seconds)
-                for ($poll = 1; $poll <= 5; $poll++) {
+                // Poll for up to 60 seconds (20 checks x 3 seconds)
+                for ($poll = 1; $poll <= 20; $poll++) {
                     sleep(3); // Wait 3 seconds between each poll
 
                     // Check connection
@@ -167,7 +184,18 @@ class SessionManager
                         ];
                     }
 
-                    Log::debug("Connection poll {$poll}/5 for user {$user->id}: not yet connected");
+                    // GHOST SESSION FIX: Fail fast if session died during polling
+                    $pollStatus = strtoupper($connectionStatus['status'] ?? '');
+                    if (in_array($pollStatus, ['CLOSED', 'DISCONNECTED', 'NOTLOGGED', 'QRCODE'])) {
+                        Log::warning("Session died during polling (User {$user->id}): Status {$pollStatus}");
+                        return [
+                            'status' => 'needs_qr',
+                            'service' => null,
+                            'message' => 'تم قطع الاتصال. يرجى إعادة الربط.',
+                        ];
+                    }
+
+                    Log::debug("Connection poll {$poll}/20 for user {$user->id}: Status " . ($connectionStatus['status'] ?? 'unknown'));
                 }
 
                 // After max polls, do one final check
@@ -252,12 +280,15 @@ class SessionManager
 
         $success = $whatsapp->closeSession();
 
+        // Always update session state to sleeping - even if close fails
+        // (e.g., browser was already closed), the session is no longer active
+        $this->removeSessionTracking($user->id);
+        $user->update(['session_state' => 'sleeping']);
+
         if ($success) {
-            $this->removeSessionTracking($user->id);
-            $user->update(['session_state' => 'sleeping']);
             Log::info("Session closed successfully for user {$user->id}");
         } else {
-            Log::warning("Failed to close session for user {$user->id}");
+            Log::info("Session close returned false for user {$user->id} (may already be closed)");
         }
 
         return $success;

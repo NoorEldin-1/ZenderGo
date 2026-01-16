@@ -141,22 +141,28 @@ class AuthController extends Controller
             ], 404);
         }
 
-        // ALWAYS generate a NEW session for reconnect
-        // The old session might be in a broken/closed state which prevents QR generation
-        // WPPConnect needs a fresh session to generate a new QR code properly
-        $newSessionName = 'user-' . $user->id . '-' . time();
-        $user->whatsapp_session = $newSessionName;
+        // Use STATIC session name for token reuse across browser restarts
+        // This ensures that when browser wakes up after sleeping, it finds the same token folder
+        // and can auto-reconnect without requiring a new QR scan
+        $stableSessionName = 'user-' . $user->id;
+
+        // Check if we need to generate a new token (first time or session name change)
+        $needsNewToken = !$user->whatsapp_token || $user->whatsapp_session !== $stableSessionName;
+
+        $user->whatsapp_session = $stableSessionName;
         $user->save();
 
         Log::info("Starting reconnect session for user {$user->id}: {$user->whatsapp_session}");
 
         $whatsapp = new WhatsAppService($user->whatsapp_session);
 
-        // Generate token for the NEW session
-        $tokenResult = $whatsapp->generateToken();
-        if (!empty($tokenResult['token'])) {
-            $user->whatsapp_token = $tokenResult['token'];
-            $user->save();
+        // Generate token only if needed (first time or session name changed)
+        if ($needsNewToken) {
+            $tokenResult = $whatsapp->generateToken();
+            if (!empty($tokenResult['token'])) {
+                $user->whatsapp_token = $tokenResult['token'];
+                $user->save();
+            }
         }
 
         // Start session
@@ -252,13 +258,19 @@ class AuthController extends Controller
                 Auth::login($user, true);
             }
 
-            // CRITICAL: Close session after successful reconnect to save RAM
-            // Session will wake when user sends a campaign
-            $sessionManager = new SessionManager();
-            $sessionManager->closeSession($user);
+            // If explicitly PAIRED, ensure session state is updated
+            if (($status['status'] ?? '') === 'PAIRED') {
+                $user->update(['session_state' => 'sleeping']);
+            }
 
-            // Set session state to sleeping (will wake on campaign send)
-            $user->update(['session_state' => 'sleeping']);
+            // CRITICAL: Close session after successful reconnect to save RAM
+            // Only if it was actually open (CONNECTED)
+            if (($status['status'] ?? '') === 'CONNECTED') {
+                $sessionManager = new SessionManager();
+                $sessionManager->closeSession($user);
+                // Set session state to sleeping (will wake on campaign send)
+                $user->update(['session_state' => 'sleeping']);
+            }
 
             session()->forget(['login_phone', 'login_user_id']);
 
@@ -328,11 +340,12 @@ class AuthController extends Controller
         }
 
         // Poll for QR code - WPPConnect might take a few seconds to generate it
-        // Try up to 5 times with 2-second intervals
-        for ($attempt = 1; $attempt <= 5; $attempt++) {
-            usleep(2000000); // Wait 2 seconds
+        // Try up to 10 times with 3-second intervals (30 seconds total)
+        // WPPConnect browser initialization can take 15-25 seconds
+        for ($attempt = 1; $attempt <= 10; $attempt++) {
+            usleep(3000000); // Wait 3 seconds
 
-            Log::info("Polling for QR code, attempt {$attempt}/5 for registration session {$sessionName}");
+            Log::info("Polling for QR code, attempt {$attempt}/10 for registration session {$sessionName}");
 
             $qrResult = $whatsapp->getQrCode();
             if (!empty($qrResult['qrcode'])) {
@@ -345,8 +358,8 @@ class AuthController extends Controller
             }
         }
 
-        // If still no QR after 5 attempts, return with retry message
-        Log::warning("Failed to get QR code after 5 attempts for registration session {$sessionName}");
+        // If still no QR after 10 attempts, return with retry message
+        Log::warning("Failed to get QR code after 10 attempts for registration session {$sessionName}");
         return response()->json([
             'success' => false,
             'status' => 'initializing',
@@ -392,7 +405,8 @@ class AuthController extends Controller
             // Check if user already exists with this phone
             $existingUser = User::where('phone', $phoneNumber)->first();
             if ($existingUser) {
-                // Update existing user's session info and optionally password, then log them in
+                // Keep the registration session name - tokens are stored under this name
+                // Don't change to user-X as it would break the token lookup
                 $existingUser->whatsapp_session = $sessionName;
                 $existingUser->whatsapp_token = $token;
                 $existingUser->session_state = 'sleeping'; // Will wake on campaign send
@@ -417,12 +431,13 @@ class AuthController extends Controller
                 ]);
             }
 
-            // Create new user with password
+            // Create new user with password - keep the registration session name
+            // The tokens are stored under this session name in the Node.js server
             $user = User::create([
                 'name' => 'User ' . substr($phoneNumber, -4),
                 'phone' => $phoneNumber,
                 'password' => $hashedPassword,
-                'whatsapp_session' => $sessionName,
+                'whatsapp_session' => $sessionName, // Keep registration session name
                 'whatsapp_token' => $token,
                 'session_state' => 'sleeping', // Will wake on campaign send
             ]);
@@ -459,27 +474,59 @@ class AuthController extends Controller
         $baseUrl = config('services.whatsapp.url');
         $token = $whatsapp->getToken();
 
-        // Method 1: Try get-phone-number endpoint (most direct)
-        try {
-            $response = \Illuminate\Support\Facades\Http::withToken($token)
-                ->timeout(10)
-                ->get("{$baseUrl}/api/{$session}/get-phone-number");
+        // Retry logic to handle race conditions where Node.js hasn't saved the phone yet
+        $maxRetries = 5;
 
-            if ($response->successful()) {
-                $data = $response->json();
-                Log::info("get-phone-number response for {$session}", $data);
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
 
-                $phone = $data['response']['phoneNumber']
-                    ?? $data['response']
-                    ?? $data['phoneNumber']
-                    ?? null;
+            // Method 0: Try get-stored-phone endpoint (works even after browser closes)
+            try {
+                $response = \Illuminate\Support\Facades\Http::withToken($token)
+                    ->timeout(10)
+                    ->get("{$baseUrl}/api/{$session}/get-stored-phone");
 
-                if ($phone) {
-                    return $this->formatPhoneNumber($phone);
+                if ($response->successful()) {
+                    $data = $response->json();
+
+                    if ($attempt > 1 || !empty($data['response']['phoneNumber'])) {
+                        Log::info("get-stored-phone response for {$session} (Attempt {$attempt})", $data);
+                    }
+
+                    $phone = $data['response']['phoneNumber'] ?? null;
+
+                    if ($phone) {
+                        return $this->formatPhoneNumber($phone);
+                    }
                 }
+            } catch (\Exception $e) {
+                Log::warning("get-stored-phone failed (Attempt {$attempt}): " . $e->getMessage());
             }
-        } catch (\Exception $e) {
-            Log::warning("get-phone-number failed: " . $e->getMessage());
+
+            // Method 1: Try get-phone-number endpoint (direct from browser)
+            try {
+                $response = \Illuminate\Support\Facades\Http::withToken($token)
+                    ->timeout(10)
+                    ->get("{$baseUrl}/api/{$session}/get-phone-number");
+
+                if ($response->successful()) {
+                    $data = $response->json();
+                    $phone = $data['response']['phoneNumber']
+                        ?? $data['response']
+                        ?? $data['phoneNumber']
+                        ?? null;
+
+                    if ($phone) {
+                        return $this->formatPhoneNumber($phone);
+                    }
+                }
+            } catch (\Exception $e) {
+                // suppress log for method 1
+            }
+
+            // If not found, wait and retry
+            if ($attempt < $maxRetries) {
+                sleep(1);
+            }
         }
 
         // Method 2: Try host-device endpoint (fallback)
@@ -490,14 +537,9 @@ class AuthController extends Controller
 
             if ($response->successful()) {
                 $data = $response->json();
-                Log::info("host-device response for {$session}", $data);
-
-                // Try different possible response structures
                 $phone = $data['response']['id']['user']
                     ?? $data['response']['wid']['user']
-                    ?? $data['response']['id']['_serialized']
                     ?? $data['id']['user']
-                    ?? $data['wid']['user']
                     ?? null;
 
                 if ($phone) {
@@ -508,30 +550,7 @@ class AuthController extends Controller
             Log::warning("host-device failed: " . $e->getMessage());
         }
 
-        // Method 3: Try check-connection-session which might have user info
-        try {
-            $response = \Illuminate\Support\Facades\Http::withToken($token)
-                ->timeout(10)
-                ->get("{$baseUrl}/api/{$session}/check-connection-session");
-
-            if ($response->successful()) {
-                $data = $response->json();
-                Log::info("check-connection-session response for {$session}", $data);
-
-                // Some versions include phone in connection response
-                $phone = $data['response']['id']['user']
-                    ?? $data['id']['user']
-                    ?? null;
-
-                if ($phone) {
-                    return $this->formatPhoneNumber($phone);
-                }
-            }
-        } catch (\Exception $e) {
-            Log::warning("check-connection-session failed: " . $e->getMessage());
-        }
-
-        Log::error("All methods failed to get phone number for session {$session}");
+        Log::error("All methods failed to get phone number for session {$session} after {$maxRetries} attempts");
         return null;
     }
 

@@ -100,9 +100,9 @@ class WhatsAppService
             $response = Http::withToken($authToken)
                 ->timeout(60)
                 ->post("{$this->baseUrl}/api/{$this->session}/start-session", [
-                        'webhook' => null,
-                        'waitQrCode' => true,
-                    ]);
+                    'webhook' => null,
+                    'waitQrCode' => true,
+                ]);
 
             $data = $response->json();
             Log::info("WhatsApp start session response for {$this->session}", [
@@ -138,6 +138,20 @@ class WhatsAppService
 
             // If we got here, return what we have
             Log::warning("WhatsApp start session - no QR in response for {$this->session}", $data);
+
+            // GHOST SESSION FIX: Treat CLOSED/DISCONNECTED as "Needs QR"
+            // If the Node.js server explicitly reports CLOSED (due to max QR attempts or logout),
+            // tell SessionManager to stop retrying and ask for re-auth.
+            $status = strtoupper($data['status'] ?? 'UNKNOWN');
+            if (in_array($status, ['CLOSED', 'DISCONNECTED', 'NOTLOGGED', 'QRCODE'])) {
+                return [
+                    'success' => true, // Sent successfully, just needs auth
+                    'status' => 'qrcode', // Force SessionManager to trigger "needs_qr" flow
+                    'qrcode' => null, // Might be null if max attempts reached, but flow is same
+                    'message' => 'الجلسة مغلقة. يرجى إعادة الربط.',
+                ];
+            }
+
             return [
                 'success' => false,
                 'status' => $data['status'] ?? 'unknown',
@@ -240,26 +254,27 @@ class WhatsAppService
 
             if ($response->successful()) {
                 $data = $response->json();
+
+                // PAIRED LOGIC: Treat 'PAIRED' as connected (sleeping session)
+                $message = $data['message'] ?? '';
+                $isPaired = ($message === 'PAIRED');
+
                 return [
-                    'success' => true,
-                    'connected' => ($data['status'] ?? false) === true || ($data['message'] ?? '') === 'Connected',
-                    'status' => $data['status'] ?? 'unknown',
-                    'message' => $data['message'] ?? null,
+                    'connected' => ($data['status'] ?? false) || $isPaired,
+                    'message' => $message,
+                    'status' => $isPaired ? 'PAIRED' : ($data['status'] ? 'CONNECTED' : 'DISCONNECTED')
                 ];
             }
 
             return [
-                'success' => false,
                 'connected' => false,
-                'status' => 'disconnected',
+                'message' => 'Failed to connect to WhatsApp server'
             ];
         } catch (\Exception $e) {
-            Log::error("WhatsApp check connection error: " . $e->getMessage());
+            Log::error("Connection check failed: " . $e->getMessage());
             return [
-                'success' => false,
                 'connected' => false,
-                'status' => 'error',
-                'message' => 'خطأ في التحقق من الاتصال',
+                'message' => $e->getMessage()
             ];
         }
     }
@@ -472,12 +487,12 @@ class WhatsAppService
             $response = Http::withToken($this->token)
                 ->timeout(30)
                 ->post("{$this->baseUrl}/api/{$this->session}/send-message", [
-                        'phone' => $this->formatPhone($phone),
-                        'message' => $message,
-                        'isGroup' => false,
-                        'isNewsletter' => false,
-                        'isLid' => false,
-                    ]);
+                    'phone' => $this->formatPhone($phone),
+                    'message' => $message,
+                    'isGroup' => false,
+                    'isNewsletter' => false,
+                    'isLid' => false,
+                ]);
 
             if ($response->successful()) {
                 $data = $response->json();
