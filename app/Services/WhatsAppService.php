@@ -469,6 +469,41 @@ class WhatsAppService
     }
 
     /**
+     * Force logout and completely delete session data from Node.js server.
+     * This removes:
+     * - Browser session data (userDataDir)
+     * - Token files
+     * - Session from memory
+     * 
+     * IMPORTANT: Call this BEFORE attempting to reconnect to ensure clean slate.
+     * This is the "nuclear option" - use when token is invalid (e.g., after mobile logout).
+     */
+    public function forceLogoutSession(): bool
+    {
+        try {
+            Log::info("Force logout session: {$this->session}");
+
+            $response = Http::withToken($this->token)
+                ->timeout(30)
+                ->post("{$this->baseUrl}/api/{$this->session}/logout-session");
+
+            $data = $response->json();
+            Log::info("Force logout response for {$this->session}", [
+                'status' => $response->status(),
+                'response' => $data
+            ]);
+
+            // Even if the request "fails" (e.g., 404 session not found), 
+            // the goal is to ensure session is gone - so treat as success
+            return true;
+        } catch (\Exception $e) {
+            // Log but don't fail - the goal is cleanup, not verification
+            Log::warning("Force logout exception for {$this->session}: " . $e->getMessage());
+            return true; // Return true anyway - we want to proceed with reconnect
+        }
+    }
+
+    /**
      * Send a text message via WhatsApp.
      */
     public function sendMessage(string $phone, string $message): bool

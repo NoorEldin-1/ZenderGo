@@ -120,6 +120,9 @@ class AuthController extends Controller
     /**
      * Start reconnection session for existing user (AJAX).
      * Supports both session-based (from login) and authenticated users.
+     * 
+     * CLEAN SLATE APPROACH: Force logout old session before starting new one.
+     * This ensures no stale tokens/browser data conflict with new connection.
      */
     public function startReconnect()
     {
@@ -141,28 +144,57 @@ class AuthController extends Controller
             ], 404);
         }
 
-        // Use STATIC session name for token reuse across browser restarts
-        // This ensures that when browser wakes up after sleeping, it finds the same token folder
-        // and can auto-reconnect without requiring a new QR scan
+        // Use STATIC session name for consistency
         $stableSessionName = 'user-' . $user->id;
 
-        // Check if we need to generate a new token (first time or session name change)
-        $needsNewToken = !$user->whatsapp_token || $user->whatsapp_session !== $stableSessionName;
+        Log::info("Starting CLEAN SLATE reconnect for user {$user->id}");
 
-        $user->whatsapp_session = $stableSessionName;
-        $user->save();
+        // ============================================================
+        // CRITICAL: CLEAN SLATE RECONNECT
+        // Step 1: Close browser to free RAM
+        // Step 2: Force logout to delete all stale data (tokens, userDataDir)
+        // ============================================================
+        if ($user->whatsapp_session && $user->whatsapp_token) {
+            Log::info("Cleaning up old session before reconnect for user {$user->id}: {$user->whatsapp_session}");
 
-        Log::info("Starting reconnect session for user {$user->id}: {$user->whatsapp_session}");
+            $oldWhatsapp = new WhatsAppService($user->whatsapp_session, $user->whatsapp_token);
 
-        $whatsapp = new WhatsAppService($user->whatsapp_session);
+            // Step 1: Close browser first (free RAM immediately)
+            $oldWhatsapp->closeSession();
+            Log::info("Closed browser for user {$user->id} to free RAM");
 
-        // Generate token only if needed (first time or session name changed)
-        if ($needsNewToken) {
-            $tokenResult = $whatsapp->generateToken();
-            if (!empty($tokenResult['token'])) {
-                $user->whatsapp_token = $tokenResult['token'];
-                $user->save();
-            }
+            // Step 2: Force logout to delete stale tokens and browser data files
+            $oldWhatsapp->forceLogoutSession();
+            Log::info("Force logout completed for user {$user->id}");
+
+            // Small delay to ensure Node.js cleanup completes
+            usleep(500000); // 0.5 seconds
+        }
+
+        // Clear old token - we MUST generate a fresh one
+        $user->update([
+            'whatsapp_session' => $stableSessionName,
+            'whatsapp_token' => null,
+            'session_state' => 'reconnecting'
+        ]);
+
+        Log::info("Creating fresh session for user {$user->id}: {$stableSessionName}");
+
+        // Create new WhatsApp service with NO token (will generate fresh one)
+        $whatsapp = new WhatsAppService($stableSessionName);
+
+        // ALWAYS generate new token during reconnect
+        $tokenResult = $whatsapp->generateToken();
+        if (!empty($tokenResult['token'])) {
+            $user->whatsapp_token = $tokenResult['token'];
+            $user->save();
+            Log::info("Generated fresh token for user {$user->id}");
+        } else {
+            Log::error("Failed to generate token for user {$user->id}");
+            return response()->json([
+                'success' => false,
+                'message' => 'فشل في إنشاء جلسة جديدة. يرجى المحاولة مرة أخرى.',
+            ]);
         }
 
         // Start session
@@ -252,29 +284,23 @@ class AuthController extends Controller
         $whatsapp = new WhatsAppService($user->whatsapp_session, $user->whatsapp_token);
         $status = $whatsapp->checkConnection();
 
-        if ($status['connected'] ?? false) {
-            // Connected! Log in the user if not already
+        $statusMessage = strtoupper($status['status'] ?? '');
+
+        // CRITICAL FIX: Only CONNECTED means truly connected
+        // PAIRED means token file exists but doesn't guarantee valid connection
+        // After mobile logout, tokens are invalid even if file exists!
+        if ($statusMessage === 'CONNECTED') {
+            // Actually connected with browser open - SUCCESS!
             if (!Auth::check()) {
                 Auth::login($user, true);
             }
 
-            // If explicitly PAIRED, ensure session state is updated
-            if (($status['status'] ?? '') === 'PAIRED') {
-                $user->update(['session_state' => 'sleeping']);
-            }
-
-            // CRITICAL: Close session after successful reconnect to save RAM
-            // Only if it was actually open (CONNECTED)
-            if (($status['status'] ?? '') === 'CONNECTED') {
-                $sessionManager = new SessionManager();
-                $sessionManager->closeSession($user);
-                // Set session state to sleeping (will wake on campaign send)
-                $user->update(['session_state' => 'sleeping']);
-            }
+            // Close session to save RAM
+            $sessionManager = new SessionManager();
+            $sessionManager->closeSession($user);
+            $user->update(['session_state' => 'sleeping']);
 
             session()->forget(['login_phone', 'login_user_id']);
-
-            // Redirect to intended URL or guide
             $redirectUrl = session()->pull('url.intended', route('guide'));
 
             return response()->json([
@@ -284,9 +310,11 @@ class AuthController extends Controller
             ]);
         }
 
+        // PAIRED or anything else = NOT truly connected, keep waiting
         return response()->json([
             'success' => true,
             'connected' => false,
+            'status' => $statusMessage,
         ]);
     }
 

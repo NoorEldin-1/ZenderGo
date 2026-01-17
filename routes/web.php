@@ -53,15 +53,15 @@ Route::middleware('auth')->group(function () {
     // Theme Toggle (AJAX)
     Route::post('/theme/toggle', [ThemeController::class, 'toggle'])->name('theme.toggle');
 
-    // Dashboard
+    // Dashboard (protected by WhatsApp connection status)
     Route::get('/dashboard', function () {
         return view('dashboard');
-    })->name('dashboard');
+    })->middleware('whatsapp.connected')->name('dashboard');
 
-    // User Guide
+    // User Guide (protected by WhatsApp connection status)
     Route::get('/guide', function () {
         return view('guide');
-    })->name('guide');
+    })->middleware('whatsapp.connected')->name('guide');
 
     // Subscription Locked Page
     Route::view('/subscription/locked', 'errors.subscription_locked')->name('subscription.locked');

@@ -50,11 +50,28 @@ class EnsureWhatsAppConnected
         // Allow request based on session_state:
         // - "active": Session was connected, allow (campaigns will check when sending)
         // - "sleeping": Session intentionally closed for RAM, allow (will wake when needed)
+        // - "reconnecting": User is in the middle of reconnecting
+        // - "disconnected": User was detected as logged out from mobile - MUST reconnect
         // - "none" or null: Never connected or needs reconnect
 
-        if ($user->session_state === 'active' || $user->session_state === 'sleeping') {
+        if (in_array($user->session_state, ['active', 'sleeping', 'reconnecting'])) {
             // Trust the session state - no connection check needed
             return $next($request);
+        }
+
+        // CRITICAL: If user is explicitly disconnected, they MUST reconnect
+        // Do NOT reset to sleeping - this would bypass the reconnection requirement
+        if ($user->session_state === 'disconnected') {
+            Log::info("User {$user->id} has disconnected state, redirecting to reconnect");
+
+            // Store session data for reconnect flow
+            session([
+                'login_phone' => $user->phone,
+                'login_user_id' => $user->id,
+            ]);
+
+            return redirect()->route('login.reconnect')
+                ->with('warning', 'تم فقدان اتصال WhatsApp. يرجى إعادة الربط.');
         }
 
         // State is "none" or null - user needs to reconnect
