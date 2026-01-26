@@ -7,9 +7,10 @@
         /* ========== Hero Section ========== */
         /* Guide Page Wrapper - Overflow Protection */
         .guide-page-wrapper {
-            overflow-x: hidden;
+            overflow-x: clip;
             max-width: 100%;
             position: relative;
+            padding-left: 0;
         }
 
         .guide-hero {
@@ -213,7 +214,8 @@
         /* ========== Timeline ========== */
         .timeline {
             position: relative;
-            padding-right: 30px;
+            padding-right: 60px;
+            overflow: visible;
         }
 
         .timeline::before {
@@ -232,13 +234,16 @@
             background: white;
             border-radius: 20px;
             padding: 2rem;
+            padding-top: 2.5rem;
             margin-bottom: 2.5rem;
+            margin-top: 1rem;
             position: relative;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
             border: 1px solid rgba(37, 211, 102, 0.1);
             opacity: 0;
             transform: translateX(-30px);
             transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow: visible;
         }
 
         .step-card.visible {
@@ -266,8 +271,8 @@
 
         .step-number {
             position: absolute;
-            top: -15px;
-            right: 20px;
+            top: 15px;
+            right: 15px;
             width: 50px;
             height: 50px;
             background: linear-gradient(135deg, var(--whatsapp-green), var(--whatsapp-dark));
@@ -280,6 +285,7 @@
             color: white;
             box-shadow: 0 8px 25px rgba(37, 211, 102, 0.4);
             transform: rotate(-5deg);
+            z-index: 10;
         }
 
         .step-icon {
@@ -663,6 +669,7 @@
             /* Timeline mobile fix - hide decorative elements */
             .timeline {
                 padding-right: 0;
+                padding-left: 0;
                 overflow: visible;
             }
 
@@ -672,7 +679,10 @@
 
             .step-card {
                 padding: 1.5rem;
+                padding-top: 4rem;
                 margin-right: 0;
+                margin-top: 0.5rem;
+                position: relative;
             }
 
             .step-card::before {
@@ -683,11 +693,21 @@
                 font-size: 1.25rem;
             }
 
+            /* Step number - centered at top of card */
             .step-number {
-                right: 15px;
-                width: 42px;
-                height: 42px;
-                font-size: 1.2rem;
+                position: absolute;
+                top: -20px;
+                left: 50%;
+                right: auto;
+                transform: translateX(-50%) rotate(0deg);
+                width: 44px;
+                height: 44px;
+                font-size: 1.1rem;
+            }
+
+            .step-icon {
+                text-align: center;
+                margin-top: 0.5rem;
             }
 
             /* CTA section mobile fix */
