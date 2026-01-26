@@ -401,11 +401,14 @@ class AuthController extends Controller
      */
     public function checkRegistration()
     {
+        Log::emergency("CHECK-REG: Entering checkRegistration function.");
         $sessionName = session('reg_session');
         $token = session('reg_token');
+        Log::emergency("CHECK-REG: Using token: '{$token}' for session: '{$sessionName}'");
         $hashedPassword = session('reg_password');
 
         if (!$sessionName) {
+            Log::emergency("CHECK-REG: No active session found.");
             return response()->json([
                 'success' => false,
                 'connected' => false,
@@ -413,79 +416,110 @@ class AuthController extends Controller
             ]);
         }
 
+        // ... (existing code for connection check) ...
+
+
         $whatsapp = new WhatsAppService($sessionName, $token);
         $status = $whatsapp->checkConnection();
+
+        Log::emergency("CHECK-REG: Status for {$sessionName}: " . json_encode($status));
 
         Log::info("Registration check for session {$sessionName}", $status);
 
         if ($status['connected'] ?? false) {
             // Connected! Get the phone number from WhatsApp
             $phoneNumber = $this->getConnectedPhoneNumber($whatsapp, $sessionName);
+            Log::emergency("CHECK-REG: Phone number result: " . ($phoneNumber ?? 'NULL'));
 
             if (!$phoneNumber) {
+                // If we are connected but can't get the phone number yet, keep polling
+                // Do NOT return connected: true, otherwise the frontend stops polling and freezes
+                Log::info("Session connected but phone number missing for {$sessionName}, continuing to poll...");
+                Log::emergency("CHECK-REG: Connected but NO PHONE. Returning connected=false to force poll.");
                 return response()->json([
-                    'success' => false,
-                    'connected' => true,
-                    'message' => 'تم الربط ولكن لم نتمكن من الحصول على رقم الهاتف. يرجى المحاولة مرة أخرى.',
+                    'success' => true,
+                    'connected' => false, // Force polling retry
+                    'message' => 'Waiting for phone number...',
                 ]);
             }
 
-            // Check if user already exists with this phone
-            $existingUser = User::where('phone', $phoneNumber)->first();
-            if ($existingUser) {
-                // Keep the registration session name - tokens are stored under this name
-                // Don't change to user-X as it would break the token lookup
-                $existingUser->whatsapp_session = $sessionName;
-                $existingUser->whatsapp_token = $token;
-                $existingUser->session_state = 'sleeping'; // Will wake on campaign send
-                // Update password if provided (re-registration updates password)
-                if ($hashedPassword) {
-                    $existingUser->password = $hashedPassword;
+            Log::emergency("CHECK-REG: Success with phone {$phoneNumber} - Proceeding to login/create");
+
+            Log::emergency("CHECK-REG: Success with phone {$phoneNumber} - Proceeding to login/create");
+
+            try {
+                // Check if user already exists with this phone
+                $existingUser = User::where('phone', $phoneNumber)->first();
+
+                if ($existingUser) {
+                    Log::emergency("CHECK-REG: Found existing user ID: {$existingUser->id}");
+                    // Keep the registration session name - tokens are stored under this name
+                    // Don't change to user-X as it would break the token lookup
+                    $existingUser->whatsapp_session = $sessionName;
+                    $existingUser->whatsapp_token = $token;
+                    $existingUser->session_state = 'sleeping'; // Will wake on campaign send
+                    // Update password if provided (re-registration updates password)
+                    if ($hashedPassword) {
+                        $existingUser->password = $hashedPassword;
+                    }
+                    $existingUser->save();
+                    Log::emergency("CHECK-REG: Updated existing user.");
+
+                    // CRITICAL: Close session after successful registration to save RAM
+                    $sessionManager = new SessionManager();
+                    $sessionManager->closeSession($existingUser);
+
+                    Auth::login($existingUser, true);
+                    session()->forget(['reg_session', 'reg_token', 'reg_password']);
+
+                    return response()->json([
+                        'success' => true,
+                        'connected' => true,
+                        'redirect' => route('guide'),
+                        'message' => 'مرحباً بعودتك! تم تحديث جلسة WhatsApp وكلمة المرور.',
+                    ]);
                 }
-                $existingUser->save();
+
+                Log::emergency("CHECK-REG: Creating NEW user");
+                // Create new user with password - keep the registration session name
+                // The tokens are stored under this session name in the Node.js server
+                $user = User::create([
+                    'name' => 'User ' . substr($phoneNumber, -4),
+                    'phone' => $phoneNumber,
+                    'password' => $hashedPassword,
+                    'whatsapp_session' => $sessionName, // Keep registration session name
+                    'whatsapp_token' => $token,
+                    'session_state' => 'sleeping', // Will wake on campaign send
+                ]);
+                Log::emergency("CHECK-REG: Created new user ID: {$user->id}");
+
+                // Create trial subscription for new user
+                $user->createTrialSubscription();
 
                 // CRITICAL: Close session after successful registration to save RAM
                 $sessionManager = new SessionManager();
-                $sessionManager->closeSession($existingUser);
+                $sessionManager->closeSession($user);
 
-                Auth::login($existingUser, true);
+                Auth::login($user, true);
                 session()->forget(['reg_session', 'reg_token', 'reg_password']);
 
                 return response()->json([
                     'success' => true,
                     'connected' => true,
                     'redirect' => route('guide'),
-                    'message' => 'مرحباً بعودتك! تم تحديث جلسة WhatsApp وكلمة المرور.',
+                    'message' => 'تم إنشاء حسابك وربطه بـ WhatsApp بنجاح!',
+                ]);
+
+            } catch (\Exception $e) {
+                Log::emergency("CHECK-REG: DATABASE ERROR: " . $e->getMessage());
+                Log::emergency("CHECK-REG: Trace: " . $e->getTraceAsString());
+
+                return response()->json([
+                    'success' => false,
+                    'connected' => true, // Still connected, but DB failed
+                    'message' => 'حدث خطأ في قاعدة البيانات: ' . $e->getMessage(),
                 ]);
             }
-
-            // Create new user with password - keep the registration session name
-            // The tokens are stored under this session name in the Node.js server
-            $user = User::create([
-                'name' => 'User ' . substr($phoneNumber, -4),
-                'phone' => $phoneNumber,
-                'password' => $hashedPassword,
-                'whatsapp_session' => $sessionName, // Keep registration session name
-                'whatsapp_token' => $token,
-                'session_state' => 'sleeping', // Will wake on campaign send
-            ]);
-
-            // Create trial subscription for new user
-            $user->createTrialSubscription();
-
-            // CRITICAL: Close session after successful registration to save RAM
-            $sessionManager = new SessionManager();
-            $sessionManager->closeSession($user);
-
-            Auth::login($user, true);
-            session()->forget(['reg_session', 'reg_token', 'reg_password']);
-
-            return response()->json([
-                'success' => true,
-                'connected' => true,
-                'redirect' => route('guide'),
-                'message' => 'تم التسجيل بنجاح!',
-            ]);
         }
 
         return response()->json([

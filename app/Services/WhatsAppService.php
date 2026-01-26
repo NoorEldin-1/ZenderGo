@@ -90,12 +90,15 @@ class WhatsAppService
     public function startSession(): array
     {
         try {
-            // First, generate token for this session
-            $tokenResult = $this->generateToken();
-            Log::info("Token generation result for {$this->session}", $tokenResult);
+            // Only generate token if we don't have one yet
+            if (empty($this->token)) {
+                $tokenResult = $this->generateToken();
+                Log::info("Token generation result for {$this->session}", $tokenResult);
+                $this->token = $tokenResult['token'] ?? '';
+            }
 
-            // Use the new token if available
-            $authToken = $tokenResult['token'] ?? $this->token;
+            // Use the current token
+            $authToken = $this->token;
 
             $response = Http::withToken($authToken)
                 ->timeout(60)
@@ -266,9 +269,11 @@ class WhatsAppService
                 ];
             }
 
+            Log::error("WhatsApp API Error for {$this->session}: " . $response->status() . " - " . $response->body());
+
             return [
                 'connected' => false,
-                'message' => 'Failed to connect to WhatsApp server'
+                'message' => 'Failed to connect to WhatsApp server (Status: ' . $response->status() . ')'
             ];
         } catch (\Exception $e) {
             Log::error("Connection check failed: " . $e->getMessage());

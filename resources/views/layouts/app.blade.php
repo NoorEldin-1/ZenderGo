@@ -1660,12 +1660,10 @@
                                 <hr class="dropdown-divider">
                             </li>
                             <li>
-                                <form action="{{ route('logout') }}" method="POST">
-                                    @csrf
-                                    <button type="submit" class="dropdown-item text-danger">
-                                        <i class="bi bi-box-arrow-right me-2"></i>تسجيل الخروج
-                                    </button>
-                                </form>
+                                <button type="button" class="dropdown-item text-danger" data-bs-toggle="modal"
+                                    data-bs-target="#logoutModal">
+                                    <i class="bi bi-box-arrow-right me-2"></i>تسجيل الخروج
+                                </button>
                             </li>
                         </ul>
                     </div>
@@ -1834,7 +1832,36 @@
 
             @yield('content')
         </div>
+
     @endauth
+
+    <!-- Logout Confirmation Modal -->
+    <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4">
+                    <div class="mb-3">
+                        <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center"
+                            style="width: 70px; height: 70px;">
+                            <i class="bi bi-box-arrow-right text-danger"
+                                style="font-size: 2rem; margin-left: 3px;"></i>
+                        </div>
+                    </div>
+                    <h6 class="fw-bold mb-2">تسجيل الخروج</h6>
+                    <p class="text-muted small mb-0">هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟</p>
+                </div>
+                <div class="modal-footer justify-content-center border-0 pt-0 pb-4">
+                    <button type="button" class="btn btn-light btn-sm px-4" data-bs-dismiss="modal">إلغاء</button>
+                    <form action="{{ route('logout') }}" method="POST" class="d-inline">
+                        @csrf
+                        <button type="submit" class="btn btn-danger btn-sm px-4">
+                            تسجيل الخروج
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Bootstrap 5.3 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"

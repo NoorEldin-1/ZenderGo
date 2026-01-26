@@ -5,6 +5,13 @@
 @push('styles')
     <style>
         /* ========== Hero Section ========== */
+        /* Guide Page Wrapper - Overflow Protection */
+        .guide-page-wrapper {
+            overflow-x: hidden;
+            max-width: 100%;
+            position: relative;
+        }
+
         .guide-hero {
             background: linear-gradient(135deg, #1a1d21 0%, #2d3748 50%, #1a1d21 100%);
             padding: 3rem 1.5rem;
@@ -12,6 +19,8 @@
             text-align: center;
             position: relative;
             overflow: hidden;
+            max-width: 100vw;
+            box-sizing: border-box;
         }
 
         .guide-hero::before {
@@ -81,8 +90,12 @@
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             padding: 1.5rem 1rem;
+            padding-bottom: 2.5rem;
             margin: 0 -1.5rem 2rem -1.5rem;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            max-width: 100vw;
+            box-sizing: border-box;
+            overflow: visible;
         }
 
         .progress-steps {
@@ -570,10 +583,14 @@
             .guide-hero {
                 margin: -1rem -1rem 1.5rem -1rem;
                 padding: 2rem 1rem;
+                width: calc(100% + 2rem);
+                margin-left: -1rem;
+                margin-right: -1rem;
             }
 
             .progress-container {
                 margin: 0 -1rem 1.5rem -1rem;
+                width: calc(100% + 2rem);
             }
 
             .timeline {
@@ -592,36 +609,91 @@
         }
 
         @media (max-width: 575.98px) {
+
+            /* Hero section mobile fix */
+            .guide-hero {
+                margin: 0 0 1.5rem 0;
+                padding: 2rem 1rem;
+                width: 100%;
+                border-radius: 0;
+            }
+
             .guide-hero h1 {
                 font-size: 1.5rem;
             }
 
+            /* Progress container mobile fix */
+            .progress-container {
+                margin: 0 0 1.5rem 0;
+                width: 100%;
+                padding: 1rem 0.5rem;
+                padding-bottom: 2rem;
+            }
+
+            .progress-steps {
+                justify-content: center;
+                gap: 0;
+                max-width: 100%;
+                flex-wrap: nowrap;
+            }
+
+            .progress-steps::before {
+                left: 15%;
+                right: 15%;
+                top: 16px;
+            }
+
+            .progress-line {
+                right: 15%;
+                top: 16px;
+            }
+
+            .progress-step {
+                width: 32px;
+                height: 32px;
+                font-size: 0.75rem;
+                margin: 0 4px;
+                flex-shrink: 0;
+            }
+
+            .progress-step-label {
+                display: none !important;
+            }
+
+            /* Timeline mobile fix - hide decorative elements */
+            .timeline {
+                padding-right: 0;
+                overflow: visible;
+            }
+
+            .timeline::before {
+                display: none;
+            }
+
             .step-card {
                 padding: 1.5rem;
+                margin-right: 0;
+            }
+
+            .step-card::before {
+                display: none;
             }
 
             .step-title {
                 font-size: 1.25rem;
             }
 
-            .progress-step {
-                width: 32px;
-                height: 32px;
-                font-size: 0.8rem;
-                margin: 0 6px;
+            .step-number {
+                right: 15px;
+                width: 42px;
+                height: 42px;
+                font-size: 1.2rem;
             }
 
-            .progress-steps::before {
-                left: 30px;
-                right: 30px;
-            }
-
-            .progress-line {
-                right: 30px;
-            }
-
-            .progress-step-label {
-                display: none;
+            /* CTA section mobile fix */
+            .cta-section {
+                margin: 2rem 0;
+                border-radius: 15px;
             }
 
             .cta-buttons {
@@ -637,640 +709,648 @@
 @endpush
 
 @section('content')
-    <!-- Hero Section -->
-    <div class="guide-hero">
-        <h1><span class="emoji-rocket">🚀</span> رحلتك مع زندر</h1>
-        <p>دليل شامل ومفصل لجميع مميزات المنصة - من إضافة جهات الاتصال حتى إرسال حملاتك</p>
-    </div>
+    <div class="guide-page-wrapper">
+        <!-- Hero Section -->
+        <div class="guide-hero">
+            <h1><span class="emoji-rocket">🚀</span> رحلتك مع زندر</h1>
+            <p>دليل شامل ومفصل لجميع مميزات المنصة - من إضافة جهات الاتصال حتى إرسال حملاتك</p>
+        </div>
 
-    <!-- Progress Bar -->
-    <div class="progress-container">
-        <div class="progress-steps">
-            <div class="progress-line" id="progressLine"></div>
-            <div class="progress-step active" data-step="1" onclick="scrollToStep(1)">
-                <span>1</span>
-                <span class="progress-step-label">جهات الاتصال</span>
-            </div>
-            <div class="progress-step" data-step="2" onclick="scrollToStep(2)">
-                <span>2</span>
-                <span class="progress-step-label">المشاركة</span>
-            </div>
-            <div class="progress-step" data-step="3" onclick="scrollToStep(3)">
-                <span>3</span>
-                <span class="progress-step-label">إنشاء حملة</span>
-            </div>
-            <div class="progress-step" data-step="4" onclick="scrollToStep(4)">
-                <span>4</span>
-                <span class="progress-step-label">القوالب</span>
-            </div>
-            <div class="progress-step" data-step="5" onclick="scrollToStep(5)">
-                <span>5</span>
-                <span class="progress-step-label">الإرسال</span>
-            </div>
-            <div class="progress-step" data-step="6" onclick="scrollToStep(6)">
-                <span>6</span>
-                <span class="progress-step-label">الاشتراك</span>
+        <!-- Progress Bar -->
+        <div class="progress-container">
+            <div class="progress-steps">
+                <div class="progress-line" id="progressLine"></div>
+                <div class="progress-step active" data-step="1" onclick="scrollToStep(1)">
+                    <span>1</span>
+                    <span class="progress-step-label">جهات الاتصال</span>
+                </div>
+                <div class="progress-step" data-step="2" onclick="scrollToStep(2)">
+                    <span>2</span>
+                    <span class="progress-step-label">المشاركة</span>
+                </div>
+                <div class="progress-step" data-step="3" onclick="scrollToStep(3)">
+                    <span>3</span>
+                    <span class="progress-step-label">إنشاء حملة</span>
+                </div>
+                <div class="progress-step" data-step="4" onclick="scrollToStep(4)">
+                    <span>4</span>
+                    <span class="progress-step-label">القوالب</span>
+                </div>
+                <div class="progress-step" data-step="5" onclick="scrollToStep(5)">
+                    <span>5</span>
+                    <span class="progress-step-label">الإرسال</span>
+                </div>
+                <div class="progress-step" data-step="6" onclick="scrollToStep(6)">
+                    <span>6</span>
+                    <span class="progress-step-label">الاشتراك</span>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Timeline -->
-    <div class="timeline">
-        <!-- Step 1: Add Contacts -->
-        <div class="step-card" id="step1">
-            <div class="step-number">1</div>
-            <div class="step-icon">👥</div>
-            <h2 class="step-title">إضافة جهات الاتصال</h2>
-            <p class="step-description">
-                الخطوة الأولى في رحلتك مع زندر هي إضافة جهات الاتصال - وهم العملاء أو الأشخاص الذين تريد إرسال الرسائل
-                إليهم.
-                يوفر لك زندر <strong>طريقتين مرنتين</strong> لإضافة جهات الاتصال حسب احتياجاتك.
-            </p>
+        <!-- Timeline -->
+        <div class="timeline">
+            <!-- Step 1: Add Contacts -->
+            <div class="step-card" id="step1">
+                <div class="step-number">1</div>
+                <div class="step-icon">👥</div>
+                <h2 class="step-title">إضافة جهات الاتصال</h2>
+                <p class="step-description">
+                    الخطوة الأولى في رحلتك مع زندر هي إضافة جهات الاتصال - وهم العملاء أو الأشخاص الذين تريد إرسال الرسائل
+                    إليهم.
+                    يوفر لك زندر <strong>طريقتين مرنتين</strong> لإضافة جهات الاتصال حسب احتياجاتك.
+                </p>
 
-            <!-- Benefits -->
-            <div class="benefits-list">
-                <div class="benefits-title">
-                    <i class="bi bi-stars"></i>
-                    لماذا هذه الخطوة مهمة؟
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon"><i class="bi bi-clock-history"></i></div>
-                    <div class="benefit-text">
-                        <strong>توفير الوقت والجهد</strong>
-                        <span>بدلاً من إرسال رسائل فردية، أضف كل جهات اتصالك مرة واحدة وأرسل للجميع بضغطة زر</span>
+                <!-- Benefits -->
+                <div class="benefits-list">
+                    <div class="benefits-title">
+                        <i class="bi bi-stars"></i>
+                        لماذا هذه الخطوة مهمة؟
                     </div>
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon"><i class="bi bi-folder2-open"></i></div>
-                    <div class="benefit-text">
-                        <strong>تنظيم قاعدة العملاء</strong>
-                        <span>احتفظ بقائمة منظمة ومحدثة لجميع عملائك في مكان واحد</span>
+                    <div class="benefit-item">
+                        <div class="benefit-icon"><i class="bi bi-clock-history"></i></div>
+                        <div class="benefit-text">
+                            <strong>توفير الوقت والجهد</strong>
+                            <span>بدلاً من إرسال رسائل فردية، أضف كل جهات اتصالك مرة واحدة وأرسل للجميع بضغطة زر</span>
+                        </div>
                     </div>
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon"><i class="bi bi-arrow-repeat"></i></div>
-                    <div class="benefit-text">
-                        <strong>إعادة الاستخدام</strong>
-                        <span>جهات الاتصال المضافة تبقى محفوظة ويمكنك استخدامها في أي حملة مستقبلية</span>
+                    <div class="benefit-item">
+                        <div class="benefit-icon"><i class="bi bi-folder2-open"></i></div>
+                        <div class="benefit-text">
+                            <strong>تنظيم قاعدة العملاء</strong>
+                            <span>احتفظ بقائمة منظمة ومحدثة لجميع عملائك في مكان واحد</span>
+                        </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Sub-steps Accordion -->
-            <div class="substeps-accordion">
-                <button class="substep-header method-1" type="button" data-bs-toggle="collapse" data-bs-target="#method1"
-                    aria-expanded="true">
-                    <span class="icon"><i class="bi bi-person-plus"></i></span>
-                    <span>الطريقة الأولى: الإضافة اليدوية (جهة واحدة)</span>
-                    <i class="bi bi-chevron-down arrow"></i>
-                </button>
-                <div class="collapse show" id="method1">
-                    <div class="substep-body">
-                        <ol class="substep-list">
-                            <li>من القائمة الجانبية، اضغط على <strong>"جهات الاتصال"</strong></li>
-                            <li>اضغط على زر <strong>"+ إضافة"</strong> الموجود أعلى الصفحة</li>
-                            <li>أدخل <strong>اسم جهة الاتصال</strong> (مثال: أحمد محمد)</li>
-                            <li>أدخل <strong>رقم الهاتف</strong> كاملاً مع كود المنطقة (مثال: 01012345678)</li>
-                            <li>اضغط على <strong>"حفظ"</strong> لإضافة جهة الاتصال</li>
-                        </ol>
-                        <div class="alert alert-info py-2 mb-0 mt-3 small">
-                            <i class="bi bi-info-circle me-1"></i>
-                            <strong>نصيحة:</strong> هذه الطريقة مناسبة لإضافة عدد قليل من جهات الاتصال (1-10 جهات)
+                    <div class="benefit-item">
+                        <div class="benefit-icon"><i class="bi bi-arrow-repeat"></i></div>
+                        <div class="benefit-text">
+                            <strong>إعادة الاستخدام</strong>
+                            <span>جهات الاتصال المضافة تبقى محفوظة ويمكنك استخدامها في أي حملة مستقبلية</span>
                         </div>
                     </div>
                 </div>
 
-                <button class="substep-header method-2" type="button" data-bs-toggle="collapse" data-bs-target="#method2"
-                    aria-expanded="false">
-                    <span class="icon"><i class="bi bi-file-earmark-excel"></i></span>
-                    <span>الطريقة الثانية: الاستيراد من Excel (آلاف الجهات)</span>
-                    <i class="bi bi-chevron-down arrow"></i>
-                </button>
-                <div class="collapse" id="method2">
-                    <div class="substep-body">
-                        <ol class="substep-list">
-                            <li>من صفحة <strong>"جهات الاتصال"</strong>، اضغط على زر <strong>"استيراد"</strong></li>
-                            <li>سيظهر لك نافذة توضح <strong>تنسيق الملف المطلوب</strong>:
-                                <div class="mt-2 mb-2 p-2 bg-light rounded small">
-                                    <code>Store_Name</code> (اختياري) | <code>Cust_FullName</code> (مطلوب) |
-                                    <code>Cust_Mobile</code> (مطلوب)
-                                </div>
-                            </li>
-                            <li>اختر <strong>ملف Excel أو CSV</strong> من جهازك</li>
-                            <li>ستظهر <strong>معاينة للبيانات</strong> قبل الاستيراد للتأكد من صحتها</li>
-                            <li>يمكنك <strong>تصفية البيانات</strong> حسب رقم الهاتف أو اسم المتجر</li>
-                            <li>اضغط <strong>"تأكيد الاستيراد"</strong> لإضافة جميع الجهات دفعة واحدة</li>
-                        </ol>
-                        <div class="alert alert-success py-2 mb-0 mt-3 small">
-                            <i class="bi bi-lightning me-1"></i>
-                            <strong>ميزة ذكية:</strong> النظام يضيف الصفر تلقائياً للأرقام الناقصة ويتعرف على أسماء الأعمدة
-                            البديلة!
+                <!-- Sub-steps Accordion -->
+                <div class="substeps-accordion">
+                    <button class="substep-header method-1" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#method1" aria-expanded="true">
+                        <span class="icon"><i class="bi bi-person-plus"></i></span>
+                        <span>الطريقة الأولى: الإضافة اليدوية (جهة واحدة)</span>
+                        <i class="bi bi-chevron-down arrow"></i>
+                    </button>
+                    <div class="collapse show" id="method1">
+                        <div class="substep-body">
+                            <ol class="substep-list">
+                                <li>من القائمة الجانبية، اضغط على <strong>"جهات الاتصال"</strong></li>
+                                <li>اضغط على زر <strong>"+ إضافة"</strong> الموجود أعلى الصفحة</li>
+                                <li>أدخل <strong>اسم جهة الاتصال</strong> (مثال: أحمد محمد)</li>
+                                <li>أدخل <strong>رقم الهاتف</strong> كاملاً مع كود المنطقة (مثال: 01012345678)</li>
+                                <li>اضغط على <strong>"حفظ"</strong> لإضافة جهة الاتصال</li>
+                            </ol>
+                            <div class="alert alert-info py-2 mb-0 mt-3 small">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <strong>نصيحة:</strong> هذه الطريقة مناسبة لإضافة عدد قليل من جهات الاتصال (1-10 جهات)
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="substep-header method-2" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#method2" aria-expanded="false">
+                        <span class="icon"><i class="bi bi-file-earmark-excel"></i></span>
+                        <span>الطريقة الثانية: الاستيراد من Excel (آلاف الجهات)</span>
+                        <i class="bi bi-chevron-down arrow"></i>
+                    </button>
+                    <div class="collapse" id="method2">
+                        <div class="substep-body">
+                            <ol class="substep-list">
+                                <li>من صفحة <strong>"جهات الاتصال"</strong>، اضغط على زر <strong>"استيراد"</strong></li>
+                                <li>سيظهر لك نافذة توضح <strong>تنسيق الملف المطلوب</strong>:
+                                    <div class="mt-2 mb-2 p-2 bg-light rounded small">
+                                        <code>Store_Name</code> (اختياري) | <code>Cust_FullName</code> (مطلوب) |
+                                        <code>Cust_Mobile</code> (مطلوب)
+                                    </div>
+                                </li>
+                                <li>اختر <strong>ملف Excel أو CSV</strong> من جهازك</li>
+                                <li>ستظهر <strong>معاينة للبيانات</strong> قبل الاستيراد للتأكد من صحتها</li>
+                                <li>يمكنك <strong>تصفية البيانات</strong> حسب رقم الهاتف أو اسم المتجر</li>
+                                <li>اضغط <strong>"تأكيد الاستيراد"</strong> لإضافة جميع الجهات دفعة واحدة</li>
+                            </ol>
+                            <div class="alert alert-success py-2 mb-0 mt-3 small">
+                                <i class="bi bi-lightning me-1"></i>
+                                <strong>ميزة ذكية:</strong> النظام يضيف الصفر تلقائياً للأرقام الناقصة ويتعرف على أسماء
+                                الأعمدة
+                                البديلة!
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Tips -->
-            <div class="tips-section">
-                <div class="tips-title">
-                    <i class="bi bi-lightbulb"></i>
-                    نصائح مهمة
-                </div>
-                <div class="tip-item">
-                    <i class="bi bi-check-circle-fill"></i>
-                    <span>تأكد من صحة أرقام الهواتف - يجب أن تكون أرقام واتساب صالحة</span>
-                </div>
-                <div class="tip-item">
-                    <i class="bi bi-check-circle-fill"></i>
-                    <span>يمكنك تعديل أو حذف أي جهة اتصال في أي وقت</span>
-                </div>
-                <div class="tip-item">
-                    <i class="bi bi-check-circle-fill"></i>
-                    <span>استخدم خاصية <strong>"المشاركة"</strong> لإرسال جهات الاتصال لمستخدم آخر على المنصة</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Step 2: Contact Sharing -->
-        <div class="step-card" id="step2">
-            <div class="step-number">2</div>
-            <div class="step-icon">🔄</div>
-            <h2 class="step-title">مشاركة جهات الاتصال</h2>
-            <p class="step-description">
-                هل تريد مشاركة جهات الاتصال مع زميلك في العمل؟ زندر يتيح لك إرسال واستقبال جهات الاتصال
-                بين المستخدمين بسهولة تامة. هذه الميزة مفيدة للعمل الجماعي وتوزيع قوائم العملاء.
-            </p>
-
-            <!-- Benefits -->
-            <div class="benefits-list">
-                <div class="benefits-title">
-                    <i class="bi bi-stars"></i>
-                    لماذا تستخدم المشاركة؟
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon"><i class="bi bi-people-fill"></i></div>
-                    <div class="benefit-text">
-                        <strong>العمل الجماعي</strong>
-                        <span>شارك جهات الاتصال مع فريقك للعمل على نفس قاعدة العملاء</span>
+                <!-- Tips -->
+                <div class="tips-section">
+                    <div class="tips-title">
+                        <i class="bi bi-lightbulb"></i>
+                        نصائح مهمة
                     </div>
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon"><i class="bi bi-arrow-left-right"></i></div>
-                    <div class="benefit-text">
-                        <strong>تبادل البيانات</strong>
-                        <span>استقبل جهات اتصال من زملائك وأضفها لقائمتك مباشرة</span>
+                    <div class="tip-item">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>تأكد من صحة أرقام الهواتف - يجب أن تكون أرقام واتساب صالحة</span>
                     </div>
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon"><i class="bi bi-shield-check"></i></div>
-                    <div class="benefit-text">
-                        <strong>تحكم كامل</strong>
-                        <span>قبول أو رفض أي طلب مشاركة - أنت المتحكم</span>
+                    <div class="tip-item">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>يمكنك تعديل أو حذف أي جهة اتصال في أي وقت</span>
+                    </div>
+                    <div class="tip-item">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>استخدم خاصية <strong>"المشاركة"</strong> لإرسال جهات الاتصال لمستخدم آخر على المنصة</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Sub-steps Accordion -->
-            <div class="substeps-accordion">
-                <button class="substep-header method-1" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#shareMethod1" aria-expanded="true">
-                    <span class="icon"><i class="bi bi-send"></i></span>
-                    <span>إرسال جهات اتصال لمستخدم آخر</span>
-                    <i class="bi bi-chevron-down arrow"></i>
-                </button>
-                <div class="collapse show" id="shareMethod1">
-                    <div class="substep-body">
-                        <ol class="substep-list">
-                            <li>من صفحة <strong>"جهات الاتصال"</strong>، حدد جهات الاتصال التي تريد مشاركتها</li>
-                            <li>اضغط على زر <strong>"مشاركة"</strong> الذي يظهر في أعلى الصفحة</li>
-                            <li>أدخل <strong>رقم هاتف المستخدم</strong> الذي تريد المشاركة معه</li>
-                            <li>اختيارياً: أضف <strong>رسالة</strong> توضيحية مع طلب المشاركة</li>
-                            <li>اضغط <strong>"إرسال"</strong> لإرسال طلب المشاركة</li>
-                        </ol>
-                    </div>
-                </div>
+            <!-- Step 2: Contact Sharing -->
+            <div class="step-card" id="step2">
+                <div class="step-number">2</div>
+                <div class="step-icon">🔄</div>
+                <h2 class="step-title">مشاركة جهات الاتصال</h2>
+                <p class="step-description">
+                    هل تريد مشاركة جهات الاتصال مع زميلك في العمل؟ زندر يتيح لك إرسال واستقبال جهات الاتصال
+                    بين المستخدمين بسهولة تامة. هذه الميزة مفيدة للعمل الجماعي وتوزيع قوائم العملاء.
+                </p>
 
-                <button class="substep-header method-2" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#shareMethod2" aria-expanded="false">
-                    <span class="icon"><i class="bi bi-inbox"></i></span>
-                    <span>استقبال طلبات المشاركة</span>
-                    <i class="bi bi-chevron-down arrow"></i>
-                </button>
-                <div class="collapse" id="shareMethod2">
-                    <div class="substep-body">
-                        <ol class="substep-list">
-                            <li>عندما يشاركك أحد المستخدمين جهات اتصال، ستظهر في <strong>"طلبات المشاركة"</strong></li>
-                            <li>اضغط على <strong>"عرض جهات الاتصال"</strong> لمعاينة البيانات قبل القبول</li>
-                            <li>اضغط <strong>"قبول"</strong> لإضافة جهات الاتصال لقائمتك</li>
-                            <li>أو اضغط <strong>"رفض"</strong> إذا لم ترغب في استلامها</li>
-                        </ol>
-                        <div class="alert alert-info py-2 mb-0 mt-3 small">
-                            <i class="bi bi-info-circle me-1"></i>
-                            <strong>ملاحظة:</strong> جهات الاتصال المقبولة تُضاف لقائمتك ويمكنك التعديل عليها بحرية
+                <!-- Benefits -->
+                <div class="benefits-list">
+                    <div class="benefits-title">
+                        <i class="bi bi-stars"></i>
+                        لماذا تستخدم المشاركة؟
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon"><i class="bi bi-people-fill"></i></div>
+                        <div class="benefit-text">
+                            <strong>العمل الجماعي</strong>
+                            <span>شارك جهات الاتصال مع فريقك للعمل على نفس قاعدة العملاء</span>
+                        </div>
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon"><i class="bi bi-arrow-left-right"></i></div>
+                        <div class="benefit-text">
+                            <strong>تبادل البيانات</strong>
+                            <span>استقبل جهات اتصال من زملائك وأضفها لقائمتك مباشرة</span>
+                        </div>
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon"><i class="bi bi-shield-check"></i></div>
+                        <div class="benefit-text">
+                            <strong>تحكم كامل</strong>
+                            <span>قبول أو رفض أي طلب مشاركة - أنت المتحكم</span>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Step 3: Create Campaign -->
-        <div class="step-card" id="step3">
-            <div class="step-number">3</div>
-            <div class="step-icon">📝</div>
-            <h2 class="step-title">إنشاء حملة جديدة</h2>
-            <p class="step-description">
-                بعد إضافة جهات الاتصال، حان وقت إنشاء حملتك! الحملة هي الرسالة التي سترسلها لمجموعة من العملاء.
-                زندر يوفر لك أدوات احترافية لكتابة رسائل جذابة ومؤثرة.
-            </p>
+                <!-- Sub-steps Accordion -->
+                <div class="substeps-accordion">
+                    <button class="substep-header method-1" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#shareMethod1" aria-expanded="true">
+                        <span class="icon"><i class="bi bi-send"></i></span>
+                        <span>إرسال جهات اتصال لمستخدم آخر</span>
+                        <i class="bi bi-chevron-down arrow"></i>
+                    </button>
+                    <div class="collapse show" id="shareMethod1">
+                        <div class="substep-body">
+                            <ol class="substep-list">
+                                <li>من صفحة <strong>"جهات الاتصال"</strong>، حدد جهات الاتصال التي تريد مشاركتها</li>
+                                <li>اضغط على زر <strong>"مشاركة"</strong> الذي يظهر في أعلى الصفحة</li>
+                                <li>أدخل <strong>رقم هاتف المستخدم</strong> الذي تريد المشاركة معه</li>
+                                <li>اختيارياً: أضف <strong>رسالة</strong> توضيحية مع طلب المشاركة</li>
+                                <li>اضغط <strong>"إرسال"</strong> لإرسال طلب المشاركة</li>
+                            </ol>
+                        </div>
+                    </div>
 
-            <!-- Benefits -->
-            <div class="benefits-list">
-                <div class="benefits-title">
-                    <i class="bi bi-stars"></i>
-                    ما الذي يميز إنشاء الحملات في زندر؟
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon"><i class="bi bi-emoji-smile"></i></div>
-                    <div class="benefit-text">
-                        <strong>إيموجي ورموز تعبيرية</strong>
-                        <span>أضف الإيموجي المناسب لجعل رسالتك أكثر جاذبية وتفاعلية 😊🔥⭐</span>
-                    </div>
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon"><i class="bi bi-type-bold"></i></div>
-                    <div class="benefit-text">
-                        <strong>تنسيق النص</strong>
-                        <span>اجعل النص <b>عريض</b> أو <i>مائل</i> أو <s>مشطوب</s> لإبراز المعلومات المهمة</span>
-                    </div>
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon"><i class="bi bi-lightning"></i></div>
-                    <div class="benefit-text">
-                        <strong>قوالب جاهزة</strong>
-                        <span>استخدم قوالب جاهزة أو احفظ رسائلك المميزة لإعادة استخدامها لاحقاً</span>
-                    </div>
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon"><i class="bi bi-images"></i></div>
-                    <div class="benefit-text">
-                        <strong>إضافة صور متعددة 🆕</strong>
-                        <span>أرفق حتى <strong>5 صور</strong> مع رسالتك لجذب انتباه العميل وتوضيح العرض بشكل أفضل!</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sub-steps -->
-            <div class="substeps-accordion">
-                <button class="substep-header" type="button" data-bs-toggle="collapse" data-bs-target="#createSteps"
-                    aria-expanded="true">
-                    <span class="icon"><i class="bi bi-list-ol"></i></span>
-                    <span>خطوات إنشاء الحملة بالتفصيل</span>
-                    <i class="bi bi-chevron-down arrow"></i>
-                </button>
-                <div class="collapse show" id="createSteps">
-                    <div class="substep-body">
-                        <ol class="substep-list">
-                            <li>من القائمة، اضغط على <strong>"الحملات"</strong> أو من لوحة التحكم اضغط <strong>"+
-                                    إنشاء"</strong></li>
-                            <li><strong>اختر المستلمين:</strong> حدد جهات الاتصال التي تريد إرسال الرسالة إليها (الحد الأقصى
-                                50 مستلم لكل حملة)</li>
-                            <li>استخدم <strong>البحث</strong> للعثور على جهات اتصال معينة بسرعة</li>
-                            <li><strong>اكتب رسالتك:</strong> في مربع الرسالة، اكتب المحتوى الذي تريد إرساله</li>
-                            <li>استخدم <strong>أزرار التنسيق</strong> (إيموجي، عريض، مائل، مشطوب) لتحسين رسالتك</li>
-                            <li><strong>اختياري:</strong> أضف صور (حتى 5 صور) بالضغط على زر "صور" واختيار الملفات من جهازك -
-                                الحد الأقصى 5MB لكل صورة</li>
-                            <li><strong>اختياري:</strong> استخدم "القوالب" لتحميل رسالة جاهزة أو حفظ رسالتك الحالية</li>
-                        </ol>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tips -->
-            <div class="tips-section">
-                <div class="tips-title">
-                    <i class="bi bi-lightbulb"></i>
-                    نصائح لرسائل أكثر فعالية
-                </div>
-                <div class="tip-item">
-                    <i class="bi bi-check-circle-fill"></i>
-                    <span>ابدأ رسالتك بتحية ودية مثل "مرحباً 👋" لجذب الانتباه</span>
-                </div>
-                <div class="tip-item">
-                    <i class="bi bi-check-circle-fill"></i>
-                    <span>اجعل رسالتك قصيرة ومباشرة - الرسائل الطويلة قد لا تُقرأ كاملة</span>
-                </div>
-                <div class="tip-item">
-                    <i class="bi bi-check-circle-fill"></i>
-                    <span>استخدم <strong>Call To Action</strong> واضح مثل "اتصل الآن" أو "احجز مكانك"</span>
-                </div>
-                <div class="tip-item">
-                    <i class="bi bi-check-circle-fill"></i>
-                    <span>احفظ الرسائل الناجحة كقوالب لإعادة استخدامها</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Step 4: Templates -->
-        <div class="step-card" id="step4">
-            <div class="step-number">4</div>
-            <div class="step-icon">📋</div>
-            <h2 class="step-title">إدارة القوالب</h2>
-            <p class="step-description">
-                هل تكتب نفس الرسالة مراراً وتكراراً؟ القوالب توفر عليك الوقت! احفظ رسائلك المميزة
-                واستخدمها في أي وقت بضغطة زر واحدة. كما يمكنك مشاركتها مع زملائك.
-            </p>
-
-            <!-- Benefits -->
-            <div class="benefits-list">
-                <div class="benefits-title">
-                    <i class="bi bi-stars"></i>
-                    ماذا تستفيد من القوالب؟
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon"><i class="bi bi-clock-history"></i></div>
-                    <div class="benefit-text">
-                        <strong>توفير الوقت</strong>
-                        <span>بدلاً من كتابة الرسالة كل مرة، استخدم قالب جاهز بضغطة واحدة</span>
-                    </div>
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon"><i class="bi bi-check2-all"></i></div>
-                    <div class="benefit-text">
-                        <strong>ثبات الجودة</strong>
-                        <span>احتفظ بأفضل صيغ رسائلك واستخدمها دائماً بنفس الجودة</span>
-                    </div>
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon"><i class="bi bi-share"></i></div>
-                    <div class="benefit-text">
-                        <strong>مشاركة مع الفريق</strong>
-                        <span>شارك قوالبك مع زملائك ليستخدموا نفس الرسائل الناجحة</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sub-steps Accordion -->
-            <div class="substeps-accordion">
-                <button class="substep-header method-1" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#templatesSave" aria-expanded="true">
-                    <span class="icon"><i class="bi bi-bookmark-plus"></i></span>
-                    <span>حفظ رسالة كقالب</span>
-                    <i class="bi bi-chevron-down arrow"></i>
-                </button>
-                <div class="collapse show" id="templatesSave">
-                    <div class="substep-body">
-                        <ol class="substep-list">
-                            <li>من صفحة <strong>"الحملات"</strong>، اكتب الرسالة التي تريد حفظها</li>
-                            <li>اضغط على زر <strong>"القوالب"</strong> في شريط الأدوات</li>
-                            <li>اضغط على <strong>"+ حفظ كقالب جديد"</strong></li>
-                            <li>أدخل <strong>اسم القالب</strong> (مثال: عرض شهر رمضان)</li>
-                            <li>اضغط <strong>"حفظ"</strong> - سيُحفظ القالب في قائمتك</li>
-                        </ol>
-                    </div>
-                </div>
-
-                <button class="substep-header method-2" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#templatesLoad" aria-expanded="false">
-                    <span class="icon"><i class="bi bi-file-earmark-text"></i></span>
-                    <span>استخدام قالب محفوظ</span>
-                    <i class="bi bi-chevron-down arrow"></i>
-                </button>
-                <div class="collapse" id="templatesLoad">
-                    <div class="substep-body">
-                        <ol class="substep-list">
-                            <li>من صفحة <strong>"الحملات"</strong>، اضغط على زر <strong>"القوالب"</strong></li>
-                            <li>ستظهر قائمة بجميع قوالبك المحفوظة</li>
-                            <li>اضغط على <strong>اسم القالب</strong> الذي تريد استخدامه</li>
-                            <li>سيتم <strong>تحميل النص تلقائياً</strong> في مربع الرسالة</li>
-                        </ol>
-                        <div class="alert alert-success py-2 mb-0 mt-3 small">
-                            <i class="bi bi-lightbulb me-1"></i>
-                            <strong>نصيحة:</strong> يمكنك تعديل النص بعد تحميله لتخصيصه حسب الحاجة
+                    <button class="substep-header method-2" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#shareMethod2" aria-expanded="false">
+                        <span class="icon"><i class="bi bi-inbox"></i></span>
+                        <span>استقبال طلبات المشاركة</span>
+                        <i class="bi bi-chevron-down arrow"></i>
+                    </button>
+                    <div class="collapse" id="shareMethod2">
+                        <div class="substep-body">
+                            <ol class="substep-list">
+                                <li>عندما يشاركك أحد المستخدمين جهات اتصال، ستظهر في <strong>"طلبات المشاركة"</strong></li>
+                                <li>اضغط على <strong>"عرض جهات الاتصال"</strong> لمعاينة البيانات قبل القبول</li>
+                                <li>اضغط <strong>"قبول"</strong> لإضافة جهات الاتصال لقائمتك</li>
+                                <li>أو اضغط <strong>"رفض"</strong> إذا لم ترغب في استلامها</li>
+                            </ol>
+                            <div class="alert alert-info py-2 mb-0 mt-3 small">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <strong>ملاحظة:</strong> جهات الاتصال المقبولة تُضاف لقائمتك ويمكنك التعديل عليها بحرية
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Tips -->
-            <div class="tips-section">
-                <div class="tips-title">
-                    <i class="bi bi-lightbulb"></i>
-                    نصائح للقوالب
-                </div>
-                <div class="tip-item">
-                    <i class="bi bi-check-circle-fill"></i>
-                    <span>أنشئ قوالب لكل نوع من رسائلك (عروض، تذكيرات، تهنئة...)</span>
-                </div>
-                <div class="tip-item">
-                    <i class="bi bi-check-circle-fill"></i>
-                    <span>استخدم أسماء واضحة للقوالب ليسهل العثور عليها</span>
-                </div>
-                <div class="tip-item">
-                    <i class="bi bi-check-circle-fill"></i>
-                    <span>يمكنك مشاركة القوالب مع زملائك من نفس نافذة القوالب</span>
-                </div>
-            </div>
-        </div>
+            <!-- Step 3: Create Campaign -->
+            <div class="step-card" id="step3">
+                <div class="step-number">3</div>
+                <div class="step-icon">📝</div>
+                <h2 class="step-title">إنشاء حملة جديدة</h2>
+                <p class="step-description">
+                    بعد إضافة جهات الاتصال، حان وقت إنشاء حملتك! الحملة هي الرسالة التي سترسلها لمجموعة من العملاء.
+                    زندر يوفر لك أدوات احترافية لكتابة رسائل جذابة ومؤثرة.
+                </p>
 
-        <!-- Step 5: Send Campaign -->
-        <div class="step-card" id="step5">
-            <div class="step-number">5</div>
-            <div class="step-icon">🚀</div>
-            <h2 class="step-title">إرسال الحملة</h2>
-            <p class="step-description">
-                الخطوة الأخيرة والأهم! بعد اختيار المستلمين وكتابة الرسالة، كل ما عليك هو الضغط على زر الإرسال
-                وسيتولى زندر إرسال رسالتك لجميع المستلمين <strong>تلقائياً</strong>.
-            </p>
-
-            <!-- Benefits -->
-            <div class="benefits-list">
-                <div class="benefits-title">
-                    <i class="bi bi-stars"></i>
-                    كيف يعمل الإرسال التلقائي؟
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon"><i class="bi bi-robot"></i></div>
-                    <div class="benefit-text">
-                        <strong>إرسال آلي 100%</strong>
-                        <span>لا تحتاج لفعل أي شيء - النظام يرسل الرسائل واحدة تلو الأخرى تلقائياً</span>
+                <!-- Benefits -->
+                <div class="benefits-list">
+                    <div class="benefits-title">
+                        <i class="bi bi-stars"></i>
+                        ما الذي يميز إنشاء الحملات في زندر؟
                     </div>
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon"><i class="bi bi-shield-check"></i></div>
-                    <div class="benefit-text">
-                        <strong>فاصل زمني ذكي (15 ثانية)</strong>
-                        <span>يوجد فاصل 15 ثانية بين كل رسالة لحماية حسابك من الحظر والحفاظ على استقرار الخدمة</span>
+                    <div class="benefit-item">
+                        <div class="benefit-icon"><i class="bi bi-emoji-smile"></i></div>
+                        <div class="benefit-text">
+                            <strong>إيموجي ورموز تعبيرية</strong>
+                            <span>أضف الإيموجي المناسب لجعل رسالتك أكثر جاذبية وتفاعلية 😊🔥⭐</span>
+                        </div>
                     </div>
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon"><i class="bi bi-graph-up-arrow"></i></div>
-                    <div class="benefit-text">
-                        <strong>وصول مضمون</strong>
-                        <span>الرسائل تُرسل مباشرة عبر واتساب مما يضمن وصولها للعميل</span>
+                    <div class="benefit-item">
+                        <div class="benefit-icon"><i class="bi bi-type-bold"></i></div>
+                        <div class="benefit-text">
+                            <strong>تنسيق النص</strong>
+                            <span>اجعل النص <b>عريض</b> أو <i>مائل</i> أو <s>مشطوب</s> لإبراز المعلومات المهمة</span>
+                        </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Sub-steps -->
-            <div class="substeps-accordion">
-                <button class="substep-header" type="button" data-bs-toggle="collapse" data-bs-target="#sendSteps"
-                    aria-expanded="true">
-                    <span class="icon"><i class="bi bi-send-check"></i></span>
-                    <span>خطوات الإرسال النهائية</span>
-                    <i class="bi bi-chevron-down arrow"></i>
-                </button>
-                <div class="collapse show" id="sendSteps">
-                    <div class="substep-body">
-                        <ol class="substep-list">
-                            <li><strong>راجع الحملة:</strong> تأكد من اختيار المستلمين الصحيحين وأن الرسالة مكتوبة بشكل صحيح
-                            </li>
-                            <li><strong>تحقق من العدد:</strong> تأكد أن عدد المستلمين يظهر بشكل صحيح (أعلى قائمة المستلمين)
-                            </li>
-                            <li><strong>اضغط "إرسال":</strong> زر الإرسال الأخضر أسفل مربع الرسالة</li>
-                            <li><strong>انتظر:</strong> سيبدأ النظام بإرسال الرسائل تلقائياً - لا تغلق الصفحة!</li>
-                            <li><strong>اكتمل!</strong> بعد انتهاء الإرسال ستظهر رسالة تأكيد بنجاح العملية</li>
-                        </ol>
+                    <div class="benefit-item">
+                        <div class="benefit-icon"><i class="bi bi-lightning"></i></div>
+                        <div class="benefit-text">
+                            <strong>قوالب جاهزة</strong>
+                            <span>استخدم قوالب جاهزة أو احفظ رسائلك المميزة لإعادة استخدامها لاحقاً</span>
+                        </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Warning -->
-            <div class="alert alert-warning mt-4">
-                <div class="d-flex align-items-start gap-2">
-                    <i class="bi bi-exclamation-triangle-fill fs-5"></i>
-                    <div>
-                        <strong>تنبيه مهم!</strong>
-                        <p class="mb-0 small">
-                            لا تغلق الصفحة أثناء عملية الإرسال. انتظر حتى تظهر رسالة تأكيد نجاح الإرسال.
-                            الفاصل الزمني 15 ثانية ضروري لحماية حسابك.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Step 6: Subscription -->
-        <div class="step-card" id="step6">
-            <div class="step-number">6</div>
-            <div class="step-icon">💎</div>
-            <h2 class="step-title">الاشتراك والدفع</h2>
-            <p class="step-description">
-                للاستمتاع بجميع مميزات زندر، تحتاج لاشتراك فعّال. النظام يوفر فترة تجريبية مجانية
-                للبدء، ثم يمكنك الاشتراك بخطوات بسيطة.
-            </p>
-
-            <!-- Benefits -->
-            <div class="benefits-list">
-                <div class="benefits-title">
-                    <i class="bi bi-stars"></i>
-                    معلومات عن الاشتراكات
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon"><i class="bi bi-gift"></i></div>
-                    <div class="benefit-text">
-                        <strong>فترة تجريبية مجانية</strong>
-                        <span>ابدأ بفترة تجريبية مجانية لتجربة جميع المميزات قبل الاشتراك</span>
-                    </div>
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon"><i class="bi bi-calendar-check"></i></div>
-                    <div class="benefit-text">
-                        <strong>اشتراك شهري</strong>
-                        <span>اشترك شهرياً واستخدم جميع مميزات زندر بدون حدود</span>
-                    </div>
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon"><i class="bi bi-credit-card-2-front"></i></div>
-                    <div class="benefit-text">
-                        <strong>دفع سهل</strong>
-                        <span>ادفع عبر فودافون كاش أو إنستاباي وارفع إيصال الدفع - بسيط وسريع</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sub-steps Accordion -->
-            <div class="substeps-accordion">
-                <button class="substep-header method-1" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#subPayment" aria-expanded="true">
-                    <span class="icon"><i class="bi bi-wallet2"></i></span>
-                    <span>كيفية الاشتراك والدفع</span>
-                    <i class="bi bi-chevron-down arrow"></i>
-                </button>
-                <div class="collapse show" id="subPayment">
-                    <div class="substep-body">
-                        <ol class="substep-list">
-                            <li>من القائمة الجانبية، اضغط على <strong>"اشتراكي"</strong></li>
-                            <li>ستجد <strong>رقم فودافون كاش أو إنستاباي</strong> لتحويل قيمة الاشتراك</li>
-                            <li>قم بالتحويل عبر فودافون كاش أو إنستاباي أو أي محفظة إلكترونية</li>
-                            <li>ارفع <strong>صورة إيصال الدفع</strong> من خلال الصفحة</li>
-                            <li>انتظر <strong>تأكيد الإدارة</strong> - عادة خلال ساعات قليلة</li>
-                        </ol>
-                        <div class="alert alert-info py-2 mb-0 mt-3 small">
-                            <i class="bi bi-info-circle me-1"></i>
-                            <strong>ملاحظة:</strong> بعد تأكيد الدفع، سيتم تفعيل اشتراكك فوراً وستتمكن من استخدام جميع
-                            المميزات
+                    <div class="benefit-item">
+                        <div class="benefit-icon"><i class="bi bi-images"></i></div>
+                        <div class="benefit-text">
+                            <strong>إضافة صور متعددة 🆕</strong>
+                            <span>أرفق حتى <strong>5 صور</strong> مع رسالتك لجذب انتباه العميل وتوضيح العرض بشكل
+                                أفضل!</span>
                         </div>
                     </div>
                 </div>
 
-                <button class="substep-header method-2" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#subStatus" aria-expanded="false">
-                    <span class="icon"><i class="bi bi-clock-history"></i></span>
-                    <span>متابعة حالة الاشتراك</span>
-                    <i class="bi bi-chevron-down arrow"></i>
-                </button>
-                <div class="collapse" id="subStatus">
-                    <div class="substep-body">
-                        <ol class="substep-list">
-                            <li>اضغط على <strong>"اشتراكي"</strong> من القائمة الجانبية</li>
-                            <li>ستظهر لك <strong>حالة اشتراكك الحالي</strong> (نشط/تجريبي/منتهي)</li>
-                            <li>كما ستظهر <strong>المدة المتبقية</strong> في اشتراكك بالتفصيل</li>
-                            <li>إذا اقترب انتهاء اشتراكك، ستظهر لك <strong>تنبيهات</strong> للتجديد</li>
-                        </ol>
+                <!-- Sub-steps -->
+                <div class="substeps-accordion">
+                    <button class="substep-header" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#createSteps" aria-expanded="true">
+                        <span class="icon"><i class="bi bi-list-ol"></i></span>
+                        <span>خطوات إنشاء الحملة بالتفصيل</span>
+                        <i class="bi bi-chevron-down arrow"></i>
+                    </button>
+                    <div class="collapse show" id="createSteps">
+                        <div class="substep-body">
+                            <ol class="substep-list">
+                                <li>من القائمة، اضغط على <strong>"الحملات"</strong> أو من لوحة التحكم اضغط <strong>"+
+                                        إنشاء"</strong></li>
+                                <li><strong>اختر المستلمين:</strong> حدد جهات الاتصال التي تريد إرسال الرسالة إليها (الحد
+                                    الأقصى
+                                    50 مستلم لكل حملة)</li>
+                                <li>استخدم <strong>البحث</strong> للعثور على جهات اتصال معينة بسرعة</li>
+                                <li><strong>اكتب رسالتك:</strong> في مربع الرسالة، اكتب المحتوى الذي تريد إرساله</li>
+                                <li>استخدم <strong>أزرار التنسيق</strong> (إيموجي، عريض، مائل، مشطوب) لتحسين رسالتك</li>
+                                <li><strong>اختياري:</strong> أضف صور (حتى 5 صور) بالضغط على زر "صور" واختيار الملفات من
+                                    جهازك -
+                                    الحد الأقصى 5MB لكل صورة</li>
+                                <li><strong>اختياري:</strong> استخدم "القوالب" لتحميل رسالة جاهزة أو حفظ رسالتك الحالية</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tips -->
+                <div class="tips-section">
+                    <div class="tips-title">
+                        <i class="bi bi-lightbulb"></i>
+                        نصائح لرسائل أكثر فعالية
+                    </div>
+                    <div class="tip-item">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>ابدأ رسالتك بتحية ودية مثل "مرحباً 👋" لجذب الانتباه</span>
+                    </div>
+                    <div class="tip-item">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>اجعل رسالتك قصيرة ومباشرة - الرسائل الطويلة قد لا تُقرأ كاملة</span>
+                    </div>
+                    <div class="tip-item">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>استخدم <strong>Call To Action</strong> واضح مثل "اتصل الآن" أو "احجز مكانك"</span>
+                    </div>
+                    <div class="tip-item">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>احفظ الرسائل الناجحة كقوالب لإعادة استخدامها</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Tips -->
-            <div class="tips-section">
-                <div class="tips-title">
-                    <i class="bi bi-lightbulb"></i>
-                    نصائح مهمة
+            <!-- Step 4: Templates -->
+            <div class="step-card" id="step4">
+                <div class="step-number">4</div>
+                <div class="step-icon">📋</div>
+                <h2 class="step-title">إدارة القوالب</h2>
+                <p class="step-description">
+                    هل تكتب نفس الرسالة مراراً وتكراراً؟ القوالب توفر عليك الوقت! احفظ رسائلك المميزة
+                    واستخدمها في أي وقت بضغطة زر واحدة. كما يمكنك مشاركتها مع زملائك.
+                </p>
+
+                <!-- Benefits -->
+                <div class="benefits-list">
+                    <div class="benefits-title">
+                        <i class="bi bi-stars"></i>
+                        ماذا تستفيد من القوالب؟
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon"><i class="bi bi-clock-history"></i></div>
+                        <div class="benefit-text">
+                            <strong>توفير الوقت</strong>
+                            <span>بدلاً من كتابة الرسالة كل مرة، استخدم قالب جاهز بضغطة واحدة</span>
+                        </div>
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon"><i class="bi bi-check2-all"></i></div>
+                        <div class="benefit-text">
+                            <strong>ثبات الجودة</strong>
+                            <span>احتفظ بأفضل صيغ رسائلك واستخدمها دائماً بنفس الجودة</span>
+                        </div>
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon"><i class="bi bi-share"></i></div>
+                        <div class="benefit-text">
+                            <strong>مشاركة مع الفريق</strong>
+                            <span>شارك قوالبك مع زملائك ليستخدموا نفس الرسائل الناجحة</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="tip-item">
-                    <i class="bi bi-check-circle-fill"></i>
-                    <span>احرص على رفع إيصال واضح يظهر فيه المبلغ والتاريخ</span>
+
+                <!-- Sub-steps Accordion -->
+                <div class="substeps-accordion">
+                    <button class="substep-header method-1" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#templatesSave" aria-expanded="true">
+                        <span class="icon"><i class="bi bi-bookmark-plus"></i></span>
+                        <span>حفظ رسالة كقالب</span>
+                        <i class="bi bi-chevron-down arrow"></i>
+                    </button>
+                    <div class="collapse show" id="templatesSave">
+                        <div class="substep-body">
+                            <ol class="substep-list">
+                                <li>من صفحة <strong>"الحملات"</strong>، اكتب الرسالة التي تريد حفظها</li>
+                                <li>اضغط على زر <strong>"القوالب"</strong> في شريط الأدوات</li>
+                                <li>اضغط على <strong>"+ حفظ كقالب جديد"</strong></li>
+                                <li>أدخل <strong>اسم القالب</strong> (مثال: عرض شهر رمضان)</li>
+                                <li>اضغط <strong>"حفظ"</strong> - سيُحفظ القالب في قائمتك</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <button class="substep-header method-2" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#templatesLoad" aria-expanded="false">
+                        <span class="icon"><i class="bi bi-file-earmark-text"></i></span>
+                        <span>استخدام قالب محفوظ</span>
+                        <i class="bi bi-chevron-down arrow"></i>
+                    </button>
+                    <div class="collapse" id="templatesLoad">
+                        <div class="substep-body">
+                            <ol class="substep-list">
+                                <li>من صفحة <strong>"الحملات"</strong>، اضغط على زر <strong>"القوالب"</strong></li>
+                                <li>ستظهر قائمة بجميع قوالبك المحفوظة</li>
+                                <li>اضغط على <strong>اسم القالب</strong> الذي تريد استخدامه</li>
+                                <li>سيتم <strong>تحميل النص تلقائياً</strong> في مربع الرسالة</li>
+                            </ol>
+                            <div class="alert alert-success py-2 mb-0 mt-3 small">
+                                <i class="bi bi-lightbulb me-1"></i>
+                                <strong>نصيحة:</strong> يمكنك تعديل النص بعد تحميله لتخصيصه حسب الحاجة
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="tip-item">
-                    <i class="bi bi-check-circle-fill"></i>
-                    <span>جدد اشتراكك قبل انتهائه لتجنب انقطاع الخدمة</span>
+
+                <!-- Tips -->
+                <div class="tips-section">
+                    <div class="tips-title">
+                        <i class="bi bi-lightbulb"></i>
+                        نصائح للقوالب
+                    </div>
+                    <div class="tip-item">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>أنشئ قوالب لكل نوع من رسائلك (عروض، تذكيرات، تهنئة...)</span>
+                    </div>
+                    <div class="tip-item">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>استخدم أسماء واضحة للقوالب ليسهل العثور عليها</span>
+                    </div>
+                    <div class="tip-item">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>يمكنك مشاركة القوالب مع زملائك من نفس نافذة القوالب</span>
+                    </div>
                 </div>
-                <div class="tip-item">
-                    <i class="bi bi-check-circle-fill"></i>
-                    <span>تواصل مع الدعم عبر واتساب لأي استفسار عن الاشتراك</span>
+            </div>
+
+            <!-- Step 5: Send Campaign -->
+            <div class="step-card" id="step5">
+                <div class="step-number">5</div>
+                <div class="step-icon">🚀</div>
+                <h2 class="step-title">إرسال الحملة</h2>
+                <p class="step-description">
+                    الخطوة الأخيرة والأهم! بعد اختيار المستلمين وكتابة الرسالة، كل ما عليك هو الضغط على زر الإرسال
+                    وسيتولى زندر إرسال رسالتك لجميع المستلمين <strong>تلقائياً</strong>.
+                </p>
+
+                <!-- Benefits -->
+                <div class="benefits-list">
+                    <div class="benefits-title">
+                        <i class="bi bi-stars"></i>
+                        كيف يعمل الإرسال التلقائي؟
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon"><i class="bi bi-robot"></i></div>
+                        <div class="benefit-text">
+                            <strong>إرسال آلي 100%</strong>
+                            <span>لا تحتاج لفعل أي شيء - النظام يرسل الرسائل واحدة تلو الأخرى تلقائياً</span>
+                        </div>
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon"><i class="bi bi-shield-check"></i></div>
+                        <div class="benefit-text">
+                            <strong>فاصل زمني ذكي (15 ثانية)</strong>
+                            <span>يوجد فاصل 15 ثانية بين كل رسالة لحماية حسابك من الحظر والحفاظ على استقرار الخدمة</span>
+                        </div>
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon"><i class="bi bi-graph-up-arrow"></i></div>
+                        <div class="benefit-text">
+                            <strong>وصول مضمون</strong>
+                            <span>الرسائل تُرسل مباشرة عبر واتساب مما يضمن وصولها للعميل</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sub-steps -->
+                <div class="substeps-accordion">
+                    <button class="substep-header" type="button" data-bs-toggle="collapse" data-bs-target="#sendSteps"
+                        aria-expanded="true">
+                        <span class="icon"><i class="bi bi-send-check"></i></span>
+                        <span>خطوات الإرسال النهائية</span>
+                        <i class="bi bi-chevron-down arrow"></i>
+                    </button>
+                    <div class="collapse show" id="sendSteps">
+                        <div class="substep-body">
+                            <ol class="substep-list">
+                                <li><strong>راجع الحملة:</strong> تأكد من اختيار المستلمين الصحيحين وأن الرسالة مكتوبة بشكل
+                                    صحيح
+                                </li>
+                                <li><strong>تحقق من العدد:</strong> تأكد أن عدد المستلمين يظهر بشكل صحيح (أعلى قائمة
+                                    المستلمين)
+                                </li>
+                                <li><strong>اضغط "إرسال":</strong> زر الإرسال الأخضر أسفل مربع الرسالة</li>
+                                <li><strong>انتظر:</strong> سيبدأ النظام بإرسال الرسائل تلقائياً - لا تغلق الصفحة!</li>
+                                <li><strong>اكتمل!</strong> بعد انتهاء الإرسال ستظهر رسالة تأكيد بنجاح العملية</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Warning -->
+                <div class="alert alert-warning mt-4">
+                    <div class="d-flex align-items-start gap-2">
+                        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                        <div>
+                            <strong>تنبيه مهم!</strong>
+                            <p class="mb-0 small">
+                                لا تغلق الصفحة أثناء عملية الإرسال. انتظر حتى تظهر رسالة تأكيد نجاح الإرسال.
+                                الفاصل الزمني 15 ثانية ضروري لحماية حسابك.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 6: Subscription -->
+            <div class="step-card" id="step6">
+                <div class="step-number">6</div>
+                <div class="step-icon">💎</div>
+                <h2 class="step-title">الاشتراك والدفع</h2>
+                <p class="step-description">
+                    للاستمتاع بجميع مميزات زندر، تحتاج لاشتراك فعّال. النظام يوفر فترة تجريبية مجانية
+                    للبدء، ثم يمكنك الاشتراك بخطوات بسيطة.
+                </p>
+
+                <!-- Benefits -->
+                <div class="benefits-list">
+                    <div class="benefits-title">
+                        <i class="bi bi-stars"></i>
+                        معلومات عن الاشتراكات
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon"><i class="bi bi-gift"></i></div>
+                        <div class="benefit-text">
+                            <strong>فترة تجريبية مجانية</strong>
+                            <span>ابدأ بفترة تجريبية مجانية لتجربة جميع المميزات قبل الاشتراك</span>
+                        </div>
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon"><i class="bi bi-calendar-check"></i></div>
+                        <div class="benefit-text">
+                            <strong>اشتراك شهري</strong>
+                            <span>اشترك شهرياً واستخدم جميع مميزات زندر بدون حدود</span>
+                        </div>
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon"><i class="bi bi-credit-card-2-front"></i></div>
+                        <div class="benefit-text">
+                            <strong>دفع سهل</strong>
+                            <span>ادفع عبر فودافون كاش أو إنستاباي وارفع إيصال الدفع - بسيط وسريع</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sub-steps Accordion -->
+                <div class="substeps-accordion">
+                    <button class="substep-header method-1" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#subPayment" aria-expanded="true">
+                        <span class="icon"><i class="bi bi-wallet2"></i></span>
+                        <span>كيفية الاشتراك والدفع</span>
+                        <i class="bi bi-chevron-down arrow"></i>
+                    </button>
+                    <div class="collapse show" id="subPayment">
+                        <div class="substep-body">
+                            <ol class="substep-list">
+                                <li>من القائمة الجانبية، اضغط على <strong>"اشتراكي"</strong></li>
+                                <li>ستجد <strong>رقم فودافون كاش أو إنستاباي</strong> لتحويل قيمة الاشتراك</li>
+                                <li>قم بالتحويل عبر فودافون كاش أو إنستاباي أو أي محفظة إلكترونية</li>
+                                <li>ارفع <strong>صورة إيصال الدفع</strong> من خلال الصفحة</li>
+                                <li>انتظر <strong>تأكيد الإدارة</strong> - عادة خلال ساعات قليلة</li>
+                            </ol>
+                            <div class="alert alert-info py-2 mb-0 mt-3 small">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <strong>ملاحظة:</strong> بعد تأكيد الدفع، سيتم تفعيل اشتراكك فوراً وستتمكن من استخدام جميع
+                                المميزات
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="substep-header method-2" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#subStatus" aria-expanded="false">
+                        <span class="icon"><i class="bi bi-clock-history"></i></span>
+                        <span>متابعة حالة الاشتراك</span>
+                        <i class="bi bi-chevron-down arrow"></i>
+                    </button>
+                    <div class="collapse" id="subStatus">
+                        <div class="substep-body">
+                            <ol class="substep-list">
+                                <li>اضغط على <strong>"اشتراكي"</strong> من القائمة الجانبية</li>
+                                <li>ستظهر لك <strong>حالة اشتراكك الحالي</strong> (نشط/تجريبي/منتهي)</li>
+                                <li>كما ستظهر <strong>المدة المتبقية</strong> في اشتراكك بالتفصيل</li>
+                                <li>إذا اقترب انتهاء اشتراكك، ستظهر لك <strong>تنبيهات</strong> للتجديد</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tips -->
+                <div class="tips-section">
+                    <div class="tips-title">
+                        <i class="bi bi-lightbulb"></i>
+                        نصائح مهمة
+                    </div>
+                    <div class="tip-item">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>احرص على رفع إيصال واضح يظهر فيه المبلغ والتاريخ</span>
+                    </div>
+                    <div class="tip-item">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>جدد اشتراكك قبل انتهائه لتجنب انقطاع الخدمة</span>
+                    </div>
+                    <div class="tip-item">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>تواصل مع الدعم عبر واتساب لأي استفسار عن الاشتراك</span>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- CTA Section -->
-    <div class="cta-section">
-        <div class="cta-content">
-            <h3>🎉 أنت جاهز الآن!</h3>
-            <p>لقد تعلمت كل ما تحتاجه لاستخدام زندر بكفاءة. ابدأ الآن!</p>
-            <div class="cta-buttons">
-                <a href="{{ route('contacts.index') }}" class="cta-btn cta-btn-primary">
-                    <i class="bi bi-people"></i>
-                    جهات الاتصال
-                </a>
-                <a href="{{ route('campaigns.create') }}" class="cta-btn cta-btn-secondary">
-                    <i class="bi bi-megaphone"></i>
-                    إنشاء حملة
-                </a>
-                <a href="{{ route('subscription.index') }}" class="cta-btn cta-btn-secondary">
-                    <i class="bi bi-gem"></i>
-                    اشتراكي
-                </a>
+        <!-- CTA Section -->
+        <div class="cta-section">
+            <div class="cta-content">
+                <h3>🎉 أنت جاهز الآن!</h3>
+                <p>لقد تعلمت كل ما تحتاجه لاستخدام زندر بكفاءة. ابدأ الآن!</p>
+                <div class="cta-buttons">
+                    <a href="{{ route('contacts.index') }}" class="cta-btn cta-btn-primary">
+                        <i class="bi bi-people"></i>
+                        جهات الاتصال
+                    </a>
+                    <a href="{{ route('campaigns.create') }}" class="cta-btn cta-btn-secondary">
+                        <i class="bi bi-megaphone"></i>
+                        إنشاء حملة
+                    </a>
+                    <a href="{{ route('subscription.index') }}" class="cta-btn cta-btn-secondary">
+                        <i class="bi bi-gem"></i>
+                        اشتراكي
+                    </a>
+                </div>
             </div>
         </div>
     </div>
