@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('admin.layouts.app')
 
 @section('title', 'لوحة الإدارة')
 
@@ -6,10 +6,8 @@
     <style>
         /* Stats Cards */
         .stat-card {
-            background: white;
             border-radius: 16px;
             padding: 1.5rem;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
             transition: all 0.3s ease;
         }
 
@@ -31,11 +29,9 @@
         .stat-card .stat-value {
             font-size: 2rem;
             font-weight: 700;
-            color: #212529;
         }
 
         .stat-card .stat-label {
-            color: #6c757d;
             font-size: 0.9rem;
         }
     </style>
@@ -120,40 +116,40 @@
     <!-- Stats Cards -->
     <div class="row g-4 mb-4">
         <div class="col-md-4">
-            <div class="stat-card">
+            <div class="stat-card card">
                 <div class="d-flex align-items-center gap-3">
                     <div class="stat-icon" style="background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);">
                         <i class="bi bi-people text-white"></i>
                     </div>
                     <div>
                         <div class="stat-value">{{ number_format($stats['users_count']) }}</div>
-                        <div class="stat-label">المستخدمين</div>
+                        <div class="stat-label text-muted">المستخدمين</div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="stat-card">
+            <div class="stat-card card">
                 <div class="d-flex align-items-center gap-3">
                     <div class="stat-icon" style="background: linear-gradient(135deg, #17a2b8 0%, #0dcaf0 100%);">
                         <i class="bi bi-person-lines-fill text-white"></i>
                     </div>
                     <div>
                         <div class="stat-value">{{ number_format($stats['contacts_count']) }}</div>
-                        <div class="stat-label">جهات الاتصال</div>
+                        <div class="stat-label text-muted">جهات الاتصال</div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="stat-card">
+            <div class="stat-card card">
                 <div class="d-flex align-items-center gap-3">
                     <div class="stat-icon" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
                         <i class="bi bi-file-earmark-text text-white"></i>
                     </div>
                     <div>
                         <div class="stat-value">{{ number_format($stats['templates_count']) }}</div>
-                        <div class="stat-label">القوالب</div>
+                        <div class="stat-label text-muted">القوالب</div>
                     </div>
                 </div>
             </div>

@@ -1,69 +1,21 @@
-@extends('layouts.app')
+@extends('admin.layouts.app')
 
 @section('title', 'تفاصيل طلب الدفع')
 
 @push('styles')
     <style>
-        .detail-card {
-            background: white;
-            border-radius: 16px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            margin-bottom: 1.5rem;
-        }
-
-        .detail-card h6 {
-            color: #212529;
-            margin-bottom: 1rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 2px solid #f0f0f0;
-        }
-
-        .detail-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid #f5f5f5;
-        }
-
-        .detail-row:last-child {
-            border-bottom: none;
-        }
-
-        .detail-row .label {
-            color: #6c757d;
-        }
-
-        .detail-row .value {
-            font-weight: 600;
-            color: #212529;
-        }
-
-        .receipt-image {
-            width: 100%;
-            max-height: 500px;
-            object-fit: contain;
+        .status-badge-large {
+            padding: 0.75rem 1.5rem;
             border-radius: 12px;
-            cursor: pointer;
-            transition: transform 0.3s ease;
-        }
-
-        .receipt-image:hover {
-            transform: scale(1.02);
-        }
-
-        .action-card {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-radius: 16px;
-            padding: 1.5rem;
-        }
-
-        .action-card h6 {
-            margin-bottom: 1rem;
+            font-size: 1rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .status-pending {
-            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%);
             border: 2px solid #ffc107;
             color: #856404;
         }
@@ -80,14 +32,17 @@
             color: #721c24;
         }
 
-        .status-badge-large {
-            padding: 1rem 2rem;
+        .receipt-image {
+            width: 100%;
+            max-height: 450px;
+            object-fit: contain;
             border-radius: 12px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .receipt-image:hover {
+            transform: scale(1.02);
         }
 
         /* Image Modal */
@@ -129,11 +84,9 @@
         <h4 class="mb-0">
             <i class="bi bi-credit-card text-success ms-2"></i>تفاصيل طلب الدفع #{{ $paymentRequest->id }}
         </h4>
-        <div class="d-flex align-items-center gap-3">
-            <a href="{{ route('admin.payment-requests.index') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-arrow-right ms-1"></i>رجوع للقائمة
-            </a>
-        </div>
+        <a href="{{ route('admin.payment-requests.index') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-right ms-1"></i>رجوع للقائمة
+        </a>
     </div>
 
     @if ($errors->any())
@@ -147,118 +100,134 @@
     <div class="row g-4">
         {{-- Receipt Image --}}
         <div class="col-lg-6">
-            <div class="detail-card">
-                <h6><i class="bi bi-image me-2"></i>صورة الوصل</h6>
-
-                @if ($paymentRequest->isPending())
-                    <img src="{{ asset('storage/' . $paymentRequest->receipt_image) }}" alt="صورة الوصل"
-                        class="receipt-image" onclick="openImageModal(this.src)">
-                    <p class="text-muted small mt-2 mb-0 text-center">
-                        <i class="bi bi-zoom-in me-1"></i>اضغط على الصورة للتكبير
-                    </p>
-                @else
-                    <div class="alert alert-secondary text-center mb-0">
-                        <i class="bi bi-trash fs-1 d-block mb-2"></i>
-                        <p class="mb-0">تم حذف الصورة بعد معالجة الطلب</p>
-                    </div>
-                @endif
+            <div class="card h-100">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-image me-2"></i>صورة الوصل</h6>
+                </div>
+                <div class="card-body d-flex flex-column justify-content-center align-items-center">
+                    @if ($paymentRequest->isPending())
+                        <img src="{{ asset('storage/' . $paymentRequest->receipt_image) }}" alt="صورة الوصل"
+                            class="receipt-image" onclick="openImageModal(this.src)">
+                        <p class="text-muted small mt-2 mb-0 text-center">
+                            <i class="bi bi-zoom-in me-1"></i>اضغط على الصورة للتكبير
+                        </p>
+                    @else
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-trash fs-1 d-block mb-2"></i>
+                            <p class="mb-0">تم حذف الصورة بعد معالجة الطلب</p>
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
 
         {{-- Request & User Details --}}
         <div class="col-lg-6">
             {{-- Current Status --}}
-            <div class="detail-card text-center">
-                <div class="status-badge-large status-{{ $paymentRequest->status }} d-inline-flex align-items-center gap-2">
-                    @if ($paymentRequest->isPending())
-                        <i class="bi bi-hourglass-split"></i>قيد المراجعة
-                    @elseif($paymentRequest->isApproved())
-                        <i class="bi bi-check-circle-fill"></i>تم القبول
-                    @else
-                        <i class="bi bi-x-circle-fill"></i>تم الرفض
-                    @endif
+            <div class="card text-center mb-4">
+                <div class="card-body py-3">
+                    <div class="status-badge-large status-{{ $paymentRequest->status }}">
+                        @if ($paymentRequest->isPending())
+                            <i class="bi bi-hourglass-split"></i>قيد المراجعة
+                        @elseif($paymentRequest->isApproved())
+                            <i class="bi bi-check-circle-fill"></i>تم القبول
+                        @else
+                            <i class="bi bi-x-circle-fill"></i>تم الرفض
+                        @endif
+                    </div>
                 </div>
             </div>
 
             {{-- User Info --}}
-            <div class="detail-card">
-                <h6><i class="bi bi-person me-2"></i>بيانات المستخدم</h6>
-                <div class="detail-row">
-                    <span class="label">الاسم</span>
-                    <span class="value">{{ $paymentRequest->user->name }}</span>
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-person me-2"></i>بيانات المستخدم</h6>
                 </div>
-                <div class="detail-row">
-                    <span class="label">رقم الهاتف</span>
-                    <span class="value" dir="ltr">{{ $paymentRequest->user->phone }}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="label">حالة الاشتراك</span>
-                    <span class="value">
-                        @if ($paymentRequest->user->hasActiveSubscription())
-                            <span class="badge bg-success">نشط</span>
-                        @else
-                            <span class="badge bg-danger">منتهي</span>
-                        @endif
-                    </span>
-                </div>
-                <div class="detail-row">
-                    <span class="label">حالة الحساب</span>
-                    <span class="value">
-                        @if ($paymentRequest->user->is_suspended)
-                            <span class="badge bg-danger">معطل</span>
-                        @else
-                            <span class="badge bg-success">نشط</span>
-                        @endif
-                    </span>
-                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span class="text-muted">الاسم</span>
+                        <span class="fw-semibold">{{ $paymentRequest->user->name }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span class="text-muted">رقم الهاتف</span>
+                        <span class="fw-semibold" dir="ltr">{{ $paymentRequest->user->phone }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span class="text-muted">حالة الاشتراك</span>
+                        <span>
+                            @if ($paymentRequest->user->hasActiveSubscription())
+                                <span class="badge bg-success">نشط</span>
+                            @else
+                                <span class="badge bg-danger">منتهي</span>
+                            @endif
+                        </span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span class="text-muted">حالة الحساب</span>
+                        <span>
+                            @if ($paymentRequest->user->is_suspended)
+                                <span class="badge bg-danger">معطل</span>
+                            @else
+                                <span class="badge bg-success">نشط</span>
+                            @endif
+                        </span>
+                    </li>
+                </ul>
             </div>
 
             {{-- Request Info --}}
-            <div class="detail-card">
-                <h6><i class="bi bi-receipt me-2"></i>تفاصيل الطلب</h6>
-                <div class="detail-row">
-                    <span class="label">المبلغ</span>
-                    <span class="value text-success">{{ number_format($paymentRequest->amount) }} جنيه</span>
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-receipt me-2"></i>تفاصيل الطلب</h6>
                 </div>
-                <div class="detail-row">
-                    <span class="label">تاريخ الإرسال</span>
-                    <span class="value">{{ $paymentRequest->created_at->format('Y/m/d - H:i') }}</span>
-                </div>
-                @if ($paymentRequest->reviewed_at)
-                    <div class="detail-row">
-                        <span class="label">تاريخ المراجعة</span>
-                        <span class="value">{{ $paymentRequest->reviewed_at->format('Y/m/d - H:i') }}</span>
-                    </div>
-                @endif
-                @if ($paymentRequest->admin_notes)
-                    <div class="detail-row">
-                        <span class="label">الملاحظات</span>
-                        <span class="value">{{ $paymentRequest->admin_notes }}</span>
-                    </div>
-                @endif
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span class="text-muted">المبلغ</span>
+                        <span class="fw-semibold text-success">{{ number_format($paymentRequest->amount) }} جنيه</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span class="text-muted">تاريخ الإرسال</span>
+                        <span class="fw-semibold">{{ $paymentRequest->created_at->format('Y/m/d - H:i') }}</span>
+                    </li>
+                    @if ($paymentRequest->reviewed_at)
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="text-muted">تاريخ المراجعة</span>
+                            <span class="fw-semibold">{{ $paymentRequest->reviewed_at->format('Y/m/d - H:i') }}</span>
+                        </li>
+                    @endif
+                    @if ($paymentRequest->admin_notes)
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="text-muted">الملاحظات</span>
+                            <span class="fw-semibold">{{ $paymentRequest->admin_notes }}</span>
+                        </li>
+                    @endif
+                </ul>
             </div>
 
             {{-- Actions (only for pending) --}}
             @if ($paymentRequest->isPending())
-                <div class="action-card">
-                    <h6><i class="bi bi-gear me-2"></i>اتخاذ إجراء</h6>
-
-                    <div class="mb-3">
-                        <label class="form-label">ملاحظات (اختياري للقبول، إجباري للرفض)</label>
-                        <textarea id="adminNotes" class="form-control" rows="2" placeholder="اكتب ملاحظة..."></textarea>
-                        <div id="notesError" class="text-danger small mt-1 d-none">
-                            <i class="bi bi-exclamation-circle me-1"></i>يجب كتابة سبب الرفض
-                        </div>
+                <div class="card border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0"><i class="bi bi-gear me-2"></i>اتخاذ إجراء</h6>
                     </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">ملاحظات (اختياري للقبول، إجباري للرفض)</label>
+                            <textarea id="adminNotes" class="form-control" rows="2" placeholder="اكتب ملاحظة..."></textarea>
+                            <div id="notesError" class="text-danger small mt-1 d-none">
+                                <i class="bi bi-exclamation-circle me-1"></i>يجب كتابة سبب الرفض
+                            </div>
+                        </div>
 
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-success flex-fill" data-bs-toggle="modal"
-                            data-bs-target="#approveModal">
-                            <i class="bi bi-check-circle me-1"></i>قبول وتفعيل الاشتراك
-                        </button>
-                        <button type="button" class="btn btn-danger flex-fill" id="rejectBtn">
-                            <i class="bi bi-x-circle me-1"></i>رفض الطلب
-                        </button>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-success flex-fill" data-bs-toggle="modal"
+                                data-bs-target="#approveModal">
+                                <i class="bi bi-check-circle me-1"></i>قبول وتفعيل الاشتراك
+                            </button>
+                            <button type="button" class="btn btn-danger flex-fill" id="rejectBtn">
+                                <i class="bi bi-x-circle me-1"></i>رفض الطلب
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -270,7 +239,8 @@
                                 <h5 class="modal-title">
                                     <i class="bi bi-check-circle me-2"></i>تأكيد القبول
                                 </h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                <button type="button" class="btn-close btn-close-white"
+                                    data-bs-dismiss="modal"></button>
                             </div>
                             <div class="modal-body text-center py-4">
                                 <i class="bi bi-patch-check-fill text-success" style="font-size: 4rem;"></i>

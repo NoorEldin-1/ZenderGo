@@ -29,9 +29,20 @@ class AdminPaymentRequestsController extends Controller
         }
 
         $paymentRequests = $query->paginate(15);
-        $pendingCount = PaymentRequest::pending()->count();
 
-        return view('admin.payment-requests.index', compact('paymentRequests', 'pendingCount'));
+        // Stats for widgets
+        $pendingCount = PaymentRequest::pending()->count();
+        $approvedCount = PaymentRequest::where('status', 'approved')->count();
+        $rejectedCount = PaymentRequest::where('status', 'rejected')->count();
+        $totalCount = PaymentRequest::count();
+
+        return view('admin.payment-requests.index', compact(
+            'paymentRequests',
+            'pendingCount',
+            'approvedCount',
+            'rejectedCount',
+            'totalCount'
+        ));
     }
 
     /**

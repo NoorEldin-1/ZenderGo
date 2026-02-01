@@ -1,56 +1,36 @@
-@extends('layouts.app')
+@extends('admin.layouts.app')
 
 @section('title', 'طلبات الدفع')
 
 @push('styles')
     <style>
-        .stats-row {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .stat-box {
-            background: white;
+        .stat-card {
             border-radius: 12px;
-            padding: 1rem 1.5rem;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-            display: flex;
-            align-items: center;
-            gap: 1rem;
+            padding: 1.25rem;
+            transition: all 0.3s ease;
         }
 
-        .stat-box.pending {
-            border-right: 4px solid #ffc107;
+        .stat-card:hover {
+            transform: translateY(-3px);
         }
 
-        .stat-box .icon {
+        .stat-card .stat-icon {
             width: 50px;
             height: 50px;
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
+            font-size: 1.35rem;
         }
 
-        .stat-box .value {
+        .stat-card .stat-value {
             font-size: 1.75rem;
             font-weight: 700;
-            color: #212529;
         }
 
-        .stat-box .label {
+        .stat-card .stat-label {
             font-size: 0.85rem;
-            color: #6c757d;
-        }
-
-        .filter-card {
-            background: white;
-            border-radius: 12px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
         }
     </style>
 @endpush
@@ -60,79 +40,113 @@
         <h4 class="mb-0">
             <i class="bi bi-credit-card text-success ms-2"></i>طلبات الدفع
         </h4>
-        <div class="d-flex align-items-center gap-3">
-            <a href="{{ route('admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-arrow-right ms-1"></i>لوحة التحكم
-            </a>
-            <form action="{{ route('admin.logout') }}" method="POST" class="d-inline">
-                @csrf
-                <button type="submit" class="btn btn-outline-danger btn-sm px-3">
-                    <i class="bi bi-box-arrow-right ms-1"></i>خروج
-                </button>
-            </form>
-        </div>
     </div>
 
-    @if (session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle ms-2"></i>
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
-    {{-- Pending Count --}}
-    <div class="stats-row">
-        <div class="stat-box pending">
-            <div class="icon bg-warning bg-opacity-15 text-warning">
-                <i class="bi bi-hourglass-split"></i>
+    {{-- Stats Grid: 4 Columns --}}
+    <div class="row g-3 mb-4">
+        {{-- Total Requests --}}
+        <div class="col-6 col-lg-3">
+            <div class="stat-card card h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-info bg-opacity-15 text-info">
+                        <i class="bi bi-collection"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ $totalCount }}</div>
+                        <div class="stat-label text-muted">إجمالي الطلبات</div>
+                    </div>
+                </div>
             </div>
-            <div>
-                <div class="value">{{ $pendingCount }}</div>
-                <div class="label">طلبات في الانتظار</div>
+        </div>
+
+        {{-- Pending --}}
+        <div class="col-6 col-lg-3">
+            <div class="stat-card card h-100 border-warning border-start border-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-warning bg-opacity-15 text-warning">
+                        <i class="bi bi-hourglass-split"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ $pendingCount }}</div>
+                        <div class="stat-label text-muted">في الانتظار</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Approved --}}
+        <div class="col-6 col-lg-3">
+            <div class="stat-card card h-100 border-success border-start border-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-success bg-opacity-15 text-success">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ $approvedCount }}</div>
+                        <div class="stat-label text-muted">مقبولة</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Rejected --}}
+        <div class="col-6 col-lg-3">
+            <div class="stat-card card h-100 border-danger border-start border-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-danger bg-opacity-15 text-danger">
+                        <i class="bi bi-x-circle"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ $rejectedCount }}</div>
+                        <div class="stat-label text-muted">مرفوضة</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     {{-- Filters --}}
-    <div class="filter-card">
-        <form action="{{ route('admin.payment-requests.index') }}" method="GET">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-5">
-                    <label class="form-label">البحث</label>
-                    <input type="text" name="search" class="form-control" placeholder="اسم المستخدم أو رقم الهاتف..."
-                        value="{{ request('search') }}">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">الحالة</label>
-                    <select name="status" class="form-select">
-                        <option value="">الكل</option>
-                        <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>قيد المراجعة</option>
-                        <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>مقبول</option>
-                        <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>مرفوض</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-whatsapp flex-fill">
-                            <i class="bi bi-search me-1"></i>بحث
-                        </button>
-                        @if (request('search') || request('status'))
-                            <a href="{{ route('admin.payment-requests.index') }}" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-lg"></i>
-                            </a>
-                        @endif
+    <div class="card mb-4">
+        <div class="card-body">
+            <form action="{{ route('admin.payment-requests.index') }}" method="GET">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-5">
+                        <label class="form-label">البحث</label>
+                        <input type="text" name="search" class="form-control"
+                            placeholder="اسم المستخدم أو رقم الهاتف..." value="{{ request('search') }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">الحالة</label>
+                        <select name="status" class="form-select">
+                            <option value="">الكل</option>
+                            <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>قيد المراجعة
+                            </option>
+                            <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>مقبول</option>
+                            <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>مرفوض</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-whatsapp flex-fill">
+                                <i class="bi bi-search me-1"></i>بحث
+                            </button>
+                            @if (request('search') || request('status'))
+                                <a href="{{ route('admin.payment-requests.index') }}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-lg"></i>
+                                </a>
+                            @endif
+                        </div>
                     </div>
                 </div>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 
     {{-- Requests Table --}}
     <div class="card">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table">
+                <table class="table table-hover align-middle mb-0">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -146,7 +160,7 @@
                     </thead>
                     <tbody>
                         @forelse($paymentRequests as $request)
-                            <tr class="{{ $request->isPending() ? 'table-warning bg-opacity-10' : '' }}">
+                            <tr>
                                 <td>{{ $request->id }}</td>
                                 <td>
                                     <div class="d-flex align-items-center gap-2">

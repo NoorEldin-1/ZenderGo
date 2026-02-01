@@ -306,6 +306,8 @@
             transition: all 0.3s ease;
             cursor: pointer;
             background: white;
+            overflow: hidden;
+            /* Prevent any children from overflowing */
         }
 
         .upload-area:hover {
@@ -330,7 +332,13 @@
         }
 
         .upload-preview {
-            max-width: 200px;
+            max-width: 100%;
+            /* Never exceed container */
+            width: auto;
+            height: auto;
+            max-height: 250px;
+            /* Limit height for better UX */
+            object-fit: contain;
             border-radius: 8px;
             margin-top: 1rem;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
@@ -439,6 +447,146 @@
             border-radius: 12px;
             padding: 1rem;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        /* ===== DARK MODE OVERRIDES ===== */
+        [data-bs-theme="dark"] .subscription-card {
+            background: var(--bs-dark);
+        }
+
+        [data-bs-theme="dark"] .info-card {
+            background: #1a1d21;
+        }
+
+        [data-bs-theme="dark"] .info-card:hover {
+            background: #22262b;
+        }
+
+        [data-bs-theme="dark"] .info-card .icon {
+            background: #2c3035;
+        }
+
+        [data-bs-theme="dark"] .info-card .value {
+            color: #e9ecef;
+        }
+
+        [data-bs-theme="dark"] .payment-section {
+            background: linear-gradient(135deg, #1a1d21 0%, #22262b 100%);
+        }
+
+        [data-bs-theme="dark"] .payment-section h6 {
+            color: #e9ecef;
+        }
+
+        [data-bs-theme="dark"] .payment-tab {
+            background: #1a1d21;
+            border-color: #495057;
+            color: #e9ecef;
+        }
+
+        [data-bs-theme="dark"] .payment-tab:hover {
+            background: #22262b;
+        }
+
+        [data-bs-theme="dark"] .upload-area {
+            background: #1a1d21;
+            border-color: #495057;
+        }
+
+        [data-bs-theme="dark"] .upload-area:hover {
+            border-color: #25D366;
+            background: rgba(37, 211, 102, 0.1);
+        }
+
+        /* Dark Mode: Rejected Alert - CRITICAL FIX */
+        [data-bs-theme="dark"] .rejected-alert {
+            background: linear-gradient(135deg, #3d1f23 0%, #4a252a 100%);
+            border-color: #dc3545;
+        }
+
+        [data-bs-theme="dark"] .rejected-alert i {
+            color: #ff6b7a;
+        }
+
+        [data-bs-theme="dark"] .rejected-alert h6 {
+            color: #ff8a96;
+        }
+
+        [data-bs-theme="dark"] .rejected-alert p {
+            color: #e0a6ab;
+        }
+
+        /* Dark Mode: Pending Alert */
+        [data-bs-theme="dark"] .pending-alert {
+            background: linear-gradient(135deg, #3d3520 0%, #4a4025 100%);
+            border-color: #ffc107;
+        }
+
+        [data-bs-theme="dark"] .pending-alert i {
+            color: #ffd54f;
+        }
+
+        [data-bs-theme="dark"] .pending-alert h6 {
+            color: #ffeb8a;
+        }
+
+        [data-bs-theme="dark"] .pending-alert p {
+            color: #e0d5a0;
+        }
+
+        /* Dark Mode: Expired Alert */
+        [data-bs-theme="dark"] .expired-alert {
+            background: linear-gradient(135deg, #3d1f23 0%, #4a252a 100%);
+            border-color: #dc3545;
+        }
+
+        [data-bs-theme="dark"] .expired-alert i,
+        [data-bs-theme="dark"] .expired-alert h5 {
+            color: #ff8a96;
+        }
+
+        /* Dark Mode: Trial Notice */
+        [data-bs-theme="dark"] .trial-notice {
+            background: linear-gradient(135deg, #1a3a3a 0%, #1e4040 100%);
+            border-color: #17a2b8;
+        }
+
+        [data-bs-theme="dark"] .trial-notice h5 {
+            color: #5dd0e6;
+        }
+
+        [data-bs-theme="dark"] .trial-countdown {
+            background: #1a1d21;
+        }
+
+        /* ===== RESPONSIVE FIXES ===== */
+        @media (max-width: 576px) {
+
+            .vodafone-number,
+            .instapay-number {
+                flex-wrap: wrap;
+                justify-content: center;
+                text-align: center;
+                gap: 0.75rem;
+            }
+
+            .vodafone-number>div,
+            .instapay-number>div {
+                width: 100%;
+            }
+
+            .vodafone-number .copy-btn,
+            .instapay-number .copy-btn {
+                width: 100%;
+            }
+
+            .info-cards {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+
+            .payment-methods-tabs {
+                flex-direction: column;
+            }
         }
     </style>
 @endpush
