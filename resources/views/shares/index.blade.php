@@ -49,11 +49,13 @@
                         <div class="list-group list-group-flush">
                             @foreach ($receivedRequests as $request)
                                 <div class="list-group-item py-3">
-                                    <div class="d-flex justify-content-between align-items-start gap-3">
+                                    {{-- Mobile-first: Stack vertically, Desktop: Row --}}
+                                    <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+                                        {{-- Content Area --}}
                                         <div class="flex-grow-1">
-                                            <div class="d-flex align-items-center gap-2 mb-1">
-                                                <i class="bi bi-person-circle text-primary"></i>
-                                                <strong dir="ltr">{{ $request->sender->phone }}</strong>
+                                            <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                                                <i class="bi bi-person-circle text-primary fs-5"></i>
+                                                <strong dir="ltr" class="fs-6">{{ $request->sender->phone }}</strong>
                                                 @if ($request->isPending())
                                                     <span class="badge bg-warning text-dark">قيد الانتظار</span>
                                                 @elseif ($request->isAccepted())
@@ -75,19 +77,21 @@
                                                 <i class="bi bi-clock me-1"></i>{{ $request->created_at->diffForHumans() }}
                                             </small>
                                         </div>
+
+                                        {{-- Action Buttons: Full-width on mobile, inline on desktop --}}
                                         @if ($request->isPending())
-                                            <div class="d-flex gap-2">
+                                            <div class="d-flex gap-2 flex-shrink-0 mt-2 mt-md-0">
                                                 <form action="{{ route('shares.accept', $request->id) }}" method="POST"
-                                                    class="d-inline">
+                                                    class="flex-fill flex-md-grow-0">
                                                     @csrf
-                                                    <button type="submit" class="btn btn-success btn-sm">
+                                                    <button type="submit" class="btn btn-success w-100">
                                                         <i class="bi bi-check-lg me-1"></i>قبول
                                                     </button>
                                                 </form>
                                                 <form action="{{ route('shares.reject', $request->id) }}" method="POST"
-                                                    class="d-inline">
+                                                    class="flex-fill flex-md-grow-0">
                                                     @csrf
-                                                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                    <button type="submit" class="btn btn-outline-danger w-100">
                                                         <i class="bi bi-x-lg me-1"></i>رفض
                                                     </button>
                                                 </form>
@@ -147,11 +151,14 @@
                         <div class="list-group list-group-flush">
                             @foreach ($sentRequests as $request)
                                 <div class="list-group-item py-3">
-                                    <div class="d-flex justify-content-between align-items-start gap-3">
+                                    {{-- Mobile-first: Stack vertically, Desktop: Row --}}
+                                    <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+                                        {{-- Content Area --}}
                                         <div class="flex-grow-1">
-                                            <div class="d-flex align-items-center gap-2 mb-1">
-                                                <i class="bi bi-person-circle text-info"></i>
-                                                <strong dir="ltr">{{ $request->recipient->phone }}</strong>
+                                            <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                                                <i class="bi bi-person-circle text-info fs-5"></i>
+                                                <strong dir="ltr"
+                                                    class="fs-6">{{ $request->recipient->phone }}</strong>
                                                 @if ($request->isPending())
                                                     <span class="badge bg-warning text-dark">قيد الانتظار</span>
                                                 @elseif ($request->isAccepted())
@@ -176,15 +183,19 @@
                                                 @endif
                                             </small>
                                         </div>
+
+                                        {{-- Action Buttons: Full-width on mobile, inline on desktop --}}
                                         @if ($request->isPending())
-                                            <form action="{{ route('shares.destroy', $request->id) }}" method="POST"
-                                                class="d-inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-outline-secondary btn-sm">
-                                                    <i class="bi bi-x-lg me-1"></i>إلغاء
-                                                </button>
-                                            </form>
+                                            <div class="d-flex gap-2 flex-shrink-0 mt-2 mt-md-0">
+                                                <form action="{{ route('shares.destroy', $request->id) }}" method="POST"
+                                                    class="flex-fill flex-md-grow-0">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-outline-secondary w-100">
+                                                        <i class="bi bi-x-lg me-1"></i>إلغاء
+                                                    </button>
+                                                </form>
+                                            </div>
                                         @endif
                                     </div>
 
