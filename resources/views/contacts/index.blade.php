@@ -815,7 +815,13 @@
         }
 
         .mobile-action-bar.visible {
-            bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+            bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+        }
+
+        /* Selection Mode: Adds extra scroll space at bottom for pagination */
+        body.selection-mode-active {
+            padding-bottom: 140px !important;
+            transition: padding-bottom 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .mobile-action-bar .action-btn {
@@ -1502,11 +1508,15 @@
                     mobileActionBar.setAttribute('aria-hidden', 'false');
                     // Hide navbar (swap animation)
                     if (mobileNav) mobileNav.classList.add('mobile-nav-hidden');
+                    // Add extra body padding for pagination scroll space
+                    document.body.classList.add('selection-mode-active');
                 } else {
                     mobileActionBar.classList.remove('visible');
                     mobileActionBar.setAttribute('aria-hidden', 'true');
                     // Show navbar back
                     if (mobileNav) mobileNav.classList.remove('mobile-nav-hidden');
+                    // Remove extra body padding
+                    document.body.classList.remove('selection-mode-active');
                 }
             }
 
