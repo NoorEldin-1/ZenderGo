@@ -125,10 +125,12 @@ class ContactController extends Controller
             $contact->share_history = $shareHistory->get($contact->id, collect())->toArray();
         }
 
-        // Return JSON with HTML for AJAX requests
+        // Return JSON with HTML for AJAX requests (dual-view: desktop table + mobile cards)
         if ($request->ajax()) {
             return response()->json([
-                'html' => view('contacts.partials.rows', compact('contacts'))->render(),
+                'html_desktop' => view('contacts.partials.rows', compact('contacts'))->render(),
+                'html_mobile' => view('contacts.partials.mobile_cards', compact('contacts'))->render(),
+                'html' => view('contacts.partials.rows', compact('contacts'))->render(), // Backward compatibility
                 'pagination' => $contacts->links()->toHtml(),
                 'total' => $contacts->total(),
             ]);

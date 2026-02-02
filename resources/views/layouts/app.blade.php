@@ -1241,10 +1241,16 @@
             left: 0;
             right: 0;
             background: #212529;
-            z-index: 1050;
+            z-index: 1040;
             padding: 8px 0;
             padding-bottom: calc(8px + env(safe-area-inset-bottom));
             box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Hidden state for swap animation with action bar */
+        .mobile-nav.mobile-nav-hidden {
+            transform: translateY(100%);
         }
 
         .mobile-nav .nav-link {

@@ -3,8 +3,14 @@
 @section('title', 'جهات الاتصال')
 
 @section('content')
-    <!-- Header -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-2">
+    {{-- ===== MOBILE HEADER (Visible only < 768px) ===== --}}
+    <div class="d-md-none">
+        @include('contacts.partials.mobile_header')
+    </div>
+
+    {{-- ===== DESKTOP HEADER (Hidden < 768px) ===== --}}
+    <div
+        class="d-none d-md-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-2">
         <div class="d-flex align-items-center gap-2 flex-wrap">
             <h2 class="mb-0 fw-bold">جهات الاتصال</h2>
             <span class="badge bg-secondary" id="totalBadge">{{ $contacts->total() }}</span>
@@ -30,9 +36,8 @@
         </div>
     </div>
 
-    <!-- Contact Usage Indicator -->
-    <!-- Contact Usage Indicator -->
-    <div class="card mb-4 border-0 shadow-sm overflow-hidden position-relative">
+    {{-- ===== DESKTOP STATS (Hidden < 768px) ===== --}}
+    <div class="card mb-4 border-0 shadow-sm overflow-hidden position-relative d-none d-md-block">
         <div class="card-body p-4">
             <!-- Background Gradient (Subtle) -->
             <div
@@ -104,8 +109,8 @@
         </div>
     </div>
 
-    <!-- Search & Bulk Actions -->
-    <div class="card mb-3">
+    {{-- ===== DESKTOP SEARCH & BULK ACTIONS (Hidden < 768px) ===== --}}
+    <div class="card mb-3 d-none d-md-block">
         <div class="card-body py-2 px-3">
             <div class="d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-center">
                 <!-- Search Input -->
@@ -170,28 +175,49 @@
         </div>
     </div>
 
-    <!-- Contacts Table -->
+    <!-- Contacts Container -->
     <div class="card">
         <div class="card-body p-0">
             @if ($contacts->count() > 0)
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" id="contactsTable">
-                        <thead class="table-light">
-                            <tr>
-                                <th style="width: 40px;" class="ps-3">
-                                    <input type="checkbox" class="form-check-input" id="selectAll" title="تحديد الكل">
-                                </th>
-                                <th>الاسم</th>
-                                <th class="d-none d-md-table-cell">الهاتف</th>
-                                <th class="d-none d-lg-table-cell">آخر إرسال</th>
-                                <th class="d-none d-xl-table-cell">التاريخ</th>
-                                <th style="width: 90px;" class="text-center">إجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody id="contactsBody">
-                            @include('contacts.partials.rows')
-                        </tbody>
-                    </table>
+                {{-- ===== DESKTOP VIEW (Table) - Hidden on Mobile ===== --}}
+                <div class="d-none d-md-block" id="desktopViewContainer">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="contactsTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 40px;" class="ps-3">
+                                        <input type="checkbox" class="form-check-input" id="selectAll"
+                                            title="تحديد الكل">
+                                    </th>
+                                    <th>الاسم</th>
+                                    <th>الهاتف</th>
+                                    <th class="d-none d-lg-table-cell">آخر إرسال</th>
+                                    <th class="d-none d-xl-table-cell">التاريخ</th>
+                                    <th style="width: 90px;" class="text-center">إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="contactsBody">
+                                @include('contacts.partials.rows')
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {{-- ===== MOBILE VIEW (Cards) - Hidden on Desktop ===== --}}
+                <div class="d-md-none p-3" id="mobileViewContainer">
+                    {{-- Mobile Select All --}}
+                    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="selectAllMobile"
+                                style="width: 1.25rem; height: 1.25rem;">
+                            <label class="form-check-label small fw-semibold" for="selectAllMobile">تحديد الكل</label>
+                        </div>
+                        <span class="badge bg-secondary">{{ $contacts->total() }} جهة اتصال</span>
+                    </div>
+                    {{-- Mobile Cards Container --}}
+                    <div id="mobileContactsBody">
+                        @include('contacts.partials.mobile_cards')
+                    </div>
                 </div>
 
                 <!-- No Results Message -->
@@ -201,7 +227,6 @@
                 </div>
 
                 <!-- Pagination -->
-                {{-- Pagination Container - Always Rendered to prevent JS Error --}}
                 <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center p-3 border-top gap-3"
                     id="pagination">
                     @if ($contacts->hasPages())
@@ -447,6 +472,9 @@
             </div>
         </div>
     </div>
+
+    {{-- Mobile Floating Bulk Action Bar --}}
+    @include('contacts.partials.mobile_bulk_actions')
 @endsection
 
 @push('styles')
@@ -604,6 +632,236 @@
         [data-bs-theme="dark"] .text-dark-emphasis {
             color: #f8f9fa !important;
         }
+
+        /* ========== MOBILE CARD STYLES ========== */
+        .contact-card {
+            transition: all 0.2s ease;
+            border-radius: 12px !important;
+        }
+
+        .contact-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        .contact-card .contact-info-section {
+            border-right: 3px solid var(--bs-primary);
+        }
+
+        .contact-card .icon-circle {
+            transition: transform 0.2s ease;
+        }
+
+        .contact-card:hover .icon-circle {
+            transform: scale(1.1);
+        }
+
+        /* Card Selection State */
+        .contact-card.selected {
+            border: 2px solid var(--bs-primary) !important;
+            background-color: rgba(var(--bs-primary-rgb), 0.05);
+        }
+
+        .contact-card .form-check-input:checked~.contact-name {
+            color: var(--bs-primary);
+        }
+
+        /* Min-width helper for text truncation */
+        .min-width-0 {
+            min-width: 0;
+        }
+
+        /* Dark Mode Mobile Cards */
+        [data-bs-theme="dark"] .contact-card {
+            background-color: #212529;
+            border-color: #343a40 !important;
+        }
+
+        [data-bs-theme="dark"] .contact-card:hover {
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3) !important;
+        }
+
+        [data-bs-theme="dark"] .contact-card .contact-info-section {
+            background-color: #2b3035 !important;
+        }
+
+        [data-bs-theme="dark"] .contact-card.selected {
+            background-color: rgba(37, 211, 102, 0.1);
+            border-color: #25d366 !important;
+        }
+
+        /* Mobile Stats Card Improvements */
+        @media (max-width: 767.98px) {
+            .card-body.p-4 {
+                padding: 1rem !important;
+            }
+
+            .display-6 {
+                font-size: 1.75rem !important;
+            }
+
+            .progress {
+                height: 10px !important;
+            }
+
+            /* Compact alert on mobile */
+            .alert.alert-danger {
+                font-size: 0.8rem;
+            }
+        }
+
+        /* ========== MOBILE HEADER STYLES ========== */
+        .mobile-header-wrapper {
+            padding: 0.5rem;
+        }
+
+        /* Circular Progress Indicator */
+        .circular-progress {
+            --size: 55px;
+            --progress: 0;
+            --color: #20c997;
+            width: var(--size);
+            height: var(--size);
+            border-radius: 50%;
+            background: conic-gradient(var(--color) calc(var(--progress) * 1%),
+                    rgba(var(--bs-secondary-rgb), 0.2) 0);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .circular-progress::before {
+            content: '';
+            position: absolute;
+            width: calc(var(--size) - 10px);
+            height: calc(var(--size) - 10px);
+            border-radius: 50%;
+            background: var(--bs-body-bg);
+        }
+
+        .circular-progress .progress-value {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Filter Chips */
+        .filter-chips-container {
+            margin: 0 -0.5rem;
+            padding: 0 0.5rem;
+        }
+
+        .filter-chip {
+            font-size: 0.85rem;
+            border: 1px solid var(--bs-border-color);
+            background: var(--bs-body-bg);
+            color: var(--bs-body-color);
+            transition: all 0.2s ease;
+        }
+
+        .filter-chip:hover {
+            border-color: var(--bs-primary);
+            color: var(--bs-primary);
+        }
+
+        .filter-chip.active {
+            background: var(--bs-primary);
+            border-color: var(--bs-primary);
+            color: #fff;
+        }
+
+        /* Hide scrollbar but allow scrolling */
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Stats Widget Styling */
+        .stats-widget {
+            border-radius: 12px !important;
+        }
+
+        /* Dark Mode Adjustments */
+        [data-bs-theme="dark"] .stats-widget {
+            background: linear-gradient(135deg, #2b3035 0%, #1a1d21 100%) !important;
+        }
+
+        [data-bs-theme="dark"] .filter-chip {
+            border-color: #495057;
+        }
+
+        [data-bs-theme="dark"] .filter-chip:hover {
+            border-color: var(--bs-primary);
+        }
+
+        /* ========== MOBILE FLOATING ACTION BAR ========== */
+        .mobile-action-bar {
+            position: fixed;
+            bottom: -100px;
+            left: 1rem;
+            right: 1rem;
+            background: rgba(33, 37, 41, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 50px;
+            padding: 0.75rem 1.25rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            z-index: 1050;
+            transition: bottom 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .mobile-action-bar.visible {
+            bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+        }
+
+        .mobile-action-bar .action-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .mobile-action-bar .action-btn:active {
+            transform: scale(0.9);
+        }
+
+        .mobile-action-bar .btn-clear {
+            background: rgba(108, 117, 125, 0.3);
+            color: #adb5bd;
+        }
+
+        .mobile-action-bar .btn-clear:hover {
+            background: rgba(108, 117, 125, 0.5);
+        }
+
+        .mobile-action-bar .btn-share {
+            background: linear-gradient(135deg, #0dcaf0 0%, #0aa2c0 100%);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(13, 202, 240, 0.4);
+        }
+
+        .mobile-action-bar .btn-share:hover {
+            box-shadow: 0 6px 20px rgba(13, 202, 240, 0.6);
+        }
+
+        .mobile-action-bar .btn-delete {
+            background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
+        }
+
+        .mobile-action-bar .btn-delete:hover {
+            box-shadow: 0 6px 20px rgba(220, 53, 69, 0.6);
+        }
     </style>
 @endpush
 
@@ -703,6 +961,7 @@
         const searchInput = document.getElementById('searchInput');
         const clearSearchBtn = document.getElementById('clearSearch');
         const contactsBody = document.getElementById('contactsBody');
+        const mobileContactsBody = document.getElementById('mobileContactsBody');
         const noResults = document.getElementById('noResults');
         const pagination = document.getElementById('pagination');
 
@@ -712,6 +971,7 @@
         const crossPageIndicator = document.getElementById('crossPageIndicator');
         const bulkActionsEl = document.getElementById('bulkActions');
         const selectAllEl = document.getElementById('selectAll');
+        const selectAllMobileEl = document.getElementById('selectAllMobile');
 
         // ========== INITIALIZATION - Restore Selection State ==========
         (function initializeSelectionState() {
@@ -724,18 +984,20 @@
             document.querySelectorAll('.contact-checkbox').forEach(cb => {
                 if (SelectionManager.has(cb.value)) {
                     cb.checked = true;
+                    // Update card visual state for mobile
+                    const card = cb.closest('.contact-card');
+                    if (card) card.classList.add('selected');
                 }
             });
         }
 
-        // Setup row click handlers (for initial load)
+        // Setup row click handlers (for desktop table rows and mobile cards)
         function setupRowClickHandlers() {
+            // Desktop table rows
             document.querySelectorAll('#contactsBody tr').forEach(row => {
                 row.style.cursor = 'pointer';
                 row.addEventListener('click', function(e) {
-                    // Don't toggle if clicking on buttons, links, or the checkbox itself
                     if (e.target.closest('button, a, input[type="checkbox"]')) return;
-
                     const checkbox = this.querySelector('.contact-checkbox');
                     if (checkbox) {
                         checkbox.checked = !checkbox.checked;
@@ -743,6 +1005,32 @@
                     }
                 });
             });
+
+            // Mobile cards - click anywhere on card to select
+            document.querySelectorAll('.contact-card').forEach(card => {
+                card.style.cursor = 'pointer';
+                card.addEventListener('click', function(e) {
+                    // Don't toggle if clicking on buttons, links, checkbox, or star
+                    if (e.target.closest('button, a, input[type="checkbox"], .star-btn')) return;
+                    const checkbox = this.querySelector('.contact-checkbox');
+                    if (checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                        checkbox.dispatchEvent(new Event('change'));
+                    }
+                });
+            });
+        }
+
+        // Update card visual state when checkbox changes
+        function updateCardSelectionState(checkbox) {
+            const card = checkbox.closest('.contact-card');
+            if (card) {
+                if (checkbox.checked) {
+                    card.classList.add('selected');
+                } else {
+                    card.classList.remove('selected');
+                }
+            }
         }
 
         // ========== SEARCH (Server-Side for All Pages) ==========
@@ -822,6 +1110,12 @@
             const query = this.value.trim();
             clearSearchBtn.classList.toggle('d-none', !query);
 
+            // Sync mobile search input
+            const mobileSearchInput = document.getElementById('mobileSearchInput');
+            if (mobileSearchInput && mobileSearchInput !== document.activeElement) {
+                mobileSearchInput.value = this.value;
+            }
+
             // Debounce: wait 300ms after user stops typing
             clearTimeout(searchDebounceTimer);
             searchDebounceTimer = setTimeout(() => {
@@ -832,14 +1126,97 @@
         clearSearchBtn.addEventListener('click', function() {
             searchInput.value = '';
             this.classList.add('d-none');
+            // Sync mobile
+            const mobileSearchInput = document.getElementById('mobileSearchInput');
+            if (mobileSearchInput) mobileSearchInput.value = '';
             performSearch('');
             searchInput.focus();
         });
 
+        // ========== MOBILE SEARCH HANDLERS ==========
+        const mobileSearchInput = document.getElementById('mobileSearchInput');
+        const mobileClearSearch = document.getElementById('mobileClearSearch');
+
+        mobileSearchInput?.addEventListener('input', function() {
+            const query = this.value.trim();
+            mobileClearSearch?.classList.toggle('d-none', !query);
+
+            // Sync desktop search input
+            if (searchInput && searchInput !== document.activeElement) {
+                searchInput.value = this.value;
+            }
+
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(() => {
+                performSearch(query);
+            }, 300);
+        });
+
+        mobileClearSearch?.addEventListener('click', function() {
+            mobileSearchInput.value = '';
+            this.classList.add('d-none');
+            // Sync desktop
+            if (searchInput) searchInput.value = '';
+            performSearch('');
+            mobileSearchInput?.focus();
+        });
+
+        // ========== MOBILE FILTER CHIPS ==========
+        document.querySelectorAll('.filter-chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                const filter = this.dataset.filter;
+
+                // Update active state
+                document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+
+                // Sync with desktop dropdown
+                const desktopFilter = document.getElementById('contactFilter');
+                if (desktopFilter) desktopFilter.value = filter;
+
+                // Show/hide date range picker
+                const mobileDateContainer = document.getElementById('mobileDateRangeContainer');
+                const desktopDateContainer = document.getElementById('dateRangeContainer');
+
+                if (filter === 'range') {
+                    mobileDateContainer?.classList.remove('d-none');
+                    desktopDateContainer?.classList.remove('d-none');
+                } else {
+                    mobileDateContainer?.classList.add('d-none');
+                    desktopDateContainer?.classList.add('d-none');
+                    // Trigger search with new filter
+                    performSearch(mobileSearchInput?.value || searchInput?.value || '');
+                }
+            });
+        });
+
+        // ========== MOBILE DATE RANGE PICKER ==========
+        const mobileDatePicker = document.getElementById('mobileDateRangePicker');
+        if (mobileDatePicker && typeof flatpickr !== 'undefined') {
+            window.mobileFlatpickrInstance = flatpickr(mobileDatePicker, {
+                mode: 'range',
+                dateFormat: 'Y-m-d',
+                locale: 'ar',
+                defaultDate: [
+                    mobileDatePicker.dataset.defaultFrom || null,
+                    mobileDatePicker.dataset.defaultTo || null
+                ].filter(Boolean),
+                onClose: function(selectedDates) {
+                    if (selectedDates.length >= 1) {
+                        performSearch(mobileSearchInput?.value || searchInput?.value || '');
+                    }
+                }
+            });
+        }
+
         function performSearch(query) {
-            // Show loading state
+            // Show loading state for both views
             contactsBody.innerHTML =
                 '<tr><td colspan="6" class="text-center py-4"><div class="spinner-border spinner-border-sm text-success me-2"></div>جاري البحث...</td></tr>';
+            if (mobileContactsBody) {
+                mobileContactsBody.innerHTML =
+                    '<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-success me-2"></div>جاري البحث...</div>';
+            }
             noResults.classList.add('d-none');
 
             // Build URL with search query and filters
@@ -882,14 +1259,29 @@
                     // Update URL
                     history.pushState(null, '', url.toString());
 
-                    if (data.html) {
-                        contactsBody.innerHTML = data.html;
+                    // Handle both old format (html) and new format (html_desktop/html_mobile)
+                    const desktopHtml = data.html_desktop || data.html;
+                    const mobileHtml = data.html_mobile || '';
+
+                    if (desktopHtml) {
+                        contactsBody.innerHTML = desktopHtml;
                         noResults.classList.add('d-none');
-                        // RESTORE CHECKBOX STATES AFTER RENDER
-                        restoreCheckboxStates();
                     } else {
                         contactsBody.innerHTML = '';
                         noResults.classList.remove('d-none');
+                    }
+
+                    // Update mobile view
+                    if (mobileContactsBody) {
+                        if (mobileHtml) {
+                            mobileContactsBody.innerHTML = mobileHtml;
+                        } else if (desktopHtml) {
+                            // Fallback: hide mobile view if no mobile html provided (shouldn't happen)
+                            mobileContactsBody.innerHTML =
+                                '<div class="text-muted text-center py-3">لا توجد نتائج</div>';
+                        } else {
+                            mobileContactsBody.innerHTML = '';
+                        }
                     }
 
                     if (pagination) {
@@ -900,6 +1292,9 @@
                         }
                     }
 
+                    // Restore selection and setup handlers for BOTH views
+                    restoreCheckboxStates();
+                    setupRowClickHandlers();
                     updateBulkActions();
                     attachContactEventListeners();
 
@@ -912,6 +1307,10 @@
                     console.error('Search error:', err);
                     contactsBody.innerHTML =
                         `<tr><td colspan="6" class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>حدث خطأ أثناء البحث: ${err.message}</td></tr>`;
+                    if (mobileContactsBody) {
+                        mobileContactsBody.innerHTML =
+                            `<div class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>حدث خطأ</div>`;
+                    }
                 });
         }
 
@@ -951,7 +1350,7 @@
         // Removed formatDate - handled server-side
 
         function attachContactEventListeners() {
-            // Re-attach checkbox listeners
+            // Re-attach checkbox listeners (for both table and cards)
             document.querySelectorAll('.contact-checkbox').forEach(cb => {
                 cb.addEventListener('change', function() {
                     if (this.checked) {
@@ -959,6 +1358,8 @@
                     } else {
                         SelectionManager.remove(this.value);
                     }
+                    // Update card visual state for mobile
+                    updateCardSelectionState(this);
                     updateBulkActions();
                 });
             });
@@ -1001,30 +1402,50 @@
             });
         }
 
-        // ========== SELECT ALL (Current Page Only) ==========
+        // ========== SELECT ALL (Current Page Only - Desktop) ==========
         selectAllEl?.addEventListener('change', function() {
-            const visibleCheckboxes = [...document.querySelectorAll('.contact-checkbox')].filter(
-                cb => cb.closest('tr').style.display !== 'none'
-            );
-            const ids = visibleCheckboxes.map(cb => cb.value);
+            handleSelectAll(this.checked);
+            // Sync mobile checkbox
+            if (selectAllMobileEl) selectAllMobileEl.checked = this.checked;
+        });
 
-            if (this.checked) {
-                // Add all visible to selection
-                SelectionManager.addMany(ids);
-                visibleCheckboxes.forEach(cb => cb.checked = true);
+        // ========== SELECT ALL (Current Page Only - Mobile) ==========
+        selectAllMobileEl?.addEventListener('change', function() {
+            handleSelectAll(this.checked);
+            // Sync desktop checkbox
+            if (selectAllEl) selectAllEl.checked = this.checked;
+        });
+
+        // Shared select all handler
+        function handleSelectAll(isChecked) {
+            // Get all visible checkboxes from both views
+            const allCheckboxes = document.querySelectorAll('.contact-checkbox');
+            const ids = [...allCheckboxes].map(cb => cb.value);
+            // Remove duplicates (same contact appears in both views)
+            const uniqueIds = [...new Set(ids)];
+
+            if (isChecked) {
+                SelectionManager.addMany(uniqueIds);
+                allCheckboxes.forEach(cb => {
+                    cb.checked = true;
+                    updateCardSelectionState(cb);
+                });
             } else {
-                // Remove all visible from selection
-                SelectionManager.removeMany(ids);
-                visibleCheckboxes.forEach(cb => cb.checked = false);
+                SelectionManager.removeMany(uniqueIds);
+                allCheckboxes.forEach(cb => {
+                    cb.checked = false;
+                    updateCardSelectionState(cb);
+                });
             }
 
             updateBulkActions();
-        });
+        }
 
         // ========== INDIVIDUAL CHECKBOX CHANGE ==========
         document.querySelectorAll('.contact-checkbox').forEach(cb => {
             cb.addEventListener('change', function() {
                 SelectionManager.toggle(this.value, this.checked);
+                updateCardSelectionState(this);
                 updateBulkActions();
             });
         });
@@ -1032,16 +1453,25 @@
         // ========== CLEAR ALL SELECTIONS ==========
         document.getElementById('clearSelectionBtn')?.addEventListener('click', function() {
             SelectionManager.clear();
-            document.querySelectorAll('.contact-checkbox').forEach(cb => cb.checked = false);
+            document.querySelectorAll('.contact-checkbox').forEach(cb => {
+                cb.checked = false;
+                updateCardSelectionState(cb);
+            });
+            // Reset select all checkboxes
+            if (selectAllEl) selectAllEl.checked = false;
+            if (selectAllMobileEl) selectAllMobileEl.checked = false;
             updateBulkActions();
             showToast('success', 'تم إلغاء كل التحديدات');
         });
 
         // ========== UPDATE BULK ACTIONS UI ==========
         function updateBulkActions() {
-            const visibleCheckboxes = [...document.querySelectorAll('.contact-checkbox')].filter(
-                cb => cb.closest('tr').style.display !== 'none'
-            );
+            // Get checkboxes from desktop table (visible) - also handles mobile since cards don't use display:none
+            const desktopCheckboxes = [...document.querySelectorAll('#contactsBody .contact-checkbox')];
+            const mobileCheckboxes = [...document.querySelectorAll('#mobileContactsBody .contact-checkbox')];
+
+            // Use whichever is visible (or desktop as default)
+            const visibleCheckboxes = window.innerWidth < 768 ? mobileCheckboxes : desktopCheckboxes;
 
             // Count checked on current page
             const currentPageChecked = visibleCheckboxes.filter(cb => cb.checked).length;
@@ -1058,8 +1488,31 @@
             // We can hide it or keep it for emphasis. I will hide it to reduce clutter.
             crossPageIndicator.classList.add('d-none'); // ALWAYS HIDDEN
 
-            // Show/hide bulk actions
+            // Show/hide bulk actions (Desktop)
             bulkActionsEl.style.display = totalSelected > 0 ? 'flex' : 'none';
+
+            // ========== MOBILE FLOATING ACTION BAR ==========
+            const mobileActionBar = document.getElementById('mobileBulkActionBar');
+            const mobileSelectedCount = document.getElementById('mobileSelectedCount');
+            const mobileNav = document.querySelector('.mobile-nav');
+
+            if (mobileActionBar) {
+                if (totalSelected > 0) {
+                    mobileActionBar.classList.add('visible');
+                    mobileActionBar.setAttribute('aria-hidden', 'false');
+                    // Hide navbar (swap animation)
+                    if (mobileNav) mobileNav.classList.add('mobile-nav-hidden');
+                } else {
+                    mobileActionBar.classList.remove('visible');
+                    mobileActionBar.setAttribute('aria-hidden', 'true');
+                    // Show navbar back
+                    if (mobileNav) mobileNav.classList.remove('mobile-nav-hidden');
+                }
+            }
+
+            if (mobileSelectedCount) {
+                mobileSelectedCount.textContent = totalSelected;
+            }
 
             // Update select all state
             if (selectAllEl) {
@@ -1125,6 +1578,28 @@
             document.getElementById('bulkDeleteCount').textContent = allSelectedIds.length;
             document.getElementById('bulkDeleteIds').value = JSON.stringify(allSelectedIds);
             bulkDeleteModal.show();
+        });
+
+        // ========== MOBILE BULK DELETE ==========
+        document.getElementById('mobileBulkDeleteBtn')?.addEventListener('click', function() {
+            const allSelectedIds = SelectionManager.getAll();
+            document.getElementById('bulkDeleteCount').textContent = allSelectedIds.length;
+            document.getElementById('bulkDeleteIds').value = JSON.stringify(allSelectedIds);
+            bulkDeleteModal.show();
+        });
+
+        // ========== MOBILE CLEAR SELECTION ==========
+        document.getElementById('mobileClearSelectionBtn')?.addEventListener('click', function() {
+            SelectionManager.clear();
+            document.querySelectorAll('.contact-checkbox').forEach(cb => {
+                cb.checked = false;
+                updateCardSelectionState(cb);
+            });
+            // Reset select all checkboxes
+            if (selectAllEl) selectAllEl.checked = false;
+            if (selectAllMobileEl) selectAllMobileEl.checked = false;
+            updateBulkActions();
+            showToast('success', 'تم إلغاء كل التحديدات');
         });
 
         // Clear selection after successful bulk delete
