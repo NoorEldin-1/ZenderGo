@@ -6,11 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="#25D366">
-    <title>@yield('title', 'لوحة الإدارة') - زندر</title>
+    <meta name="robots" content="noindex, nofollow">
+    <title>@yield('title', 'لوحة الإدارة') | زندر Admin</title>
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
-    <link rel="apple-touch-icon" href="{{ asset('favicon.png') }}">
+    <!-- Favicon Set -->
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('favicon.png') }}">
+    <link rel="manifest" href="{{ asset('site.webmanifest') }}">
 
     <!-- Bootstrap 5.3 RTL CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet"
@@ -669,7 +673,7 @@
                 <i class="bi bi-whatsapp me-1"></i>زندر
             </a>
 
-            @if(auth('admin')->check())
+            @if (auth('admin')->check())
                 <!-- Admin Actions Group (Theme Toggle + Dropdown) -->
                 <div class="d-flex align-items-center gap-2">
                     <!-- Theme Toggle Button -->
@@ -710,7 +714,7 @@
         </div>
     </nav>
 
-    @if(auth('admin')->check())
+    @if (auth('admin')->check())
         <!-- Sidebar - Desktop Only -->
         <nav class="sidebar d-none d-lg-block">
             <ul class="nav flex-column">

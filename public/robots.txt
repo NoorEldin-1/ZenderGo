@@ -1,2 +1,6 @@
+# Zender - Robots.txt
 User-agent: *
-Disallow:
+Allow: /
+
+# Sitemap location
+Sitemap: https://zendergo.cloud/sitemap.xml
