@@ -21,10 +21,10 @@ use Illuminate\Support\Facades\Route;
 // Health check endpoint for monitoring (no auth required)
 Route::get('/health', [HealthController::class, 'check'])->name('health.check');
 
-// Redirect home to login or guide
+// Home route - Landing page for guests, dashboard for authenticated users
 Route::get('/', function () {
-    return auth()->check() ? redirect()->route('guide') : redirect()->route('login');
-});
+    return auth()->check() ? redirect()->route('dashboard') : view('welcome');
+})->name('home');
 
 // Guest routes (login/register)
 Route::middleware('guest')->group(function () {
