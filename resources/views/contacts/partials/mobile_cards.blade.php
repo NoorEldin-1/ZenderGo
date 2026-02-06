@@ -62,6 +62,15 @@
             </div>
 
             {{-- Actions --}}
+            {{-- Call Client Button (Mobile Only - Full Width for easy tap) --}}
+            <div class="d-grid mb-2">
+                <a href="tel:{{ $contact->phone }}"
+                   class="btn btn-success d-flex align-items-center justify-content-center gap-2 py-2">
+                    <i class="bi bi-telephone-outbound-fill"></i>
+                    <span class="fw-semibold">كلم العميل</span>
+                </a>
+            </div>
+            {{-- Edit & Delete Buttons --}}
             <div class="d-flex gap-2">
                 <button type="button"
                     class="btn btn-outline-primary flex-grow-1 edit-btn d-flex align-items-center justify-content-center gap-2"
