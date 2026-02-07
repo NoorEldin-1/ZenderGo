@@ -84,6 +84,59 @@ class WhatsAppService
     }
 
     /**
+     * Request a pairing code for linking via phone number.
+     * This is an alternative to QR code scanning, allowing users to link from the same device.
+     */
+    public function requestPairingCode(string $phoneNumber): array
+    {
+        try {
+            // Ensure we have a token
+            if (empty($this->token)) {
+                $tokenResult = $this->generateToken();
+                Log::info("Token generation for pairing code {$this->session}", $tokenResult);
+                $this->token = $tokenResult['token'] ?? '';
+            }
+
+            $response = Http::withToken($this->token)
+                ->timeout(30)
+                ->post("{$this->baseUrl}/api/{$this->session}/pair-code", [
+                    'phoneNumber' => $phoneNumber,
+                ]);
+
+            $data = $response->json();
+            Log::info("WhatsApp pairing code response for {$this->session}", [
+                'status_code' => $response->status(),
+                'data' => $data
+            ]);
+
+            if ($response->successful() && !empty($data['pairingCode'])) {
+                return [
+                    'success' => true,
+                    'pairingCode' => $data['pairingCode'],
+                    'message' => 'تم إنشاء الكود بنجاح',
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => $data['message'] ?? 'فشل في إنشاء كود الربط',
+            ];
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            Log::error("WhatsApp pairing code connection error: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'لا يمكن الاتصال بخادم WhatsApp',
+            ];
+        } catch (\Exception $e) {
+            Log::error("WhatsApp pairing code error: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'خطأ في إنشاء كود الربط: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
      * Start a new WhatsApp session.
      * Returns the QR code if authentication is needed.
      */

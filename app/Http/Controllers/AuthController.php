@@ -120,12 +120,20 @@ class AuthController extends Controller
     /**
      * Start reconnection session for existing user (AJAX).
      * Supports both session-based (from login) and authenticated users.
+     * Supports both QR code and pairing code methods.
      * 
      * CLEAN SLATE APPROACH: Force logout old session before starting new one.
      * This ensures no stale tokens/browser data conflict with new connection.
      */
-    public function startReconnect()
+    public function startReconnect(Request $request)
     {
+        // Validate optional method parameter
+        $request->validate([
+            'method' => 'nullable|in:qr,code',
+        ]);
+
+        $method = $request->input('method', 'qr');
+
         // Support both session-based and authenticated users
         $userId = session('login_user_id') ?? Auth::id();
 
@@ -147,7 +155,7 @@ class AuthController extends Controller
         // Use STATIC session name for consistency
         $stableSessionName = 'user-' . $user->id;
 
-        Log::info("Starting CLEAN SLATE reconnect for user {$user->id}");
+        Log::info("Starting CLEAN SLATE reconnect for user {$user->id}, method: {$method}");
 
         // ============================================================
         // CRITICAL: CLEAN SLATE RECONNECT
@@ -197,6 +205,28 @@ class AuthController extends Controller
             ]);
         }
 
+        // Handle pairing code method
+        if ($method === 'code') {
+            Log::info("Requesting pairing code for reconnect user {$user->id}");
+
+            $pairingResult = $whatsapp->requestPairingCode($user->phone);
+
+            if (!empty($pairingResult['pairingCode'])) {
+                return response()->json([
+                    'success' => true,
+                    'status' => 'pairing_code',
+                    'pairingCode' => $pairingResult['pairingCode'],
+                    'message' => 'تم إنشاء كود الربط بنجاح. أدخل الكود في تطبيق WhatsApp.',
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => $pairingResult['message'] ?? 'فشل في إنشاء كود الربط',
+            ]);
+        }
+
+        // QR Code method (default)
         // Start session
         $result = $whatsapp->startSession();
 
@@ -218,7 +248,7 @@ class AuthController extends Controller
             ]);
         }
 
-        // Poll for QR code - WPPConnect might take a few seconds to generate it
+        // Poll for QR code - Baileys might take a few seconds to generate it
         // Try up to 5 times with 2-second intervals
         for ($attempt = 1; $attempt <= 5; $attempt++) {
             usleep(2000000); // Wait 2 seconds
@@ -328,19 +358,32 @@ class AuthController extends Controller
 
     /**
      * Start registration session (AJAX).
-     * Validates password and generates a new session with QR code.
+     * Validates password and generates a new session with QR code or pairing code.
      */
     public function startRegistration(Request $request)
     {
-        // Validate password
+        // Validate password and optional method/phone
         $request->validate([
             'password' => 'required|string|min:6|confirmed',
+            'method' => 'nullable|in:qr,code',
+            'phone' => 'nullable|string|min:10|max:20',
         ]);
+
+        $method = $request->input('method', 'qr');
+        $phone = $request->input('phone');
+
+        // For pairing code method, phone is required
+        if ($method === 'code' && empty($phone)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'رقم الهاتف مطلوب للربط عن طريق الكود',
+            ], 400);
+        }
 
         // Generate unique session name for registration
         $sessionName = 'reg-' . time() . '-' . rand(1000, 9999);
 
-        Log::info("Starting registration session: {$sessionName}");
+        Log::info("Starting registration session: {$sessionName}, method: {$method}");
 
         $whatsapp = new WhatsAppService($sessionName);
 
@@ -355,8 +398,31 @@ class AuthController extends Controller
             'reg_session' => $sessionName,
             'reg_token' => $token,
             'reg_password' => Hash::make($request->password),
+            'reg_phone' => $phone, // Store phone for pairing code flow
         ]);
 
+        // Handle pairing code method
+        if ($method === 'code') {
+            Log::info("Requesting pairing code for registration session {$sessionName}");
+
+            $pairingResult = $whatsapp->requestPairingCode($phone);
+
+            if (!empty($pairingResult['pairingCode'])) {
+                return response()->json([
+                    'success' => true,
+                    'status' => 'pairing_code',
+                    'pairingCode' => $pairingResult['pairingCode'],
+                    'message' => 'تم إنشاء كود الربط بنجاح. أدخل الكود في تطبيق WhatsApp.',
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => $pairingResult['message'] ?? 'فشل في إنشاء كود الربط',
+            ]);
+        }
+
+        // QR Code method (default)
         // Start the WhatsApp session
         $result = $whatsapp->startSession();
 
@@ -367,9 +433,8 @@ class AuthController extends Controller
             return response()->json($result);
         }
 
-        // Poll for QR code - WPPConnect might take a few seconds to generate it
+        // Poll for QR code - Baileys might take a few seconds to generate it
         // Try up to 10 times with 3-second intervals (30 seconds total)
-        // WPPConnect browser initialization can take 15-25 seconds
         for ($attempt = 1; $attempt <= 10; $attempt++) {
             usleep(3000000); // Wait 3 seconds
 

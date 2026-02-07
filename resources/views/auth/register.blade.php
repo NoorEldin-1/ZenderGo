@@ -63,9 +63,25 @@
                     </div>
                 </div>
 
-                <!-- Step 2: Instructions Section (hidden initially) -->
+                <!-- Step 2: Method Selection Section (hidden initially) -->
                 <div id="instructionsSection" style="display: none;">
-                    <div class="alert alert-light border mb-4">
+                    <!-- Method Toggle Tabs -->
+                    <div class="mb-4">
+                        <div class="btn-group w-100" role="group" aria-label="Connection method">
+                            <input type="radio" class="btn-check" name="connectionMethod" id="methodQr" value="qr"
+                                checked>
+                            <label class="btn btn-outline-success" for="methodQr">
+                                <i class="bi bi-qr-code me-1"></i>QR Code
+                            </label>
+                            <input type="radio" class="btn-check" name="connectionMethod" id="methodCode" value="code">
+                            <label class="btn btn-outline-success" for="methodCode">
+                                <i class="bi bi-phone me-1"></i>رقم الهاتف
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- QR Code Instructions (shown by default) -->
+                    <div id="qrInstructions" class="alert alert-light border mb-4">
                         <h6 class="fw-bold mb-2"><i class="bi bi-list-ol me-2"></i>خطوات ربط WhatsApp:</h6>
                         <ol class="mb-0 small">
                             <li>اضغط على زر "عرض QR Code" أدناه</li>
@@ -74,6 +90,30 @@
                             <li>اذهب إلى: الإعدادات ← الأجهزة المرتبطة ← ربط جهاز</li>
                             <li>امسح رمز QR Code</li>
                             <li>سيتم إنشاء حسابك تلقائياً!</li>
+                        </ol>
+                    </div>
+
+                    <!-- Pairing Code Instructions (hidden by default) -->
+                    <div id="codeInstructions" class="alert alert-light border mb-4" style="display: none;">
+                        <h6 class="fw-bold mb-2"><i class="bi bi-phone me-2"></i>الربط برقم الهاتف:</h6>
+                        <p class="mb-2 small">أدخل رقم WhatsApp الخاص بك وسنرسل لك كود للربط.</p>
+                        <div class="mb-3">
+                            <label for="phoneNumber" class="form-label small fw-semibold">رقم الهاتف (بدون +)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">
+                                    <i class="bi bi-telephone text-success"></i>
+                                </span>
+                                <input type="tel" class="form-control" id="phoneNumber" placeholder="مثال: 201234567890"
+                                    dir="ltr">
+                            </div>
+                            <div class="form-text small">أدخل الرقم كاملاً مع رمز الدولة</div>
+                        </div>
+                        <ol class="mb-0 small text-muted">
+                            <li>أدخل رقمك واضغط "الحصول على الكود"</li>
+                            <li>افتح WhatsApp على هاتفك</li>
+                            <li>اذهب إلى: الإعدادات ← الأجهزة المرتبطة ← ربط جهاز</li>
+                            <li>اختر "الربط برقم الهاتف" بدلاً من مسح QR</li>
+                            <li>أدخل الكود المعروض</li>
                         </ol>
                     </div>
 
@@ -90,7 +130,8 @@
                 <!-- QR Code Container -->
                 <div id="qrCodeContainer" class="text-center mb-4" style="display: none;">
                     <div class="p-4 bg-light rounded-3 d-inline-block">
-                        <img id="qrCodeImage" src="" alt="QR Code" class="img-fluid" style="max-width: 280px;">
+                        <img id="qrCodeImage" src="" alt="QR Code" class="img-fluid"
+                            style="max-width: 280px;">
                     </div>
                     <p class="text-muted mt-3 mb-0">
                         <i class="bi bi-phone me-1"></i>
@@ -100,6 +141,31 @@
                         <span class="visually-hidden">جاري الانتظار...</span>
                     </div>
                     <p class="text-muted small mt-2">جاري انتظار مسح الرمز...</p>
+                </div>
+
+                <!-- Pairing Code Display Container -->
+                <div id="pairingCodeContainer" class="text-center mb-4" style="display: none;">
+                    <div class="p-4 bg-light rounded-3 d-inline-block">
+                        <p class="text-muted mb-2 small">أدخل هذا الكود في WhatsApp:</p>
+                        <div id="pairingCodeDisplay" class="fw-bold text-success"
+                            style="font-size: 2.5rem; letter-spacing: 0.3rem; font-family: monospace;">
+                            --------
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-3 text-start small">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>الخطوات:</strong>
+                        <ol class="mb-0 mt-2">
+                            <li>افتح WhatsApp على هاتفك</li>
+                            <li>اذهب إلى: الإعدادات ← الأجهزة المرتبطة ← ربط جهاز</li>
+                            <li>اضغط على "الربط برقم الهاتف بدلاً من ذلك"</li>
+                            <li>أدخل الكود أعلاه</li>
+                        </ol>
+                    </div>
+                    <div class="spinner-border spinner-border-sm text-success mt-3" role="status">
+                        <span class="visually-hidden">جاري الانتظار...</span>
+                    </div>
+                    <p class="text-muted small mt-2">جاري انتظار إدخال الكود...</p>
                 </div>
 
                 <!-- Loading State -->
@@ -165,8 +231,40 @@
             const togglePassword = document.getElementById('togglePassword');
             const togglePasswordConfirm = document.getElementById('togglePasswordConfirm');
 
+            // Pairing code elements
+            const pairingCodeContainer = document.getElementById('pairingCodeContainer');
+            const pairingCodeDisplay = document.getElementById('pairingCodeDisplay');
+            const phoneNumberInput = document.getElementById('phoneNumber');
+            const qrInstructions = document.getElementById('qrInstructions');
+            const codeInstructions = document.getElementById('codeInstructions');
+            const methodQrRadio = document.getElementById('methodQr');
+            const methodCodeRadio = document.getElementById('methodCode');
+
             let statusCheckInterval = null;
             let registrationPassword = '';
+            let selectedMethod = 'qr';
+
+            // Method toggle handler
+            function setupMethodToggle() {
+                methodQrRadio.addEventListener('change', function() {
+                    if (this.checked) {
+                        selectedMethod = 'qr';
+                        qrInstructions.style.display = 'block';
+                        codeInstructions.style.display = 'none';
+                        startBtn.innerHTML = '<i class="bi bi-qr-code me-2"></i>عرض QR Code';
+                    }
+                });
+
+                methodCodeRadio.addEventListener('change', function() {
+                    if (this.checked) {
+                        selectedMethod = 'code';
+                        qrInstructions.style.display = 'none';
+                        codeInstructions.style.display = 'block';
+                        startBtn.innerHTML = '<i class="bi bi-key me-2"></i>الحصول على الكود';
+                    }
+                });
+            }
+            setupMethodToggle();
 
             // Toggle password visibility
             function setupPasswordToggle(button, input) {
@@ -224,6 +322,7 @@
                 errorContainer.style.display = 'block';
                 loadingState.style.display = 'none';
                 qrCodeContainer.style.display = 'none';
+                pairingCodeContainer.style.display = 'none';
             }
 
             function hideError() {
@@ -236,16 +335,32 @@
                 instructionsSection.style.display = 'none';
                 passwordSection.style.display = 'none';
                 qrCodeContainer.style.display = 'none';
+                pairingCodeContainer.style.display = 'none';
                 hideError();
             }
 
             function showQrCode(qrcode) {
-                // Add data URI prefix if missing (WPPConnect returns raw Base64)
+                // Add data URI prefix if missing (Baileys returns raw Base64)
                 if (qrcode && !qrcode.startsWith('data:')) {
                     qrcode = 'data:image/png;base64,' + qrcode;
                 }
                 qrCodeImage.src = qrcode;
                 qrCodeContainer.style.display = 'block';
+                pairingCodeContainer.style.display = 'none';
+                loadingState.style.display = 'none';
+                instructionsSection.style.display = 'none';
+                passwordSection.style.display = 'none';
+                startStatusCheck();
+            }
+
+            function showPairingCode(code) {
+                // Format code with dash in middle for readability (e.g., "1234-5678")
+                const formattedCode = code.length === 8 ?
+                    code.slice(0, 4) + '-' + code.slice(4) :
+                    code;
+                pairingCodeDisplay.textContent = formattedCode;
+                pairingCodeContainer.style.display = 'block';
+                qrCodeContainer.style.display = 'none';
                 loadingState.style.display = 'none';
                 instructionsSection.style.display = 'none';
                 passwordSection.style.display = 'none';
@@ -256,6 +371,7 @@
                 successMessage.textContent = message;
                 successState.style.display = 'block';
                 qrCodeContainer.style.display = 'none';
+                pairingCodeContainer.style.display = 'none';
                 loadingState.style.display = 'none';
                 passwordSection.style.display = 'none';
                 instructionsSection.style.display = 'none';
@@ -263,9 +379,28 @@
             }
 
             async function startRegistration() {
-                showLoading('جاري بدء جلسة التسجيل...');
+                // Validate phone for pairing code method
+                if (selectedMethod === 'code' && !phoneNumberInput.value.trim()) {
+                    showError('يرجى إدخال رقم الهاتف');
+                    return;
+                }
+
+                showLoading(selectedMethod === 'code' ?
+                    'جاري الحصول على كود الربط...' :
+                    'جاري بدء جلسة التسجيل...');
 
                 try {
+                    const requestBody = {
+                        password: registrationPassword,
+                        password_confirmation: registrationPassword,
+                        method: selectedMethod
+                    };
+
+                    // Include phone number for pairing code method
+                    if (selectedMethod === 'code') {
+                        requestBody.phone = phoneNumberInput.value.trim();
+                    }
+
                     const response = await fetch('{{ route('register.start') }}', {
                         method: 'POST',
                         headers: {
@@ -273,16 +408,16 @@
                             'X-CSRF-TOKEN': '{{ csrf_token() }}',
                             'Accept': 'application/json'
                         },
-                        body: JSON.stringify({
-                            password: registrationPassword,
-                            password_confirmation: registrationPassword
-                        })
+                        body: JSON.stringify(requestBody)
                     });
 
                     const data = await response.json();
                     console.log('Start registration response:', data);
 
-                    if (data.qrcode) {
+                    // Handle pairing code response
+                    if (data.pairingCode) {
+                        showPairingCode(data.pairingCode);
+                    } else if (data.qrcode) {
                         showQrCode(data.qrcode);
                     } else if (data.status === 'CONNECTED') {
                         showSuccess('تم الربط بنجاح!');
@@ -292,7 +427,7 @@
                     } else if (data.message) {
                         showError(data.message);
                     } else {
-                        showError('فشل الحصول على QR Code. يرجى المحاولة مرة أخرى.');
+                        showError('حدث خطأ. يرجى المحاولة مرة أخرى.');
                     }
                 } catch (error) {
                     console.error('Error:', error);

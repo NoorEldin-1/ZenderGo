@@ -25,8 +25,23 @@
                     <strong dir="ltr" class="fs-5">{{ $phone ?? session('login_phone') }}</strong>
                 </div>
 
-                <!-- Connect Button -->
+                <!-- Connect Section with Method Toggle -->
                 <div id="connectSection">
+                    <!-- Method Toggle Tabs -->
+                    <div class="mb-4">
+                        <div class="btn-group w-100" role="group" aria-label="Connection method">
+                            <input type="radio" class="btn-check" name="connectionMethod" id="methodQr" value="qr"
+                                checked>
+                            <label class="btn btn-outline-success" for="methodQr">
+                                <i class="bi bi-qr-code me-1"></i>QR Code
+                            </label>
+                            <input type="radio" class="btn-check" name="connectionMethod" id="methodCode" value="code">
+                            <label class="btn btn-outline-success" for="methodCode">
+                                <i class="bi bi-phone me-1"></i>رقم الهاتف
+                            </label>
+                        </div>
+                    </div>
+
                     <div class="d-grid">
                         <button type="button" class="btn btn-whatsapp btn-lg" id="connectBtn">
                             <i class="bi bi-qr-code me-2"></i>عرض QR Code
@@ -45,6 +60,29 @@
                     </p>
                     <div class="spinner-border spinner-border-sm text-success mt-3" role="status"></div>
                     <p class="text-muted small mt-2">جاري الانتظار...</p>
+                </div>
+
+                <!-- Pairing Code Display Container -->
+                <div id="pairingCodeContainer" class="text-center mb-4" style="display: none;">
+                    <div class="p-4 bg-light rounded-3 d-inline-block">
+                        <p class="text-muted mb-2 small">أدخل هذا الكود في WhatsApp:</p>
+                        <div id="pairingCodeDisplay" class="fw-bold text-success"
+                            style="font-size: 2.5rem; letter-spacing: 0.3rem; font-family: monospace;">
+                            --------
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-3 text-start small">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>الخطوات:</strong>
+                        <ol class="mb-0 mt-2">
+                            <li>افتح WhatsApp على هاتفك</li>
+                            <li>اذهب إلى: الإعدادات ← الأجهزة المرتبطة ← ربط جهاز</li>
+                            <li>اضغط على "الربط برقم الهاتف بدلاً من ذلك"</li>
+                            <li>أدخل الكود أعلاه</li>
+                        </ol>
+                    </div>
+                    <div class="spinner-border spinner-border-sm text-success mt-3" role="status"></div>
+                    <p class="text-muted small mt-2">جاري انتظار إدخال الكود...</p>
                 </div>
 
                 <!-- Loading State -->
@@ -93,16 +131,52 @@
             const errorContainer = document.getElementById('errorContainer');
             const errorMessage = document.getElementById('errorMessage');
 
+            // Pairing code elements
+            const pairingCodeContainer = document.getElementById('pairingCodeContainer');
+            const pairingCodeDisplay = document.getElementById('pairingCodeDisplay');
+            const methodQrRadio = document.getElementById('methodQr');
+            const methodCodeRadio = document.getElementById('methodCode');
+
             let statusCheckInterval = null;
+            let selectedMethod = 'qr';
+
+            // Method toggle handler
+            methodQrRadio.addEventListener('change', function() {
+                if (this.checked) {
+                    selectedMethod = 'qr';
+                    connectBtn.innerHTML = '<i class="bi bi-qr-code me-2"></i>عرض QR Code';
+                }
+            });
+
+            methodCodeRadio.addEventListener('change', function() {
+                if (this.checked) {
+                    selectedMethod = 'code';
+                    connectBtn.innerHTML = '<i class="bi bi-key me-2"></i>الحصول على الكود';
+                }
+            });
 
             function showError(message) {
                 errorMessage.textContent = message;
                 errorContainer.style.display = 'block';
                 loadingState.style.display = 'none';
+                pairingCodeContainer.style.display = 'none';
             }
 
             function hideError() {
                 errorContainer.style.display = 'none';
+            }
+
+            function showPairingCode(code) {
+                // Format code with dash in middle for readability
+                const formattedCode = code.length === 8 ?
+                    code.slice(0, 4) + '-' + code.slice(4) :
+                    code;
+                pairingCodeDisplay.textContent = formattedCode;
+                pairingCodeContainer.style.display = 'block';
+                qrCodeContainer.style.display = 'none';
+                loadingState.style.display = 'none';
+                connectSection.style.display = 'none';
+                startStatusCheck();
             }
 
             async function startReconnect() {
@@ -110,7 +184,9 @@
                 connectBtn.innerHTML =
                     '<span class="spinner-border spinner-border-sm me-2"></span>جاري الاتصال...';
                 loadingState.style.display = 'block';
-                loadingText.textContent = 'جاري بدء الجلسة...';
+                loadingText.textContent = selectedMethod === 'code' ?
+                    'جاري الحصول على كود الربط...' :
+                    'جاري بدء الجلسة...';
                 hideError();
 
                 try {
@@ -120,7 +196,10 @@
                             'Content-Type': 'application/json',
                             'X-CSRF-TOKEN': '{{ csrf_token() }}',
                             'Accept': 'application/json'
-                        }
+                        },
+                        body: JSON.stringify({
+                            method: selectedMethod
+                        })
                     });
 
                     const data = await response.json();
@@ -132,8 +211,11 @@
                         successState.style.display = 'block';
                         connectSection.style.display = 'none';
                         setTimeout(() => window.location.href = data.redirect, 1000);
+                    } else if (data.pairingCode) {
+                        // Got pairing code
+                        showPairingCode(data.pairingCode);
                     } else if (data.qrcode) {
-                        // Add data URI prefix if missing (WPPConnect returns raw Base64)
+                        // Add data URI prefix if missing (Baileys returns raw Base64)
                         let qrcode = data.qrcode;
                         if (!qrcode.startsWith('data:')) {
                             qrcode = 'data:image/png;base64,' + qrcode;
@@ -143,7 +225,7 @@
                         connectSection.style.display = 'none';
                         startStatusCheck();
                     } else if (data.message) {
-                        // Translate common WPPConnect messages
+                        // Translate common messages
                         const translatedMsg = translateMessage(data.message);
 
                         // If session is starting, show loading and auto-retry
@@ -158,7 +240,9 @@
                         } else {
                             showError(translatedMsg);
                             connectBtn.disabled = false;
-                            connectBtn.innerHTML = '<i class="bi bi-qr-code me-2"></i>عرض QR Code';
+                            connectBtn.innerHTML = selectedMethod === 'code' ?
+                                '<i class="bi bi-key me-2"></i>الحصول على الكود' :
+                                '<i class="bi bi-qr-code me-2"></i>عرض QR Code';
                         }
                     }
                 } catch (error) {
