@@ -1,249 +1,237 @@
-# Zender - WhatsApp Marketing Automation Platform
+# Zender - SaaS WhatsApp Marketing Platform (Baileys Edition)
 
-Zender is a powerful, full-featured WhatsApp marketing automation platform designed to help users manage contacts, create engaging campaigns, and track their performance effectively. It combines a robust Laravel backend with a high-performance Node.js WhatsApp server to deliver a seamless messaging experience.
+Zender is a high-performance, SaaS-ready WhatsApp marketing platform built with **Laravel 10**, **Node.js**, and **Baileys**. Unlike traditional solutions that rely on heavy browser automation (Puppeteer/WPPConnect), Zender uses the lightweight **Baileys** library to communicate directly with WhatsApp via WebSocket, reducing RAM usage by **90%**.
 
-## 🚀 Project Overview
-
-The core idea behind Zender is to provide a reliable and user-friendly interface for sending WhatsApp campaigns. Unlike simple bulk senders, Zender focuses on:
-
--   **Smart Automation:** Handles queues, rate limiting, and session management automatically.
--   **Performance:** Uses Redis for caching and background job processing to ensure the UI remains responsive.
--   **Safety:** Implements a quota system and "thundering herd" protection to prevent server overload and WhatsApp bans.
--   **User Experience:** Features a modern, responsive UI with dark/light mode support and intuitive flows.
+This edition is optimized for shared hosting/VPS environments, featuring an "On-Demand" session lifecycle, Redis-powered atomic locks, and a complete subscription management system (SaaS).
 
 ---
 
-## 🛠 Tech Stack & Tools
+## 🚀 Key Features
 
-This project utilizes a modern and robust technology stack:
+### ⚡ Performance & Architecture
 
-### Backend (Laravel ecosystem)
+- **Baileys Integration:** Uses ~50MB RAM per session (vs 500MB+ with Puppeteer).
+- **On-Demand Lifecycle:** Sessions "sleep" when idle and "wake up" instantly for campaigns.
+- **Redis Atomic Locks:** Prevents race conditions and "Thundering Herd" issues during high-volume campaigns.
+- **Smart Queue System:** Handles thousands of messages with rate limiting and retry logic.
 
--   **Framework:** Laravel 12 (PHP 8.2+)
--   **Database:** MySQL (Persistent data storage)
--   **Caching & Queue:** Redis (Crucial for performance and background jobs)
--   **Dependencies:**
-    -   `predis/predis`: For Redis interaction.
-    -   `maatwebsite/excel`: For handling contact imports/exports.
-    -   `laravel/framework`: Core framework.
+### 💼 SaaS & Subscription System
 
-### Frontend
+- **Trial & Paid Plans:** Automatic trial upon registration.
+- **Payment Gateways:** Built-in support for manual payments (Vodafone Cash, Instapay) with receipt upload.
+- **Subscription Control:** Middleware (`subscription.active`) ensures expired users cannot access core features.
+- **Admin Panel:** comprehensive dashboard for managing users, approving payments, and system settings.
 
--   **Templating:** Blade Templates
--   **Styling:** Tailwind CSS 4.0
--   **Build Tool:** Vite
--   **Interactivity:** Vanilla JS + AJAX for smooth, SPA-like experiences without the complexity of a full JS framework.
+### 📱 WhatsApp Features
 
-### WhatsApp Server (Microservice)
-
--   **Runtime:** Node.js
--   **Framework:** Express.js
--   **Core Library:** `@wppconnect-team/wppconnect` (For WhatsApp Web automation)
--   **WebSocket:** `socket.io` (For real-time updates)
--   **Database:** MongoDB (For WPPConnect token storage)
--   **Language:** TypeScript
+- **Multi-Device Support:** Connect via **QR Code** or **Pairing Code** (Phone Number).
+- **Campaign Builder:** Send Text, Images, and Collages.
+- **Smart Contact Import:** Auto-detects columns (Name, Phone) from Excel/CSV.
+- **Detailed Reports:** Track Sent, Failed, and Pending messages in real-time.
 
 ---
 
-## 📂 The `whatsapp-server` Folder
+## 🛠️ Tech Stack
 
-The `whatsapp-server` directory contains a standalone Node.js application that acts as the bridge between Laravel and WhatsApp.
-
--   **Role:** It runs a headless browser instance (Chrome/Chromium) to emulate WhatsApp Web.
--   **Communication:** Laravel communicates with this server via HTTP API (to send messages, check status) and receives webhooks/updates.
--   **Key Files:**
-    -   `src/server.ts` & `src/index.ts`: The entry points that initialize the Express server and WPPConnect.
-    -   `src/config.ts`: Configuration for ports, webhooks, and browser arguments.
--   **Performance:** It handles the heavy lifting of encryption and protocol communication with WhatsApp servers.
+- **Backend:** Laravel 10 (PHP 8.2+)
+- **WhatsApp Server:** Node.js (TypeScript) + Baileys
+- **Database:** MySQL 8.0+
+- **Queue & Cache:** Redis (Required)
+- **Frontend:** Blade Templates + Bootstrap 5 + Vanilla JS
 
 ---
 
-## 🏗️ Architecture Deep Dive
-
-Zender is built with a sophisticated architecture designed to handle the complexity of WhatsApp automation at scale.
-
-### 1. The "Aggressive" Session Lifecycle (RAM Optimization)
-
-One of the biggest challenges with WhatsApp automation is the high RAM usage of headless browsers (Chrome/Chromium). Running 50 concurrent sessions would normally require massive servers (32GB+ RAM).
-**Zender solves this with an intelligent "On-Demand" Lifecycle:**
-
--   **Idle = Dead:** Sessions are **NOT** kept alive permanently. If a user is not sending a campaign, their session is closed to free up resources.
--   **Wake-on-Demand:** When a campaign starts, the `SendWhatsappCampaign` job triggers a "Wake" sequence (`SessionManager::wakeSession`).
--   **Safety Checks:** Before waking a session, the system checks:
-    -   **RAM Usage:** If server RAM > 80%, new sessions are rejected/queued.
-    -   **Concurrency Limit:** Strict limit (e.g., 3 active sessions) to prevent crashing the VPS.
--   **Auto-Cleanup:** Once a batch finishes, the session is **immediately closed** (`cleanupAfterBatch`), returning RAM to the pool.
-
-### 2. Quota System: Preventing Race Conditions (The "Lua" Solution)
-
-Managing quotas (e.g., "100 messages per 5 hours") is trivial for one user but complex for concurrent campaigns.
-
--   **The Problem:** If a user opens 5 tabs and clicks "Send" simultaneously, a standard database check (`if current < limit`) would fail (Race Condition), allowing them to send 500 messages instead of 100.
--   **The Solution (Redis Atomic Lua Scripts):**
-    -   Zender uses a custom **Lua script** running inside Redis to perform a "Check-and-Increment" operation in a single atomic step.
-    -   **Fallback:** If Redis fails, the system automatically degrades to **Pessimistic DB Locking** (`lockForUpdate`), ensuring data integrity is never compromised.
-
-### 3. "Thundering Herd" Protection
-
-When a user launches a campaign to 1,000 contacts, we don't spam the queue instantly.
-
--   **Atomic Locks:** `Cache::lock("campaign_send_lock:{$userId}")` ensures a user cannot submit the "Send" form twice while the server is processing the request.
--   **Job Locking:** `Cache::lock("campaign_job_lock:{$userId}")` ensures that even if multiple queue workers are running, messages for a _single user_ are processed sequentially. This mimics human behavior and prevents WhatsApp from flagging the account for "bot-like speed".
-
----
-
-## ⚡ Performance & Caching Internals
-
-Zender is architected for high performance and scalability:
-
-1.  **Redis Caching:**
-
-    -   **Session Storage:** PHP sessions are stored in Redis for faster access.
-    -   **Data Caching:** Frequently accessed data (like quota status, active campaigns) is cached to reduce database queries.
-    -   **Atomic Locks:** Uses Redis atomic locks (`Cache::lock`) to prevent "double send" issues when multiple users try to send campaigns simultaneously.
-
-2.  **Queue System:**
-
-    -   **Asynchronous Sending:** Campaign messages are NOT sent immediately during the HTTP request. Instead, they are dispatched to a Redis queue (`SendWhatsappCampaign`).
-    -   **Throttling:** The system automatically adds delays (e.g., 15s) between messages to mimic human behavior and avoid blocking.
-
-3.  **Heavy Rate Limiting:**
-    -   Middleware like `rate.heavy` protects resource-intensive routes (like Import, Bulk Delete) from abuse.
-
----
-
-## 🌟 Pages & Features Breakdown
-
-### 1. **Authentication (Login/Register)**
-
--   **Features:** Secure login, registration with email verification flow, and password reset.
--   **Purpose:** Ensures strict access control. User sessions are managed via Redis.
--   **Reconnect Flow:** Special flow to re-establish WhatsApp connection if the session becomes invalid.
-
-### 2. **Dashboard**
-
--   **Features:** Provides a high-level overview of the account status.
--   **Purpose:** Quick access to key metrics and navigation.
-
-### 3. **Contacts Management**
-
--   **Smart Import:** Upload CSV/Excel files. The system attempts to auto-map columns (Name, Phone) and allows manual remapping.
--   **Preview:** Shows a preview of valid/invalid contacts before finalizing insertion.
--   **Filters:** Filter by "Featured" (Star icon), Date Added, or "Last Contacted" date.
--   **Bulk Actions:** efficient bulk deletion of contacts.
--   **Visuals:** "3-dots" menu for quick actions on individual contacts.
-
-### 4. **Campaigns**
-
--   **Create Campaign:**
-    -   Select contacts (up to 10 per batch for safety).
-    -   Write personalized messages (supports `{{ name }}` placeholders).
-    -   Upload images (Auto-creates a collage if multiple images are selected).
--   **Quota System:** Displays real-time sending limits (e.g., 100 messages/5 hours). Prevents sending if quota is exceeded.
--   **Status Tracking:** Real-time feedback on campaign progress (Pending -> Sent).
--   **WhatsApp Status:** Checks if the phone is connected/Internet is active on the phone.
-
-### 5. **Templates**
-
--   **Features:** Create, edit, and delete message templates.
--   **Sharing:** Unique feature to **Share Templates** with other users via a link or ID. The receiver can accept or reject the shared template.
-
-### 6. **Subscription & Payment**
-
--   **Locked Content:** Users with inactive subscriptions are blocked from crucial features (like sending campaigns) via `subscription.active` middleware.
--   **Payment Flow:** Integrated payment gateway for renewing subscriptions.
-
-### 7. **User Guide**
-
--   **Features:** A dedicated page explaining how to use the platform, use the installment calculator, and best practices.
-
-### 8. **👮 Admin Panel**
-
-The project includes a fully featured **Admin Panel** accessible at `/admin`. It uses a separate authentication guard (`admin` guard) for security.
-
--   **User Management:**
-    -   View all registered users and their details.
-    -   **Suspend/Unsuspend:** Limit access for abusive users.
-    -   **Subscription Control:** Manually force-activate subscriptions if needed.
--   **Payment Requests (Offline):**
-    -   Review bank transfer/offline payment proofs uploaded by users.
-    -   **Approve/Reject:** Approving a request automatically activates the user's subscription. Rejection sends usage back to the user.
-    -   **Audit Log:** Tracks which admin reviewed the request and adds notes.
--   **System Settings:**
-    -   Configure global site settings directly from the UI.
--   **Dashboard:**
-    -   View high-level statistics about the platform's growth and revenue.
-
----
-
-## 💻 Local Installation Guide
-
-To run this project locally, you need two terminals: one for Laravel and one for the WhatsApp Server.
+## 📦 Installation Guide
 
 ### Prerequisites
 
--   [PHP 8.2+](https://www.php.net/downloads)
--   [Composer](https://getcomposer.org/)
--   [Node.js 18+](https://nodejs.org/)
--   [Redis](https://redis.io/) (Must be running locally)
--   [MySQL](https://www.mysql.com/)
+1.  **PHP 8.2+** with extensions (`pcntl`, `redis`, `gd`, `intl`).
+2.  **Node.js 18+** & NPM.
+3.  **Redis Server** (Must be running).
+4.  **Composer**.
 
-### Step 1: Setup Laravel Backend
+### 1. Clone & Setup Backend
 
-1.  Navigate to the project root:
-    ```bash
-    cd c:\work\projects\zender
-    ```
-2.  Install PHP dependencies:
-    ```bash
-    composer install
-    ```
-3.  Configure Environment:
-    -   Copy `.env.example` to `.env`.
-    -   Set database credentials (`DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`).
-    -   Set Redis credentials (`REDIS_HOST`, etc.).
-4.  Generate Key & Migrate:
-    ```bash
-    php artisan key:generate
-    php artisan migrate
-    ```
-5.  Start the Development Server:
-    ```bash
-    php artisan serve
-    ```
-6.  **Crucial:** Start the Queue Worker (in a separate terminal):
-    ```bash
-    php artisan queue:work
-    ```
-    _Without this, campaigns will stay "Pending" forever._
-7.  Start the Scheduler (for periodic tasks):
-    ```bash
-    php artisan schedule:work
-    ```
+```bash
+git clone https://github.com/yourusername/zender.git
+cd zender
 
-### Step 2: Setup WhatsApp Server
+# Install PHP dependencies
+composer install --optimize-autoloader --no-dev
 
-1.  Navigate to the server folder:
-    ```bash
-    cd whatsapp-server
-    ```
-2.  Install Node dependencies:
-    ```bash
-    npm install
-    ```
-3.  Start the Server:
-    ```bash
-    npm run start
-    ```
-    _This will compile TypeScript and start the server on port 21465 (default)._
+# Copy Environment file
+cp .env.example .env
 
-### Step 3: Verify Connection
+# Generate Key
+php artisan key:generate
+```
 
-1.  Open your browser to `http://localhost:8000`.
-2.  Login/Register.
-3.  Go to Settings/Profile to scan the QR code and link your WhatsApp.
-4.  Once linked, the Dashboard should show "Connected".
+### 2. Configure Environment (.env)
+
+Edit `.env` and set your database and Redis credentials:
+
+```ini
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=zender
+DB_USERNAME=root
+DB_PASSWORD=
+
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+
+QUEUE_CONNECTION=redis
+CACHE_DRIVER=redis
+SESSION_DRIVER=redis
+```
+
+### 3. Setup Database & Assets
+
+```bash
+# Run Migrations
+php artisan migrate --seed
+
+# Link Storage
+php artisan storage:link
+
+# Install Frontend Assets
+npm install
+npm run build
+```
+
+### 4. Setup WhatsApp Server (Baileys)
+
+The WhatsApp server is located in `whatsapp-server/`.
+
+```bash
+cd whatsapp-server
+
+# Install Dependencies
+npm install
+
+# Create .env for Node.js
+cp .env.example .env
+# Ensure PORT and REDIS match your Laravel .env
+```
+
+To run the server in development:
+
+```bash
+npm run dev
+```
+
+To build for production:
+
+```bash
+npm run build
+npm start
+```
+
+### 5. Start Queues (Crucial)
+
+You **must** run the Laravel queue worker to process campaigns.
+
+```bash
+php artisan queue:work redis --tries=3 --timeout=90
+```
 
 ---
 
-Enjoy building with Zender! 🚀
+## 🏛️ Architecture Deep Dive
+
+### 1. The "On-Demand" Lifecycle (RAM Optimization)
+
+Traditional WhatsApp bots keep the browser open 24/7, consuming massive RAM. Zender introduces an intelligent lifecycle:
+
+1.  **Sleep:** After 5 minutes of inactivity, the Baileys socket closes. RAM usage drops to near zero.
+2.  **Wake:** When a campaign starts, the `SendWhatsappCampaign` job triggers a "Wake Up" signal.
+3.  **Check:** The system verifies connection health (`checkConnection`).
+4.  **Send:** Messages are dispatched.
+5.  **Shutdown:** After the queue is empty, the session returns to sleep.
+
+This allows a 2GB VPS to handle **50+ concurrent users** instead of just 4-5.
+
+### 2. Redis & "Thundering Herd" Protection
+
+When a user sends a campaign to 1,000 contacts, 1,000 jobs are dispatched instantly. Without protection, all 1,000 jobs would try to "wake up" the session simultaneously, crashing the server.
+
+Zender uses **Atomic Locks** (`Cache::lock`):
+
+- **Job #1** acquires the lock and wakes the session.
+- **Job #2-1000** checks the lock/status and waits.
+- Once the session is active, the lock releases, and all jobs proceed to send messages using the arguably active connection.
+
+---
+
+## 💎 SaaS & Subscription Model
+
+Zender is built as a multi-tenant SaaS. Here's how the subscription flow works:
+
+### 1. Trial & Expiry
+
+- Every new user gets a **Trial Period** (configurable in Admin Panel).
+- When `Subscription::isExpired()` is true, the `subscription.active` middleware blocks access to:
+    - Campaign Creation
+    - Contact Import
+    - WhatsApp Connection
+- Users are redirected to the **Renewal Page**.
+
+### 2. Renewal Flow (Offline Payments)
+
+Since in many regions (like Egypt) automated payments (Stripe) aren't always preferred for B2B, Zender prioritizes **Manual/Offline Payments**:
+
+1.  **User** visits "My Subscription".
+2.  **User** sees the payment details (Vodafone Cash / Instapay Number).
+3.  **User** transfers the amount and uploads a **Screenshot/Receipt**.
+4.  **System** creates a `PaymentRequest` (Pending).
+5.  **Admin** receives notification -> Verifies money -> Clicks "Approve".
+6.  **System** automatically:
+    - Extends the subscription (`ends_at + 30 days`).
+    - Notifies the user.
+    - Unlocks the account.
+
+---
+
+## 📱 WhatsApp Connection Methods
+
+Zender supports the latest Baileys connection methods:
+
+### Option A: QR Code (Standard)
+
+1.  Go to **Connect WhatsApp**.
+2.  A QR code generates in real-time.
+3.  Scan with WhatsApp (Linked Devices).
+
+### Option B: Pairing Code (phone Number)
+
+1.  Select **"Use Pairing Code"**.
+2.  Enter your phone number (e.g., `201xxxxxxxxx`).
+3.  A generic 8-digit code appears on the screen (`ABCD-1234`).
+4.  Enter this code on your phone's WhatsApp notification.
+
+**Note:** If connection fails or hangs, use the **"Reset Session"** button. This triggers a `Clean Slate` protocol:
+
+- Deletes local auth files.
+- Flushes Redis session keys.
+- Forces a fresh WebSocket handshake.
+
+---
+
+## 🛡️ Troubleshooting
+
+### Message Pending?
+
+- Ensure `php artisan queue:work` is running.
+- Check Redis connection: `ping` in `redis-cli`.
+
+### "Session Disconnected"?
+
+- Click to standard Refresh.
+- If persistent, click **Reset Session** (Garbage Can Icon) to clear stale auth states.
+
+### Node.js Server Error?
+
+- Check logs in `whatsapp-server/storage/logs/`.
+- Ensure ports (3000/3001) aren't blocked by firewall.
