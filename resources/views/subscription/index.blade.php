@@ -344,24 +344,310 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
 
-        /* Pending Request Alert */
-        .pending-alert {
-            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-            border: 2px solid #ffc107;
-            border-radius: 14px;
-            padding: 1.5rem;
-            text-align: center;
+        /* ===== PENDING STATUS CARD (Modern Timeline Design) ===== */
+        .pending-status-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 1.25rem;
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            padding: 2rem;
+            box-shadow: 0 10px 40px rgba(251, 191, 36, 0.15);
         }
 
-        .pending-alert i {
+        .pending-status-card .ambient-glow {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        .pending-status-card .ambient-glow.top {
+            top: -2rem;
+            right: -2rem;
+            width: 8rem;
+            height: 8rem;
+            background: #fbbf24;
+        }
+
+        .pending-status-card .ambient-glow.bottom {
+            bottom: -2rem;
+            left: -2rem;
+            width: 8rem;
+            height: 8rem;
+            background: #f59e0b;
+        }
+
+        .pending-status-card .icon-container {
+            position: relative;
+            width: 6rem;
+            height: 6rem;
+            margin: 0 auto 1.5rem;
+        }
+
+        .pending-status-card .icon-ping {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: rgba(251, 191, 36, 0.3);
+            animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+
+        @keyframes ping {
+
+            75%,
+            100% {
+                transform: scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        .pending-status-card .icon-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(251, 191, 36, 0.4);
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .pending-status-card .icon-inner i {
             font-size: 2.5rem;
-            color: #856404;
-            margin-bottom: 0.75rem;
+            color: #b45309;
         }
 
-        .pending-alert h6 {
-            color: #856404;
+        .pending-status-card .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #78350f;
             margin-bottom: 0.5rem;
+        }
+
+        .pending-status-card .card-desc {
+            color: #92400e;
+            max-width: 28rem;
+            margin: 0 auto;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        /* Timeline Stepper - Mobile First (Vertical) */
+        .timeline-stepper {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            position: relative;
+            max-width: 16rem;
+            margin: 2rem auto 1.5rem;
+            padding-right: 0;
+            gap: 0;
+            background: transparent;
+        }
+
+        .timeline-stepper::before {
+            content: '';
+            position: absolute;
+            top: 1.125rem;
+            bottom: 1.125rem;
+            right: calc(1.125rem - 1.5px);
+            width: 3px;
+            height: auto;
+            background: linear-gradient(180deg, #22c55e 0%, #22c55e 33%, #f59e0b 33%, #f59e0b 66%, #e5e7eb 66%, #e5e7eb 100%);
+            z-index: 0;
+            border-radius: 2px;
+        }
+
+        .timeline-step {
+            display: flex;
+            flex-direction: row-reverse;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            background: transparent !important;
+        }
+
+        .timeline-step .step-dot {
+            width: 2.25rem;
+            height: 2.25rem;
+            min-width: 2.25rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 2;
+        }
+
+        .timeline-step.completed .step-dot {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+        }
+
+        .timeline-step.active .step-dot {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+            animation: pulse-ring 2s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(245, 158, 11, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+            }
+        }
+
+        .timeline-step.pending .step-dot {
+            background: #e5e7eb;
+            color: #9ca3af;
+        }
+
+        .timeline-step .step-content {
+            flex: 1;
+            text-align: right;
+            padding-left: 0.5rem;
+            background: transparent !important;
+        }
+
+        .timeline-step .step-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: block;
+        }
+
+        .timeline-step.completed .step-label {
+            color: #16a34a;
+        }
+
+        .timeline-step.active .step-label {
+            color: #d97706;
+        }
+
+        .timeline-step.pending .step-label {
+            color: #9ca3af;
+        }
+
+        .timeline-step .step-time {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.125rem;
+            display: block;
+        }
+
+        /* Desktop: Horizontal Timeline */
+        @media (min-width: 640px) {
+            .timeline-stepper {
+                flex-direction: row;
+                align-items: flex-start;
+                justify-content: space-between;
+                max-width: 24rem;
+                margin: 2.5rem auto 2rem;
+                padding-right: 0;
+                gap: 0;
+            }
+
+            .timeline-stepper::before {
+                top: 1.25rem;
+                bottom: auto;
+                left: 10%;
+                right: 10%;
+                width: auto;
+                height: 3px;
+                background: linear-gradient(270deg, #22c55e 0%, #22c55e 40%, #f59e0b 40%, #f59e0b 60%, #e5e7eb 60%, #e5e7eb 100%);
+            }
+
+            .timeline-step {
+                flex-direction: column;
+                align-items: center;
+                flex: 1;
+                gap: 0;
+                padding: 0;
+            }
+
+            .timeline-step .step-content {
+                text-align: center;
+            }
+
+            .timeline-step .step-label {
+                margin-top: 0.75rem;
+                font-size: 0.75rem;
+            }
+
+            .timeline-step .step-time {
+                margin-top: 0.25rem;
+                font-size: 0.65rem;
+            }
+        }
+
+        /* Action Buttons */
+        .pending-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-width: 20rem;
+            margin: 0 auto;
+        }
+
+        @media (min-width: 640px) {
+            .pending-actions {
+                flex-direction: row;
+                max-width: 28rem;
+            }
+        }
+
+        .pending-actions .action-btn {
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.875rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .pending-actions .action-btn.whatsapp {
+            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+            color: #ffffff;
+            border: none;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .pending-actions .action-btn.whatsapp:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+        }
+
+        .pending-actions .action-btn.refresh {
+            background: #fef3c7;
+            color: #78350f;
+            border: 2px solid #d97706;
+            font-weight: 700;
+        }
+
+        .pending-actions .action-btn.refresh:hover {
+            background: #fde68a;
         }
 
         /* Rejected Alert */
@@ -516,22 +802,78 @@
             color: #e0a6ab;
         }
 
-        /* Dark Mode: Pending Alert */
-        [data-bs-theme="dark"] .pending-alert {
-            background: linear-gradient(135deg, #3d3520 0%, #4a4025 100%);
-            border-color: #ffc107;
+        /* Dark Mode: Pending Status Card */
+        [data-bs-theme="dark"] .pending-status-card {
+            background: linear-gradient(135deg, #1c1917 0%, #292524 100%);
+            border-color: rgba(251, 191, 36, 0.2);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
         }
 
-        [data-bs-theme="dark"] .pending-alert i {
-            color: #ffd54f;
+        [data-bs-theme="dark"] .pending-status-card .ambient-glow {
+            opacity: 0.2;
         }
 
-        [data-bs-theme="dark"] .pending-alert h6 {
-            color: #ffeb8a;
+        [data-bs-theme="dark"] .pending-status-card .icon-inner {
+            background: linear-gradient(135deg, #422006 0%, #713f12 100%);
+            border-color: rgba(251, 191, 36, 0.3);
         }
 
-        [data-bs-theme="dark"] .pending-alert p {
-            color: #e0d5a0;
+        [data-bs-theme="dark"] .pending-status-card .icon-inner i {
+            color: #fbbf24;
+        }
+
+        [data-bs-theme="dark"] .pending-status-card .card-title {
+            color: #fef3c7;
+        }
+
+        [data-bs-theme="dark"] .pending-status-card .card-desc {
+            color: #d4d4d8;
+        }
+
+        [data-bs-theme="dark"] .timeline-stepper::before {
+            background: linear-gradient(180deg, #22c55e 0%, #22c55e 33%, #f59e0b 33%, #f59e0b 66%, #3f3f46 66%, #3f3f46 100%);
+        }
+
+        @media (min-width: 640px) {
+            [data-bs-theme="dark"] .timeline-stepper::before {
+                background: linear-gradient(270deg, #22c55e 0%, #22c55e 40%, #f59e0b 40%, #f59e0b 60%, #3f3f46 60%, #3f3f46 100%);
+            }
+        }
+
+        [data-bs-theme="dark"] .timeline-step.pending .step-dot {
+            background: #3f3f46;
+            color: #71717a;
+        }
+
+        [data-bs-theme="dark"] .timeline-step.completed .step-label {
+            color: #4ade80;
+        }
+
+        [data-bs-theme="dark"] .timeline-step.active .step-label {
+            color: #fbbf24;
+        }
+
+        [data-bs-theme="dark"] .timeline-step.pending .step-label {
+            color: #71717a;
+        }
+
+        [data-bs-theme="dark"] .timeline-step .step-time {
+            color: #a1a1aa;
+        }
+
+        [data-bs-theme="dark"] .pending-actions .action-btn.whatsapp {
+            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+        }
+
+        [data-bs-theme="dark"] .pending-actions .action-btn.refresh {
+            background: #292524;
+            color: #fcd34d;
+            border: 2px solid #f59e0b;
+        }
+
+        [data-bs-theme="dark"] .pending-actions .action-btn.refresh:hover {
+            background: #44403c;
         }
 
         /* Dark Mode: Expired Alert */
@@ -852,20 +1194,75 @@
                     @endif
 
                     @if ($pendingRequest)
-                        {{-- Pending Request Display --}}
-                        <div class="pending-alert">
-                            <i class="bi bi-hourglass-split d-block"></i>
-                            <h6>طلبك قيد المراجعة</h6>
-                            <p class="text-muted small mb-2">
-                                تم إرسال طلبك بتاريخ {{ $pendingRequest->created_at->format('Y/m/d - H:i') }}
-                            </p>
-                            <p class="mb-2 small">
-                                <i class="bi bi-clock me-1"></i>سيتم مراجعة طلبك وتفعيل اشتراكك في أقرب وقت
-                            </p>
-                            <a href="https://wa.me/2{{ $supportPhone }}" target="_blank"
-                                class="btn btn-sm btn-outline-success">
-                                <i class="bi bi-whatsapp me-1"></i>للاستفسار: {{ $supportPhone }}
-                            </a>
+                        {{-- Pending Request Display (Modern Timeline Card) --}}
+                        <div class="pending-status-card">
+                            {{-- Ambient Glow Effects --}}
+                            <div class="ambient-glow top"></div>
+                            <div class="ambient-glow bottom"></div>
+
+                            <div class="position-relative text-center" style="z-index: 10;">
+                                {{-- Animated Icon --}}
+                                <div class="icon-container">
+                                    <div class="icon-ping"></div>
+                                    <div class="icon-inner">
+                                        <i class="bi bi-hourglass-split"></i>
+                                    </div>
+                                </div>
+
+                                {{-- Title & Description --}}
+                                <h3 class="card-title">طلبك قيد المراجعة</h3>
+                                <p class="card-desc">
+                                    شكراً لك! لقد استلمنا طلب الاشتراك الخاص بك وجاري مراجعته الآن من قبل فريقنا.
+                                </p>
+
+                                {{-- Timeline Stepper --}}
+                                <div class="timeline-stepper">
+                                    {{-- Step 1: Sent (Completed) --}}
+                                    <div class="timeline-step completed">
+                                        <div class="step-dot">
+                                            <i class="bi bi-check-lg"></i>
+                                        </div>
+                                        <div class="step-content">
+                                            <span class="step-label">تم الإرسال</span>
+                                            <span
+                                                class="step-time">{{ $pendingRequest->created_at->format('H:i') }}</span>
+                                        </div>
+                                    </div>
+
+                                    {{-- Step 2: Review (Active) --}}
+                                    <div class="timeline-step active">
+                                        <div class="step-dot">
+                                            <i class="bi bi-search"></i>
+                                        </div>
+                                        <div class="step-content">
+                                            <span class="step-label">قيد المراجعة</span>
+                                        </div>
+                                    </div>
+
+                                    {{-- Step 3: Activation (Pending) --}}
+                                    <div class="timeline-step pending">
+                                        <div class="step-dot">
+                                            <i class="bi bi-check-circle"></i>
+                                        </div>
+                                        <div class="step-content">
+                                            <span class="step-label">التفعيل</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Action Buttons --}}
+                                <div class="pending-actions">
+                                    <a href="https://wa.me/2{{ $supportPhone }}" target="_blank"
+                                        class="action-btn whatsapp">
+                                        <i class="bi bi-whatsapp"></i>
+                                        <span>تواصل مع الدعم</span>
+                                    </a>
+                                    <a href="{{ route('subscription.index') }}" class="action-btn refresh">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                        <span>تحديث الحالة</span>
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     @else
                         {{-- Upload Form --}}
@@ -1079,20 +1476,75 @@
                     @endif
 
                     @if ($pendingRequest)
-                        {{-- Pending Request Display --}}
-                        <div class="pending-alert">
-                            <i class="bi bi-hourglass-split d-block"></i>
-                            <h6>طلبك قيد المراجعة</h6>
-                            <p class="text-muted small mb-2">
-                                تم إرسال طلبك بتاريخ {{ $pendingRequest->created_at->format('Y/m/d - H:i') }}
-                            </p>
-                            <p class="mb-2 small">
-                                <i class="bi bi-clock me-1"></i>سيتم مراجعة طلبك وتفعيل اشتراكك في أقرب وقت
-                            </p>
-                            <a href="https://wa.me/2{{ $supportPhone }}" target="_blank"
-                                class="btn btn-sm btn-outline-success">
-                                <i class="bi bi-whatsapp me-1"></i>للاستفسار: {{ $supportPhone }}
-                            </a>
+                        {{-- Pending Request Display (Modern Timeline Card) --}}
+                        <div class="pending-status-card">
+                            {{-- Ambient Glow Effects --}}
+                            <div class="ambient-glow top"></div>
+                            <div class="ambient-glow bottom"></div>
+
+                            <div class="position-relative text-center" style="z-index: 10;">
+                                {{-- Animated Icon --}}
+                                <div class="icon-container">
+                                    <div class="icon-ping"></div>
+                                    <div class="icon-inner">
+                                        <i class="bi bi-hourglass-split"></i>
+                                    </div>
+                                </div>
+
+                                {{-- Title & Description --}}
+                                <h3 class="card-title">طلبك قيد المراجعة</h3>
+                                <p class="card-desc">
+                                    شكراً لك! لقد استلمنا طلب الاشتراك الخاص بك وجاري مراجعته الآن من قبل فريقنا.
+                                </p>
+
+                                {{-- Timeline Stepper --}}
+                                <div class="timeline-stepper">
+                                    {{-- Step 1: Sent (Completed) --}}
+                                    <div class="timeline-step completed">
+                                        <div class="step-dot">
+                                            <i class="bi bi-check-lg"></i>
+                                        </div>
+                                        <div class="step-content">
+                                            <span class="step-label">تم الإرسال</span>
+                                            <span
+                                                class="step-time">{{ $pendingRequest->created_at->format('H:i') }}</span>
+                                        </div>
+                                    </div>
+
+                                    {{-- Step 2: Review (Active) --}}
+                                    <div class="timeline-step active">
+                                        <div class="step-dot">
+                                            <i class="bi bi-search"></i>
+                                        </div>
+                                        <div class="step-content">
+                                            <span class="step-label">قيد المراجعة</span>
+                                        </div>
+                                    </div>
+
+                                    {{-- Step 3: Activation (Pending) --}}
+                                    <div class="timeline-step pending">
+                                        <div class="step-dot">
+                                            <i class="bi bi-check-circle"></i>
+                                        </div>
+                                        <div class="step-content">
+                                            <span class="step-label">التفعيل</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Action Buttons --}}
+                                <div class="pending-actions">
+                                    <a href="https://wa.me/2{{ $supportPhone }}" target="_blank"
+                                        class="action-btn whatsapp">
+                                        <i class="bi bi-whatsapp"></i>
+                                        <span>تواصل مع الدعم</span>
+                                    </a>
+                                    <a href="{{ route('subscription.index') }}" class="action-btn refresh">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                        <span>تحديث الحالة</span>
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     @else
                         {{-- Upload Form --}}
