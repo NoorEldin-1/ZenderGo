@@ -21,9 +21,9 @@ use Illuminate\Support\Facades\Route;
 // Health check endpoint for monitoring (no auth required)
 Route::get('/health', [HealthController::class, 'check'])->name('health.check');
 
-// Home route - Landing page for guests, dashboard for authenticated users
+// Home route - Landing page for guests, contacts for authenticated users
 Route::get('/', function () {
-    return auth()->check() ? redirect()->route('dashboard') : view('welcome');
+    return auth()->check() ? redirect()->route('contacts.index') : view('welcome');
 })->name('home');
 
 // Guest routes (login/register)
@@ -52,16 +52,6 @@ Route::middleware('auth')->group(function () {
 
     // Theme Toggle (AJAX)
     Route::post('/theme/toggle', [ThemeController::class, 'toggle'])->name('theme.toggle');
-
-    // Dashboard (protected by WhatsApp connection status)
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->middleware('whatsapp.connected')->name('dashboard');
-
-    // User Guide (protected by WhatsApp connection status)
-    Route::get('/guide', function () {
-        return view('guide');
-    })->middleware('whatsapp.connected')->name('guide');
 
     // Subscription Locked Page
     Route::view('/subscription/locked', 'errors.subscription_locked')->name('subscription.locked');

@@ -6,6 +6,8 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Auth\Events\Login;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -36,6 +38,14 @@ class AppServiceProvider extends ServiceProvider
             }
 
             $view->with('currentTheme', $theme);
+        });
+
+        // Update last_login_at on user login
+        Event::listen(Login::class, function (Login $event) {
+            // Only update for the default 'web' guard (regular users)
+            if ($event->guard === 'web' && $event->user instanceof \App\Models\User) {
+                $event->user->update(['last_login_at' => now()]);
+            }
         });
     }
 }

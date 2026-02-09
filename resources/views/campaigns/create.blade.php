@@ -18,8 +18,10 @@
             <div class="col-lg-5">
                 <div class="card h-100">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
-                        <h6 class="mb-0 fw-bold small">اختر المستلمين <span class="text-danger small">(max 10)</span></h6>
-                        <span class="badge bg-primary" id="selectedCount">0 / 10</span>
+                        <h6 class="mb-0 fw-bold small">اختر المستلمين <span class="text-danger small">(max
+                                {{ $campaignLimit }})</span></h6>
+                        <span class="badge bg-primary" id="selectedCount" data-max="{{ $campaignLimit }}">0 /
+                            {{ $campaignLimit }}</span>
                     </div>
 
                     <div class="p-2 border-bottom">
@@ -1006,7 +1008,7 @@
                 lastPage: 1,
                 isLoading: false,
                 searchQuery: '',
-                limit: 10,
+                limit: {{ $campaignLimit }},
                 // Quota tracking
                 quota: {
                     limit: {{ $quotaStatus['limit'] ?? 100 }},

@@ -42,18 +42,10 @@
         <h4 class="mb-0">
             <i class="bi bi-shield-lock text-success ms-2"></i>لوحة الإدارة
         </h4>
-        <div class="d-flex align-items-center gap-3">
-            <span class="text-muted small">
-                <i class="bi bi-calendar3 ms-1"></i>
-                {{ now()->format('Y/m/d') }}
-            </span>
-            <form action="{{ route('admin.logout') }}" method="POST" class="d-inline">
-                @csrf
-                <button type="submit" class="btn btn-outline-danger btn-sm px-3">
-                    <i class="bi bi-box-arrow-right ms-1"></i>خروج
-                </button>
-            </form>
-        </div>
+        <span class="text-muted small">
+            <i class="bi bi-calendar3 ms-1"></i>
+            {{ now()->format('Y/m/d') }}
+        </span>
     </div>
 
     <!-- Quick Actions -->

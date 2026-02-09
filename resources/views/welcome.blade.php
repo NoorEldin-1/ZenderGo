@@ -386,6 +386,191 @@
             line-height: 1.7;
         }
 
+        /* ========== Timeline Section ========== */
+        .timeline-section {
+            padding: 5rem 0;
+            position: relative;
+            background: linear-gradient(180deg, var(--body-bg) 0%, rgba(37, 211, 102, 0.03) 50%, var(--body-bg) 100%);
+        }
+
+        .timeline-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #fff, var(--whatsapp-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .timeline-subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            margin-bottom: 3rem;
+        }
+
+        .timeline-wrapper {
+            position: relative;
+            max-width: 700px;
+            margin: 0 auto;
+            padding-right: 50px;
+        }
+
+        .timeline-wrapper::before {
+            content: '';
+            position: absolute;
+            right: 20px;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, var(--whatsapp-green), #667eea, #f7c94b);
+            border-radius: 4px;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 2.5rem;
+            padding-right: 20px;
+        }
+
+        .timeline-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .timeline-indicator {
+            position: absolute;
+            right: -50px;
+            top: 0;
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, var(--whatsapp-green), var(--whatsapp-dark));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 4px solid var(--body-bg);
+            box-shadow: 0 0 0 4px rgba(37, 211, 102, 0.2);
+            z-index: 2;
+        }
+
+        .timeline-indicator .step-num {
+            color: white;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .timeline-content {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .timeline-content:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(37, 211, 102, 0.3);
+            transform: translateX(-5px);
+        }
+
+        .timeline-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, rgba(37, 211, 102, 0.2), rgba(37, 211, 102, 0.05));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        .timeline-icon i {
+            font-size: 1.5rem;
+            color: var(--whatsapp-green);
+        }
+
+        .timeline-icon.blue {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(102, 126, 234, 0.05));
+        }
+
+        .timeline-icon.blue i {
+            color: #667eea;
+        }
+
+        .timeline-icon.gold {
+            background: linear-gradient(135deg, rgba(247, 201, 75, 0.2), rgba(247, 201, 75, 0.05));
+        }
+
+        .timeline-icon.gold i {
+            color: #f7c94b;
+        }
+
+        .timeline-content h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: white;
+        }
+
+        .timeline-content p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .timeline-features {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .timeline-features span {
+            background: rgba(37, 211, 102, 0.1);
+            border: 1px solid rgba(37, 211, 102, 0.2);
+            color: var(--whatsapp-green);
+            padding: 0.4rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .timeline-features span i {
+            font-size: 0.9rem;
+        }
+
+        .timeline-cta {
+            text-align: center;
+            margin-top: 3rem;
+        }
+
+        .btn-timeline-cta {
+            background: linear-gradient(135deg, var(--whatsapp-green), var(--whatsapp-dark));
+            color: white;
+            padding: 1rem 2.5rem;
+            border-radius: 14px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(37, 211, 102, 0.3);
+        }
+
+        .btn-timeline-cta:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(37, 211, 102, 0.4);
+            color: white;
+        }
+
         .footer-section {
             background: rgba(0, 0, 0, 0.3);
             border-top: 1px solid rgba(255, 255, 255, 0.05);
@@ -446,6 +631,53 @@
             .footer-content {
                 flex-direction: column;
                 text-align: center;
+            }
+
+            /* Timeline Mobile */
+            .timeline-title {
+                font-size: 1.75rem;
+            }
+
+            .timeline-wrapper {
+                padding-right: 40px;
+            }
+
+            .timeline-wrapper::before {
+                right: 15px;
+            }
+
+            .timeline-indicator {
+                right: -40px;
+                width: 36px;
+                height: 36px;
+            }
+
+            .timeline-indicator .step-num {
+                font-size: 0.9rem;
+            }
+
+            .timeline-content {
+                padding: 1.25rem;
+            }
+
+            .timeline-content h3 {
+                font-size: 1.1rem;
+            }
+
+            .timeline-features {
+                gap: 0.5rem;
+            }
+
+            .timeline-features span {
+                font-size: 0.75rem;
+                padding: 0.3rem 0.6rem;
+            }
+
+            .btn-timeline-cta {
+                width: 100%;
+                justify-content: center;
+                padding: 0.875rem 1.5rem;
+                font-size: 1rem;
             }
         }
     </style>
@@ -533,6 +765,77 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Timeline Section -->
+    <section class="timeline-section">
+        <div class="container">
+            <h2 class="timeline-title">كيف تبدأ مع زندر؟</h2>
+            <p class="timeline-subtitle">٣ خطوات بسيطة لإطلاق حملتك الأولى</p>
+
+            <div class="timeline-wrapper">
+                <!-- Step 1 -->
+                <div class="timeline-item">
+                    <div class="timeline-indicator">
+                        <span class="step-num">1</span>
+                    </div>
+                    <div class="timeline-content">
+                        <div class="timeline-icon">
+                            <i class="bi bi-person-plus-fill"></i>
+                        </div>
+                        <h3>أنشئ حسابك واربط واتساب</h3>
+                        <p>سجّل حساباً جديداً ثم اربط رقم واتساب الخاص بك بسهولة عبر:</p>
+                        <div class="timeline-features">
+                            <span><i class="bi bi-qr-code"></i> مسح رمز QR</span>
+                            <span><i class="bi bi-phone"></i> كود الربط</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="timeline-item">
+                    <div class="timeline-indicator">
+                        <span class="step-num">2</span>
+                    </div>
+                    <div class="timeline-content">
+                        <div class="timeline-icon blue">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                        <h3>أضف جهات الاتصال</h3>
+                        <p>أضف عملاءك بالطريقة التي تناسبك:</p>
+                        <div class="timeline-features">
+                            <span><i class="bi bi-pencil-square"></i> إضافة يدوية</span>
+                            <span><i class="bi bi-file-earmark-excel"></i> استيراد من Excel</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="timeline-item">
+                    <div class="timeline-indicator">
+                        <span class="step-num">3</span>
+                    </div>
+                    <div class="timeline-content">
+                        <div class="timeline-icon gold">
+                            <i class="bi bi-send-fill"></i>
+                        </div>
+                        <h3>أطلق حملتك الأولى</h3>
+                        <p>أرسل رسائل مخصصة لكل عميل تلقائياً:</p>
+                        <div class="timeline-features">
+                            <span><i class="bi bi-image"></i> صور ومرفقات</span>
+                            <span><i class="bi bi-person-badge"></i> اسم المستلم تلقائياً</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="timeline-cta">
+                <a href="/register" class="btn-timeline-cta">
+                    <i class="bi bi-rocket-takeoff-fill"></i>
+                    ابدأ الآن مجاناً
+                </a>
             </div>
         </div>
     </section>

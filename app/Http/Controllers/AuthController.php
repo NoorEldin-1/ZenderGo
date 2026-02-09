@@ -68,7 +68,7 @@ class AuthController extends Controller
                 $user->update(['session_state' => 'sleeping']);
             }
             Auth::login($user, true);
-            return redirect()->intended(route('guide'));
+            return redirect()->intended(route('contacts.index'));
         }
 
         // User exists but no WhatsApp session - redirect to reconnect
@@ -244,7 +244,7 @@ class AuthController extends Controller
             return response()->json([
                 'success' => true,
                 'status' => 'CONNECTED',
-                'redirect' => route('guide'),
+                'redirect' => route('contacts.index'),
             ]);
         }
 
@@ -273,7 +273,7 @@ class AuthController extends Controller
                 return response()->json([
                     'success' => true,
                     'status' => 'CONNECTED',
-                    'redirect' => route('guide'),
+                    'redirect' => route('contacts.index'),
                 ]);
             }
         }
@@ -331,7 +331,7 @@ class AuthController extends Controller
             $user->update(['session_state' => 'sleeping']);
 
             session()->forget(['login_phone', 'login_user_id']);
-            $redirectUrl = session()->pull('url.intended', route('guide'));
+            $redirectUrl = session()->pull('url.intended', route('contacts.index'));
 
             return response()->json([
                 'success' => true,
@@ -540,7 +540,7 @@ class AuthController extends Controller
                     return response()->json([
                         'success' => true,
                         'connected' => true,
-                        'redirect' => route('guide'),
+                        'redirect' => route('contacts.index'),
                         'message' => 'مرحباً بعودتك! تم تحديث جلسة WhatsApp وكلمة المرور.',
                     ]);
                 }
@@ -571,7 +571,7 @@ class AuthController extends Controller
                 return response()->json([
                     'success' => true,
                     'connected' => true,
-                    'redirect' => route('guide'),
+                    'redirect' => route('contacts.index'),
                     'message' => 'تم إنشاء حسابك وربطه بـ WhatsApp بنجاح!',
                 ]);
 

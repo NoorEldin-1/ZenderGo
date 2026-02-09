@@ -53,6 +53,10 @@
                         <span class="badge bg-warning text-dark fs-6">{{ $user->templates_count }}</span>
                     </div>
                     <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-muted">الرسائل</span>
+                        <span class="badge bg-success fs-6">{{ $user->total_messages_sent }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
                         <span class="text-muted">طلبات المشاركة المرسلة</span>
                         <span class="badge bg-primary fs-6">{{ $user->sent_share_requests_count }}</span>
                     </div>
@@ -108,7 +112,7 @@
                         </div>
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <span class="text-muted">ينتهي في</span>
-                            <span class="text-dark fw-semibold">{{ $subscription->ends_at->format('Y/m/d - H:i') }}</span>
+                            <span class="text-dark fw-semibold">{{ $subscription->ends_at->format('Y/m/d h:i A') }}</span>
                         </div>
                         @if ($subscription->isPaid())
                             <div class="d-flex justify-content-between align-items-center">

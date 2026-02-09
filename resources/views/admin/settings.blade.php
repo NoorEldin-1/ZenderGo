@@ -283,6 +283,31 @@
                     </div>
                 </div>
 
+                {{-- Campaign Limit --}}
+                <div class="setting-group bg-body-tertiary border">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="icon-box bg-success bg-opacity-10 text-success">
+                            <i class="bi bi-send"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="setting-label">حد الإرسال للحملة</div>
+                            <div class="setting-description text-muted">
+                                الحد الأقصى لعدد المستلمين في كل دفعة إرسال (يؤثر أيضاً على عدد جهات الاتصال في كل صفحة)
+                            </div>
+                            <div class="input-group" style="max-width: 250px;">
+                                <input type="number" name="campaign_limit"
+                                    class="form-control @error('campaign_limit') is-invalid @enderror"
+                                    value="{{ old('campaign_limit', $settings['campaign_limit']) }}" min="1"
+                                    max="1000" required>
+                                <span class="input-group-text input-group-whatsapp">مستلم</span>
+                            </div>
+                            @error('campaign_limit')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+
                 <div class="d-flex justify-content-end pt-3">
                     <button type="submit" class="btn btn-save">
                         <i class="bi bi-check2-circle ms-2"></i>حفظ الإعدادات

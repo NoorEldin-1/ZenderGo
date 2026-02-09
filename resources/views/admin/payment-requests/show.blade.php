@@ -187,12 +187,12 @@
                     </li>
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <span class="text-muted">تاريخ الإرسال</span>
-                        <span class="fw-semibold">{{ $paymentRequest->created_at->format('Y/m/d - H:i') }}</span>
+                        <span class="fw-semibold">{{ $paymentRequest->created_at->format('Y/m/d h:i A') }}</span>
                     </li>
                     @if ($paymentRequest->reviewed_at)
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <span class="text-muted">تاريخ المراجعة</span>
-                            <span class="fw-semibold">{{ $paymentRequest->reviewed_at->format('Y/m/d - H:i') }}</span>
+                            <span class="fw-semibold">{{ $paymentRequest->reviewed_at->format('Y/m/d h:i A') }}</span>
                         </li>
                     @endif
                     @if ($paymentRequest->admin_notes)

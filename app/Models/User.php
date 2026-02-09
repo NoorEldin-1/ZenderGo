@@ -30,6 +30,8 @@ class User extends Authenticatable
         'suspension_reason',
         'suspended_at',
         'theme_preference',
+        'last_login_at',
+        'total_messages_sent',
     ];
 
     /**
@@ -54,6 +56,8 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_suspended' => 'boolean',
             'suspended_at' => 'datetime',
+            'last_login_at' => 'datetime',
+            'total_messages_sent' => 'integer',
         ];
     }
 

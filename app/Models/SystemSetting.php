@@ -120,4 +120,12 @@ class SystemSetting extends Model
     {
         return (int) static::get('contact_limit', 1000);
     }
+
+    /**
+     * Get campaign send limit per batch.
+     */
+    public static function getCampaignLimit(): int
+    {
+        return (int) static::get('campaign_limit', 10);
+    }
 }

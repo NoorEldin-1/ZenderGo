@@ -48,8 +48,8 @@
         <div class="col-6 col-lg-3">
             <div class="stat-card card h-100">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="stat-icon bg-info bg-opacity-15 text-info">
-                        <i class="bi bi-collection"></i>
+                    <div class="stat-icon bg-info text-white shadow-sm">
+                        <i class="bi bi-receipt"></i>
                     </div>
                     <div>
                         <div class="stat-value">{{ $totalCount }}</div>
@@ -63,7 +63,7 @@
         <div class="col-6 col-lg-3">
             <div class="stat-card card h-100 border-warning border-start border-4">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="stat-icon bg-warning bg-opacity-15 text-warning">
+                    <div class="stat-icon bg-warning text-white shadow-sm">
                         <i class="bi bi-hourglass-split"></i>
                     </div>
                     <div>
@@ -78,8 +78,8 @@
         <div class="col-6 col-lg-3">
             <div class="stat-card card h-100 border-success border-start border-4">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="stat-icon bg-success bg-opacity-15 text-success">
-                        <i class="bi bi-check-circle"></i>
+                    <div class="stat-icon bg-success text-white shadow-sm">
+                        <i class="bi bi-check-circle-fill"></i>
                     </div>
                     <div>
                         <div class="stat-value">{{ $approvedCount }}</div>
@@ -93,8 +93,8 @@
         <div class="col-6 col-lg-3">
             <div class="stat-card card h-100 border-danger border-start border-4">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="stat-icon bg-danger bg-opacity-15 text-danger">
-                        <i class="bi bi-x-circle"></i>
+                    <div class="stat-icon bg-danger text-white shadow-sm">
+                        <i class="bi bi-x-circle-fill"></i>
                     </div>
                     <div>
                         <div class="stat-value">{{ $rejectedCount }}</div>
@@ -173,7 +173,7 @@
                                 </td>
                                 <td dir="ltr" class="text-end">{{ $request->user->phone }}</td>
                                 <td>{{ number_format($request->amount) }} ج</td>
-                                <td>{{ $request->created_at->format('m/d H:i') }}</td>
+                                <td>{{ $request->created_at->format('Y/m/d h:i A') }}</td>
                                 <td>
                                     <span class="badge {{ $request->status_badge_class }}">
                                         @if ($request->isPending())

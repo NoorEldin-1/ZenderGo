@@ -203,7 +203,7 @@
                 </a>
             </div>
 
-            <a href="{{ route('dashboard') }}" class="back-link">
+            <a href="{{ route('contacts.index') }}" class="back-link">
                 العودة للرئيسية
             </a>
         </div>

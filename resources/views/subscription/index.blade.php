@@ -939,7 +939,7 @@
             <h4 class="mb-0">
                 <i class="bi bi-gem text-success ms-2"></i>اشتراكي
             </h4>
-            <a href="{{ route('dashboard') }}" class="btn btn-outline-secondary btn-sm">
+            <a href="{{ route('contacts.index') }}" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-arrow-right ms-1"></i>الرئيسية
             </a>
         </div>
@@ -1050,7 +1050,7 @@
                 <div class="text-center mt-2 mb-3">
                     <small class="text-muted">
                         <i class="bi bi-calendar-check me-1"></i>ينتهي في:
-                        {{ $subscription->ends_at->format('Y/m/d - H:i') }}
+                        {{ $subscription->ends_at->format('Y/m/d h:i A') }}
                     </small>
                 </div>
 
@@ -1331,7 +1331,7 @@
                                     </span>
                                 </div>
                                 <small class="text-muted d-block mt-2">
-                                    تنتهي بتاريخ: {{ $subscription->ends_at->format('Y/m/d - H:i') }}
+                                    تنتهي بتاريخ: {{ $subscription->ends_at->format('Y/m/d h:i A') }}
                                 </small>
                             </div>
 
@@ -1384,7 +1384,7 @@
                                     </span>
                                 </div>
                                 <small class="text-muted d-block mt-2">
-                                    ينتهي بتاريخ: {{ $subscription->ends_at->format('Y/m/d - H:i') }}
+                                    ينتهي بتاريخ: {{ $subscription->ends_at->format('Y/m/d h:i A') }}
                                 </small>
                             </div>
                         </div>

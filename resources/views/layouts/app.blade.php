@@ -1642,7 +1642,7 @@
     <!-- Navbar -->
     <nav class="navbar navbar-dark bg-dark sticky-top">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{{ auth()->check() ? route('dashboard') : route('login') }}">
+            <a class="navbar-brand" href="{{ auth()->check() ? route('contacts.index') : route('login') }}">
                 <i class="bi bi-whatsapp me-1"></i>زندر
             </a>
 
@@ -1662,26 +1662,35 @@
                             <i class="bi bi-person-circle fs-5"></i>
                             <span class="d-none d-sm-inline small">{{ Auth::user()->phone }}</span>
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                            <li class="d-sm-none">
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm p-2">
+                            <li class="d-sm-none mb-2">
                                 <span class="dropdown-item-text text-muted small">
                                     <i class="bi bi-phone me-1"></i>{{ Auth::user()->phone }}
                                 </span>
                             </li>
                             <li class="d-sm-none">
-                                <hr class="dropdown-divider">
+                                <hr class="dropdown-divider my-2">
                             </li>
                             <li>
-                                <a class="dropdown-item" href="{{ route('password.change') }}">
+                                <a class="dropdown-item py-2 rounded" href="{{ route('password.change') }}">
                                     <i class="bi bi-key me-2"></i>تغيير كلمة المرور
                                 </a>
                             </li>
+                            @php
+                                $supportPhone = \App\Models\SystemSetting::getSupportPhoneNumber();
+                            @endphp
                             <li>
-                                <hr class="dropdown-divider">
+                                <a class="dropdown-item py-2 rounded" href="https://wa.me/2{{ $supportPhone }}"
+                                    target="_blank">
+                                    <i class="bi bi-whatsapp me-2"></i>تواصل مع الدعم
+                                </a>
                             </li>
                             <li>
-                                <button type="button" class="dropdown-item text-danger" data-bs-toggle="modal"
-                                    data-bs-target="#logoutModal">
+                                <hr class="dropdown-divider my-2">
+                            </li>
+                            <li>
+                                <button type="button" class="dropdown-item py-2 rounded text-danger"
+                                    data-bs-toggle="modal" data-bs-target="#logoutModal">
                                     <i class="bi bi-box-arrow-right me-2"></i>تسجيل الخروج
                                 </button>
                             </li>
@@ -1706,13 +1715,6 @@
         <nav class="sidebar d-none d-lg-block">
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
-                        href="{{ route('dashboard') }}">
-                        <i class="bi bi-speedometer2"></i>
-                        لوحة التحكم
-                    </a>
-                </li>
-                <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('contacts.*') ? 'active' : '' }}"
                         href="{{ route('contacts.index') }}">
                         <i class="bi bi-people"></i>
@@ -1728,25 +1730,10 @@
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('guide') ? 'active' : '' }}" href="{{ route('guide') }}">
-                        <i class="bi bi-book"></i>
-                        دليل الاستخدام
-                    </a>
-                </li>
-                <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('subscription.*') ? 'active' : '' }}"
                         href="{{ route('subscription.index') }}">
                         <i class="bi bi-gem"></i>
                         اشتراكي
-                    </a>
-                </li>
-                @php
-                    $supportPhone = \App\Models\SystemSetting::getSupportPhoneNumber();
-                @endphp
-                <li class="nav-item mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.1);">
-                    <a class="nav-link support-link" href="https://wa.me/2{{ $supportPhone }}" target="_blank">
-                        <i class="bi bi-whatsapp"></i>
-                        تواصل مع الدعم
                     </a>
                 </li>
             </ul>
@@ -1785,13 +1772,6 @@
             <div class="container-fluid">
                 <div class="row g-0 text-center">
                     <div class="col">
-                        <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
-                            href="{{ route('dashboard') }}">
-                            <i class="bi bi-speedometer2"></i>
-                            الرئيسية
-                        </a>
-                    </div>
-                    <div class="col">
                         <a class="nav-link {{ request()->routeIs('contacts.*') ? 'active' : '' }}"
                             href="{{ route('contacts.index') }}">
                             <i class="bi bi-people"></i>
@@ -1811,19 +1791,6 @@
                             href="{{ route('subscription.index') }}">
                             <i class="bi bi-gem"></i>
                             اشتراكي
-                        </a>
-                    </div>
-                    <div class="col">
-                        <a class="nav-link {{ request()->routeIs('guide') ? 'active' : '' }}"
-                            href="{{ route('guide') }}">
-                            <i class="bi bi-book"></i>
-                            الدليل
-                        </a>
-                    </div>
-                    <div class="col">
-                        <a class="nav-link support-link" href="https://wa.me/2{{ $supportPhone }}" target="_blank">
-                            <i class="bi bi-whatsapp"></i>
-                            الدعم
                         </a>
                     </div>
                 </div>

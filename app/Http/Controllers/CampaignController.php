@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Jobs\SendWhatsappCampaign;
 use App\Services\CampaignQuotaService;
 use App\Services\ImageCollageService;
+use App\Models\SystemSetting;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -61,15 +62,17 @@ class CampaignController extends Controller
                 }
             }
 
-            $contacts = $query->latest()->paginate(10);
+            $limit = SystemSetting::getCampaignLimit();
+            $contacts = $query->latest()->paginate($limit);
 
             return response()->json($contacts);
         }
 
-        // Get quota status for display
+        // Get quota status and campaign limit for display
         $quotaStatus = $this->quotaService->getQuotaStatus(Auth::user());
+        $campaignLimit = SystemSetting::getCampaignLimit();
 
-        return view('campaigns.create', compact('quotaStatus'));
+        return view('campaigns.create', compact('quotaStatus', 'campaignLimit'));
     }
 
     /**
@@ -109,14 +112,16 @@ class CampaignController extends Controller
         }
 
         try {
+            $limit = SystemSetting::getCampaignLimit();
+
             $validated = $request->validate([
-                'contacts' => 'required|array|min:1|max:10',
+                'contacts' => 'required|array|min:1|max:' . $limit,
                 'contacts.*' => 'exists:contacts,id',
                 'message' => 'required|string|max:4096',
                 'images' => 'nullable|array|max:5', // Max 5 images
                 'images.*' => 'image|max:5120', // Max 5MB each
             ], [
-                'contacts.max' => 'عفواً، لا يمكن إرسال الحملة لأكثر من 10 مستلم في المرة الواحدة.',
+                'contacts.max' => "عفواً، لا يمكن إرسال الحملة لأكثر من {$limit} مستلم في المرة الواحدة.",
                 'images.max' => 'عفواً، الحد الأقصى هو 5 صور فقط.',
                 'images.*.max' => 'عفواً، حجم كل صورة يجب ألا يتجاوز 5MB.',
             ]);
@@ -296,6 +301,9 @@ class CampaignController extends Controller
             // $this->quotaService->recordUsage($user, $contacts->count());
 
             $count = $contacts->count();
+
+            // Increment total messages sent for the user
+            $user->increment('total_messages_sent', $count);
             $estimatedTime = ceil($delay / 60);
 
             // Get updated quota status for success message

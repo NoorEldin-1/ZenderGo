@@ -21,6 +21,7 @@ class AdminSettingsController extends Controller
             'instapay_number' => SystemSetting::getInstapayNumber(),
             'support_phone_number' => SystemSetting::getSupportPhoneNumber(),
             'contact_limit' => SystemSetting::getContactLimit(),
+            'campaign_limit' => SystemSetting::getCampaignLimit(),
         ];
 
         return view('admin.settings', compact('settings'));
@@ -39,6 +40,7 @@ class AdminSettingsController extends Controller
             'instapay_number' => 'nullable|string|max:50',
             'support_phone_number' => 'required|string|regex:/^01[0-9]{9}$/',
             'contact_limit' => 'required|integer|min:10|max:100000',
+            'campaign_limit' => 'required|integer|min:1|max:1000',
         ], [
             'vodafone_cash_number.regex' => 'رقم فودافون كاش غير صحيح. يجب أن يبدأ بـ 01 ويتكون من 11 رقم.',
             'instapay_number.max' => 'رقم إنستاباي طويل جداً.',
@@ -55,6 +57,7 @@ class AdminSettingsController extends Controller
         SystemSetting::set('instapay_number', $request->instapay_number ?? '');
         SystemSetting::set('support_phone_number', $request->support_phone_number);
         SystemSetting::set('contact_limit', $request->contact_limit);
+        SystemSetting::set('campaign_limit', $request->campaign_limit);
 
         return back()->with('success', 'تم حفظ الإعدادات بنجاح.');
     }

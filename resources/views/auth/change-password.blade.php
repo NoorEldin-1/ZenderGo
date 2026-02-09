@@ -90,7 +90,7 @@
                             <button type="submit" class="btn btn-whatsapp btn-lg" id="submitBtn">
                                 <i class="bi bi-check-lg me-2"></i>تغيير كلمة المرور
                             </button>
-                            <a href="{{ route('dashboard') }}" class="btn btn-outline-secondary">
+                            <a href="{{ route('contacts.index') }}" class="btn btn-outline-secondary">
                                 <i class="bi bi-arrow-right me-2"></i>العودة للوحة التحكم
                             </a>
                         </div>

@@ -54,10 +54,10 @@
                             <th>#</th>
                             <th>المستخدم</th>
                             <th>رقم الهاتف</th>
-                            <th>الحالة</th>
+                            <th>آخر ظهور</th>
                             <th>الاشتراك</th>
                             <th>جهات الاتصال</th>
-                            <th>القوالب</th>
+                            <th>الرسائل</th>
                             <th>تاريخ التسجيل</th>
                             <th class="text-center">الإجراءات</th>
                         </tr>
@@ -83,15 +83,13 @@
                                 </td>
                                 <td dir="ltr" class="text-end">{{ $user->phone }}</td>
                                 <td>
-                                    @if ($user->is_suspended)
-                                        <span class="badge bg-danger">
-                                            <i class="bi bi-pause-circle me-1"></i>
-                                            {{ $user->suspension_reason === 'security' ? 'معطل (أمني)' : 'معطل (اشتراك)' }}
-                                        </span>
+                                    @if ($user->last_login_at)
+                                        <div class="small">
+                                            <div class="fw-semibold">{{ $user->last_login_at->format('Y/m/d') }}</div>
+                                            <div class="text-muted">{{ $user->last_login_at->format('h:i A') }}</div>
+                                        </div>
                                     @else
-                                        <span class="badge bg-success">
-                                            <i class="bi bi-check-circle me-1"></i>نشط
-                                        </span>
+                                        <span class="text-muted small">—</span>
                                     @endif
                                 </td>
                                 <td>
@@ -122,7 +120,7 @@
                                     <span class="badge bg-info">{{ $user->contacts_count }}</span>
                                 </td>
                                 <td>
-                                    <span class="badge bg-warning text-dark">{{ $user->templates_count }}</span>
+                                    <span class="badge bg-success">{{ $user->total_messages_sent }}</span>
                                 </td>
                                 <td>{{ $user->created_at->format('Y/m/d') }}</td>
                                 <td>
