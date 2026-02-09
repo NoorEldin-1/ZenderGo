@@ -25,41 +25,13 @@
                     <strong dir="ltr" class="fs-5">{{ $phone ?? session('login_phone') }}</strong>
                 </div>
 
-                <!-- Connect Section with Method Toggle -->
+                <!-- Connect Section -->
                 <div id="connectSection">
-                    <!-- Method Toggle Tabs -->
-                    <div class="mb-4">
-                        <div class="btn-group w-100" role="group" aria-label="Connection method">
-                            <input type="radio" class="btn-check" name="connectionMethod" id="methodQr" value="qr"
-                                checked>
-                            <label class="btn btn-outline-success" for="methodQr">
-                                <i class="bi bi-qr-code me-1"></i>QR Code
-                            </label>
-                            <input type="radio" class="btn-check" name="connectionMethod" id="methodCode" value="code">
-                            <label class="btn btn-outline-success" for="methodCode">
-                                <i class="bi bi-phone me-1"></i>رقم الهاتف
-                            </label>
-                        </div>
-                    </div>
-
                     <div class="d-grid">
                         <button type="button" class="btn btn-whatsapp btn-lg" id="connectBtn">
-                            <i class="bi bi-qr-code me-2"></i>عرض QR Code
+                            <i class="bi bi-key me-2"></i>الحصول على الكود
                         </button>
                     </div>
-                </div>
-
-                <!-- QR Code Container -->
-                <div id="qrCodeContainer" class="text-center mb-4" style="display: none;">
-                    <div class="p-4 bg-light rounded-3 d-inline-block">
-                        <img id="qrCodeImage" src="" alt="QR Code" class="img-fluid" style="max-width: 280px;">
-                    </div>
-                    <p class="text-muted mt-3 mb-0">
-                        <i class="bi bi-phone me-1"></i>
-                        امسح الرمز من تطبيق WhatsApp
-                    </p>
-                    <div class="spinner-border spinner-border-sm text-success mt-3" role="status"></div>
-                    <p class="text-muted small mt-2">جاري الانتظار...</p>
                 </div>
 
                 <!-- Pairing Code Display Container -->
@@ -123,8 +95,6 @@
         document.addEventListener('DOMContentLoaded', function() {
             const connectBtn = document.getElementById('connectBtn');
             const connectSection = document.getElementById('connectSection');
-            const qrCodeContainer = document.getElementById('qrCodeContainer');
-            const qrCodeImage = document.getElementById('qrCodeImage');
             const loadingState = document.getElementById('loadingState');
             const loadingText = document.getElementById('loadingText');
             const successState = document.getElementById('successState');
@@ -134,26 +104,9 @@
             // Pairing code elements
             const pairingCodeContainer = document.getElementById('pairingCodeContainer');
             const pairingCodeDisplay = document.getElementById('pairingCodeDisplay');
-            const methodQrRadio = document.getElementById('methodQr');
-            const methodCodeRadio = document.getElementById('methodCode');
 
             let statusCheckInterval = null;
-            let selectedMethod = 'qr';
-
-            // Method toggle handler
-            methodQrRadio.addEventListener('change', function() {
-                if (this.checked) {
-                    selectedMethod = 'qr';
-                    connectBtn.innerHTML = '<i class="bi bi-qr-code me-2"></i>عرض QR Code';
-                }
-            });
-
-            methodCodeRadio.addEventListener('change', function() {
-                if (this.checked) {
-                    selectedMethod = 'code';
-                    connectBtn.innerHTML = '<i class="bi bi-key me-2"></i>الحصول على الكود';
-                }
-            });
+            const selectedMethod = 'code'; // Always use pairing code method
 
             function showError(message) {
                 errorMessage.textContent = message;
@@ -173,7 +126,6 @@
                     code;
                 pairingCodeDisplay.textContent = formattedCode;
                 pairingCodeContainer.style.display = 'block';
-                qrCodeContainer.style.display = 'none';
                 loadingState.style.display = 'none';
                 connectSection.style.display = 'none';
                 startStatusCheck();
@@ -184,9 +136,7 @@
                 connectBtn.innerHTML =
                     '<span class="spinner-border spinner-border-sm me-2"></span>جاري الاتصال...';
                 loadingState.style.display = 'block';
-                loadingText.textContent = selectedMethod === 'code' ?
-                    'جاري الحصول على كود الربط...' :
-                    'جاري بدء الجلسة...';
+                loadingText.textContent = 'جاري الحصول على كود الربط...';
                 hideError();
 
                 try {
@@ -198,7 +148,7 @@
                             'Accept': 'application/json'
                         },
                         body: JSON.stringify({
-                            method: selectedMethod
+                            method: 'code'
                         })
                     });
 
@@ -214,16 +164,6 @@
                     } else if (data.pairingCode) {
                         // Got pairing code
                         showPairingCode(data.pairingCode);
-                    } else if (data.qrcode) {
-                        // Add data URI prefix if missing (Baileys returns raw Base64)
-                        let qrcode = data.qrcode;
-                        if (!qrcode.startsWith('data:')) {
-                            qrcode = 'data:image/png;base64,' + qrcode;
-                        }
-                        qrCodeImage.src = qrcode;
-                        qrCodeContainer.style.display = 'block';
-                        connectSection.style.display = 'none';
-                        startStatusCheck();
                     } else if (data.message) {
                         // Translate common messages
                         const translatedMsg = translateMessage(data.message);
@@ -240,9 +180,7 @@
                         } else {
                             showError(translatedMsg);
                             connectBtn.disabled = false;
-                            connectBtn.innerHTML = selectedMethod === 'code' ?
-                                '<i class="bi bi-key me-2"></i>الحصول على الكود' :
-                                '<i class="bi bi-qr-code me-2"></i>عرض QR Code';
+                            connectBtn.innerHTML = '<i class="bi bi-key me-2"></i>الحصول على الكود';
                         }
                     }
                 } catch (error) {
@@ -250,7 +188,7 @@
                     loadingState.style.display = 'none';
                     showError('حدث خطأ في الاتصال');
                     connectBtn.disabled = false;
-                    connectBtn.innerHTML = '<i class="bi bi-qr-code me-2"></i>عرض QR Code';
+                    connectBtn.innerHTML = '<i class="bi bi-key me-2"></i>الحصول على الكود';
                 }
             }
 
@@ -294,7 +232,7 @@
                         if (data.connected && data.redirect) {
                             clearInterval(statusCheckInterval);
                             successState.style.display = 'block';
-                            qrCodeContainer.style.display = 'none';
+                            pairingCodeContainer.style.display = 'none';
                             setTimeout(() => window.location.href = data.redirect, 1000);
                         }
                     } catch (error) {
@@ -314,10 +252,6 @@
 
 @push('styles')
     <style>
-        #qrCodeContainer {
-            animation: fadeIn 0.3s ease-in-out;
-        }
-
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -328,11 +262,6 @@
                 opacity: 1;
                 transform: scale(1);
             }
-        }
-
-        #qrCodeImage {
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
         }
     </style>
 @endpush

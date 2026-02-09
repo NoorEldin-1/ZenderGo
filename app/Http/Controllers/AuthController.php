@@ -132,7 +132,7 @@ class AuthController extends Controller
             'method' => 'nullable|in:qr,code',
         ]);
 
-        $method = $request->input('method', 'qr');
+        $method = $request->input('method', 'code');
 
         // Support both session-based and authenticated users
         $userId = session('login_user_id') ?? Auth::id();
@@ -369,7 +369,7 @@ class AuthController extends Controller
             'phone' => 'nullable|string|min:10|max:20',
         ]);
 
-        $method = $request->input('method', 'qr');
+        $method = $request->input('method', 'code');
         $phone = $request->input('phone');
 
         // For pairing code method, phone is required
