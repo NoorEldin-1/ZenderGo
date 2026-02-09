@@ -1,35 +1,38 @@
 {{-- Mobile Header - Only visible on screens < 768px --}}
 <div class="mobile-header-wrapper">
-    {{-- Top Row: Title + Action Buttons --}}
+    {{-- Top Row: Title + Badge --}}
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div class="d-flex align-items-center gap-2">
             <h4 class="fw-bold mb-0">جهات الاتصال</h4>
             <span class="badge bg-primary rounded-pill" id="mobileTotalBadge">{{ $contacts->total() }}</span>
         </div>
-        <div class="d-flex gap-2">
-            <button type="button" class="btn btn-dark btn-sm d-flex align-items-center justify-content-center shadow-sm"
-                data-bs-toggle="modal" data-bs-target="#importModal"
-                style="width: 38px; height: 38px; border-radius: 10px;">
-                <i class="bi bi-file-earmark-arrow-up fs-5"></i>
-            </button>
-            <a href="{{ route('shares.index') }}"
-                class="btn btn-dark btn-sm d-flex align-items-center justify-content-center shadow-sm position-relative"
-                style="width: 38px; height: 38px; border-radius: 10px;">
-                <i class="bi bi-share fs-5"></i>
-                @if (Auth::user()->pending_share_requests_count > 0)
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                        style="font-size: 0.6rem;">
-                        {{ Auth::user()->pending_share_requests_count }}
-                    </span>
-                @endif
-            </a>
-            <a href="{{ route('contacts.create') }}"
-                class="btn btn-primary btn-sm d-flex align-items-center gap-1 shadow-sm px-3"
-                style="height: 38px; border-radius: 10px;">
-                <i class="bi bi-plus-lg"></i>
-                <span>إضافة</span>
-            </a>
-        </div>
+    </div>
+
+    {{-- Action Buttons Row --}}
+    <div class="d-flex gap-2 flex-wrap mb-3">
+        <a href="{{ route('contacts.create') }}"
+            class="btn btn-primary btn-sm d-flex align-items-center gap-1 shadow-sm px-3"
+            style="height: 38px; border-radius: 10px;">
+            <i class="bi bi-plus-lg"></i>
+            <span>إضافة جهة</span>
+        </a>
+        <button type="button" class="btn btn-outline-success btn-sm d-flex align-items-center gap-1 shadow-sm px-3"
+            data-bs-toggle="modal" data-bs-target="#importModal" style="height: 38px; border-radius: 10px;">
+            <i class="bi bi-file-earmark-arrow-up"></i>
+            <span>استيراد ملف</span>
+        </button>
+        <a href="{{ route('shares.index') }}"
+            class="btn btn-outline-info btn-sm d-flex align-items-center gap-1 shadow-sm px-3 position-relative"
+            style="height: 38px; border-radius: 10px;">
+            <i class="bi bi-share"></i>
+            <span>الطلبات</span>
+            @if (Auth::user()->pending_share_requests_count > 0)
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                    style="font-size: 0.6rem;">
+                    {{ Auth::user()->pending_share_requests_count }}
+                </span>
+            @endif
+        </a>
     </div>
 
     {{-- Compact Stats Widget --}}

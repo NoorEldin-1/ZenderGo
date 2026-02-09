@@ -16,8 +16,8 @@
             <span class="badge bg-secondary" id="totalBadge">{{ $contacts->total() }}</span>
         </div>
         <div class="d-flex gap-2">
-            <a href="{{ route('shares.index') }}" class="btn btn-outline-info btn-sm position-relative" title="طلبات المشاركة">
-                <i class="bi bi-share"></i>
+            <a href="{{ route('shares.index') }}" class="btn btn-outline-info btn-sm position-relative">
+                <i class="bi bi-share me-1"></i>طلبات المشاركة
                 @if (Auth::user()->pending_share_requests_count > 0)
                     <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
                         {{ Auth::user()->pending_share_requests_count }}
@@ -26,12 +26,10 @@
             </a>
             <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal"
                 data-bs-target="#importModal">
-                <i class="bi bi-file-earmark-excel"></i>
-                <span class="d-none d-sm-inline ms-1">استيراد</span>
+                <i class="bi bi-file-earmark-excel me-1"></i>استيراد ملف
             </button>
             <a href="{{ route('contacts.create') }}" class="btn btn-primary btn-sm">
-                <i class="bi bi-plus-lg"></i>
-                <span class="d-none d-sm-inline ms-1">إضافة</span>
+                <i class="bi bi-plus-lg me-1"></i>إضافة جهة
             </a>
         </div>
     </div>
@@ -127,20 +125,77 @@
                         </button>
                     </div>
                 </div>
-                <!-- Last Contacted Filter -->
+                <!-- Last Contacted Filter (Custom Smart Dropdown) -->
                 <div class="d-flex gap-2 align-items-center flex-wrap">
-                    <select class="form-select form-select-sm" id="contactFilter" style="width: auto; min-width: 150px;">
-                        <option value="" {{ request('contact_filter') == '' ? 'selected' : '' }}>جميع جهات الاتصال
-                        </option>
-                        <option value="featured" {{ request('contact_filter') == 'featured' ? 'selected' : '' }}>جهات مميزة
-                            ⭐</option>
-                        <option value="normal" {{ request('contact_filter') == 'normal' ? 'selected' : '' }}>جهات عادية
-                        </option>
-                        <option value="never" {{ request('contact_filter') == 'never' ? 'selected' : '' }}>لم يتم التواصل
-                        </option>
-                        <option value="range" {{ request('contact_filter') == 'range' ? 'selected' : '' }}>تم التواصل في
-                            فترة</option>
-                    </select>
+                    <div class="dropdown smart-filter-dropdown" id="contactFilterDropdown">
+                        <button class="btn smart-filter-btn dropdown-toggle d-flex align-items-center gap-2" type="button"
+                            data-bs-toggle="dropdown" aria-expanded="false" id="contactFilterTrigger">
+                            <i class="bi bi-funnel-fill text-primary filter-icon"></i>
+                            <span id="contactFilterLabel">
+                                @switch(request('contact_filter'))
+                                    @case('featured')
+                                        جهات مميزة
+                                    @break
+
+                                    @case('normal')
+                                        جهات عادية
+                                    @break
+
+                                    @case('never')
+                                        لم يتم التواصل
+                                    @break
+
+                                    @case('range')
+                                        تم التواصل في فترة
+                                    @break
+
+                                    @default
+                                        جميع جهات الاتصال
+                                @endswitch
+                            </span>
+                            <i class="bi bi-chevron-down dropdown-chevron"></i>
+                        </button>
+                        <ul class="dropdown-menu smart-filter-menu" aria-labelledby="contactFilterTrigger">
+                            <div class="smart-filter-content">
+                                <li>
+                                    <a class="dropdown-item smart-filter-item rounded-2 {{ request('contact_filter') == '' ? 'active' : '' }}"
+                                        href="#" data-value="">
+                                        <i class="bi bi-people-fill me-2 text-primary"></i>جميع جهات الاتصال
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item smart-filter-item rounded-2 {{ request('contact_filter') == 'featured' ? 'active' : '' }}"
+                                        href="#" data-value="featured">
+                                        <i class="bi bi-star-fill me-2 text-warning"></i>جهات مميزة
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item smart-filter-item rounded-2 {{ request('contact_filter') == 'normal' ? 'active' : '' }}"
+                                        href="#" data-value="normal">
+                                        <i class="bi bi-person me-2 text-secondary"></i>جهات عادية
+                                    </a>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider my-1">
+                                </li>
+                                <li>
+                                    <a class="dropdown-item smart-filter-item rounded-2 {{ request('contact_filter') == 'never' ? 'active' : '' }}"
+                                        href="#" data-value="never">
+                                        <i class="bi bi-clock-history me-2 text-danger"></i>لم يتم التواصل
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item smart-filter-item rounded-2 {{ request('contact_filter') == 'range' ? 'active' : '' }}"
+                                        href="#" data-value="range">
+                                        <i class="bi bi-calendar-range me-2 text-info"></i>تم التواصل في فترة
+                                    </a>
+                                </li>
+                            </div>
+                        </ul>
+                        {{-- Hidden input to hold the actual value for JavaScript --}}
+                        <input type="hidden" id="contactFilter" name="contact_filter"
+                            value="{{ request('contact_filter') }}">
+                    </div>
                     <div id="dateRangeContainer" class="{{ request('contact_filter') == 'range' ? '' : 'd-none' }}">
                         <input type="text" class="form-control form-control-sm flatpickr-input" id="dateRangePicker"
                             placeholder="اختر الفترة..." style="min-width: 200px;" readonly
@@ -149,7 +204,7 @@
                     </div>
                 </div>
                 <!-- Bulk Actions -->
-                <div class="d-flex gap-2 align-items-center" id="bulkActions" style="display: none;">
+                <div class="gap-2 align-items-center d-none" id="bulkActions">
                     <span class="text-muted small">
                         محدد: <strong id="selectedCount">0</strong>
                         <span id="crossPageIndicator" class="badge bg-info ms-1 d-none"
@@ -227,13 +282,8 @@
                 </div>
 
                 <!-- Pagination -->
-                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center p-3 border-top gap-3"
-                    id="pagination">
+                <div class="d-flex justify-content-center align-items-center p-3 border-top" id="pagination">
                     @if ($contacts->hasPages())
-                        <div class="text-muted small d-none d-sm-block">
-                            عرض {{ $contacts->firstItem() }}-{{ $contacts->lastItem() }} من {{ $contacts->total() }} جهة
-                            اتصال
-                        </div>
                         <nav aria-label="Page navigation">
                             {{ $contacts->links() }}
                         </nav>
@@ -275,59 +325,23 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <!-- Instructions -->
-                        <div class="alert alert-warning py-2 mb-3">
-                            <i class="bi bi-exclamation-triangle me-1"></i>
-                            <strong>تنبيه:</strong> تأكد من أن ملف Excel يحتوي على الأعمدة التالية في الصف الأول:
-                        </div>
-
-                        <!-- Required Columns Table -->
-                        <div class="table-responsive mb-3">
-                            <table class="table table-bordered table-sm mb-0 small">
-                                <thead class="table-success">
-                                    <tr>
-                                        <th class="text-center">Store_Name</th>
-                                        <th class="text-center">Cust_FullName</th>
-                                        <th class="text-center">Cust_Mobile</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr class="text-muted text-center">
-                                        <td>اسم المتجر (اختياري)</td>
-                                        <td>اسم العميل <span class="text-danger">*</span></td>
-                                        <td>01012345678 <span class="text-danger">*</span></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div class="alert alert-info py-2 mb-3 small">
+                        <!-- Simple Instruction -->
+                        <p class="text-muted mb-3">
                             <i class="bi bi-info-circle me-1"></i>
-                            <strong>ملاحظات:</strong>
-                            <ul class="mb-0 mt-1">
-                                <li>الأعمدة المطلوبة: <code>Cust_FullName</code> و <code>Cust_Mobile</code></li>
-                                <li>عمود <code>Store_Name</code> اختياري</li>
-                                <li>أسماء الأعمدة البديلة مدعومة: <code>name</code>, <code>phone</code>, <code>mobile</code>
-                                </li>
-                                <li>سيتم إضافة الصفر تلقائياً لأرقام الهواتف الناقصة</li>
-                            </ul>
-                        </div>
+                            يجب أن يحتوي الملف على اسم العميل ورقم الهاتف.
+                        </p>
 
-                        <div class="mb-0">
-                            <label class="form-label small fw-semibold">اختر ملف Excel أو CSV:</label>
-
-                            <!-- Custom File Input -->
-                            <div class="file-upload-wrapper">
-                                <input type="file" class="file-upload-input" name="file" id="fileInput"
-                                    accept=".xlsx,.xls,.csv" required onchange="updateFileName(this)">
-                                <div class="file-upload-box">
-                                    <div class="text-center p-4">
-                                        <i class="bi bi-cloud-arrow-up text-primary" style="font-size: 2.5rem;"></i>
-                                        <h5 class="mt-3 mb-1 fw-bold text-dark-emphasis">اضغط لاختيار الملف</h5>
-                                        <p class="text-muted small mb-0" id="fileNameDisplay">أو اسحب الملف وأفلته هنا</p>
-                                        <div class="mt-2 text-muted" style="font-size: 0.75rem;">
-                                            الحد الأقصى: 10MB | الصيغ: xlsx, xls, csv
-                                        </div>
+                        <!-- Custom File Input -->
+                        <div class="file-upload-wrapper">
+                            <input type="file" class="file-upload-input" name="file" id="fileInput"
+                                accept=".xlsx,.xls,.csv" required onchange="updateFileName(this)">
+                            <div class="file-upload-box">
+                                <div class="text-center p-4">
+                                    <i class="bi bi-cloud-arrow-up text-primary" style="font-size: 2.5rem;"></i>
+                                    <h5 class="mt-3 mb-1 fw-bold text-dark-emphasis">اضغط لاختيار الملف</h5>
+                                    <p class="text-muted small mb-0" id="fileNameDisplay">أو اسحب الملف وأفلته هنا</p>
+                                    <div class="mt-2 text-muted" style="font-size: 0.75rem;">
+                                        xlsx, xls, csv :الصيغ المدعومة
                                     </div>
                                 </div>
                             </div>
@@ -481,6 +495,118 @@
     <!-- Flatpickr CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
+        /* ========== SMART FILTER DROPDOWN ========== */
+        .smart-filter-dropdown .smart-filter-btn {
+            background: var(--bs-body-bg);
+            border: 1px solid var(--bs-border-color);
+            padding: 0.4rem 0.85rem;
+            border-radius: 50px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--bs-body-color);
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .smart-filter-dropdown .smart-filter-btn:hover {
+            border-color: var(--bs-primary);
+            box-shadow: 0 4px 12px rgba(var(--bs-primary-rgb), 0.15);
+        }
+
+        .smart-filter-dropdown .smart-filter-btn:focus {
+            border-color: var(--bs-primary);
+            box-shadow: 0 0 0 3px rgba(var(--bs-primary-rgb), 0.2);
+        }
+
+        .smart-filter-dropdown .smart-filter-btn .filter-icon {
+            font-size: 0.9rem;
+        }
+
+        .smart-filter-dropdown .smart-filter-btn .dropdown-chevron {
+            font-size: 0.7rem;
+            transition: transform 0.2s ease;
+            margin-right: -0.25rem;
+        }
+
+        .smart-filter-dropdown.show .smart-filter-btn .dropdown-chevron {
+            transform: rotate(180deg);
+        }
+
+        /* Outer menu: transparent container, no animation (Popper controls position) */
+        .smart-filter-dropdown .smart-filter-menu {
+            background: transparent !important;
+            border: 0 !important;
+            box-shadow: none !important;
+            padding: 0;
+            min-width: 220px;
+        }
+
+        /* Inner content: all visual styles + animation */
+        .smart-filter-dropdown .smart-filter-content {
+            background: var(--bs-body-bg);
+            border: 1px solid var(--bs-border-color);
+            border-radius: 12px;
+            padding: 0.5rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            transform-origin: top center;
+            animation: smartFilterFadeIn 0.15s ease-out;
+        }
+
+        @keyframes smartFilterFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .smart-filter-dropdown .smart-filter-item {
+            padding: 0.6rem 0.85rem;
+            font-size: 0.875rem;
+            transition: all 0.15s ease;
+            color: var(--bs-body-color);
+            margin-bottom: 2px;
+        }
+
+        .smart-filter-dropdown .smart-filter-item:hover {
+            background-color: rgba(var(--bs-primary-rgb), 0.1);
+        }
+
+        .smart-filter-dropdown .smart-filter-item.active {
+            background-color: var(--bs-primary);
+            color: #fff;
+        }
+
+        .smart-filter-dropdown .smart-filter-item.active i {
+            color: #fff !important;
+        }
+
+        /* Dark Mode Styles */
+        [data-bs-theme="dark"] .smart-filter-dropdown .smart-filter-btn {
+            background: #2b3035;
+            border-color: #495057;
+        }
+
+        [data-bs-theme="dark"] .smart-filter-dropdown .smart-filter-btn:hover {
+            border-color: var(--bs-primary);
+            background: #343a40;
+        }
+
+        [data-bs-theme="dark"] .smart-filter-dropdown .smart-filter-content {
+            background: #212529;
+            border-color: #343a40;
+        }
+
+        [data-bs-theme="dark"] .smart-filter-dropdown .smart-filter-item:hover {
+            background-color: rgba(var(--bs-primary-rgb), 0.2);
+        }
+
+        /* ========== END SMART FILTER ========== */
+
         /* Flatpickr Dark Mode Styles */
         [data-bs-theme="dark"] .flatpickr-input {
             background-color: #2b3035 !important;
@@ -1482,20 +1608,24 @@
             // Count checked on current page
             const currentPageChecked = visibleCheckboxes.filter(cb => cb.checked).length;
 
-            // Get total from SelectionManager (all pages)
-            const totalSelected = SelectionManager.count();
+            // Get total from SelectionManager (all pages) - FORCE INTEGER
+            const totalSelected = parseInt(SelectionManager.count(), 10) || 0;
 
-            // Update UI - Use LOCAL count for "Selected" to allow per-page selection, OR GLOBAL?
-            // User requested: "When I move to another page... number returns to 0".
-            // Fix: Show GLOBAL count in main badge.
-            selectedCountEl.textContent = totalSelected; // CHANGED FROM currentPageChecked
+            // Update UI - Use GLOBAL count in main badge
+            selectedCountEl.textContent = totalSelected;
 
             // Note: crossPageIndicator is now redundant if we show totalSelected in main badge. 
             // We can hide it or keep it for emphasis. I will hide it to reduce clutter.
             crossPageIndicator.classList.add('d-none'); // ALWAYS HIDDEN
 
-            // Show/hide bulk actions (Desktop)
-            bulkActionsEl.style.display = totalSelected > 0 ? 'flex' : 'none';
+            // Show/hide bulk actions (Desktop) - STRICT: use Bootstrap classes
+            if (totalSelected > 0) {
+                bulkActionsEl.classList.remove('d-none');
+                bulkActionsEl.classList.add('d-flex');
+            } else {
+                bulkActionsEl.classList.add('d-none');
+                bulkActionsEl.classList.remove('d-flex');
+            }
 
             // ========== MOBILE FLOATING ACTION BAR ==========
             const mobileActionBar = document.getElementById('mobileBulkActionBar');
@@ -1681,6 +1811,44 @@
                 }
             });
         }
+
+        // ========== SMART FILTER DROPDOWN HANDLER ==========
+        document.querySelectorAll('.smart-filter-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                const value = this.dataset.value;
+                const label = this.textContent.trim();
+                const dropdownMenu = this.closest('.dropdown-menu');
+                const dropdownContainer = this.closest('.smart-filter-dropdown');
+
+                // Update hidden input value
+                const hiddenInput = dropdownContainer.querySelector('#contactFilter');
+                if (hiddenInput) {
+                    hiddenInput.value = value;
+                }
+
+                // Update visible label
+                const labelEl = dropdownContainer.querySelector('#contactFilterLabel');
+                if (labelEl) {
+                    labelEl.textContent = label;
+                }
+
+                // Update active state in menu
+                dropdownMenu.querySelectorAll('.smart-filter-item').forEach(i => i.classList.remove(
+                    'active'));
+                this.classList.add('active');
+
+                // Close dropdown (Bootstrap 5)
+                const dropdownToggle = dropdownContainer.querySelector('[data-bs-toggle="dropdown"]');
+                if (dropdownToggle) {
+                    const dropdownInstance = bootstrap.Dropdown.getOrCreateInstance(dropdownToggle);
+                    dropdownInstance.hide();
+                }
+
+                // Dispatch change event on hidden input to trigger existing logic
+                hiddenInput.dispatchEvent(new Event('change'));
+            });
+        });
 
         // Contact filter change handler
         contactFilter?.addEventListener('change', function() {

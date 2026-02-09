@@ -92,32 +92,8 @@
         </div>
         <div class="card-body py-3">
             <div class="row g-3">
-                <!-- Phone Prefix Filter -->
-                <div class="col-md-6">
-                    <label class="form-label small fw-semibold mb-2">
-                        <i class="bi bi-phone me-1"></i>فلتر رقم الهاتف
-                    </label>
-                    <div class="d-flex flex-wrap gap-2" id="phonePrefixFilters">
-                        <button type="button" class="btn btn-outline-primary btn-sm prefix-btn active" data-prefix="all">
-                            الكل
-                        </button>
-                        <button type="button" class="btn btn-outline-primary btn-sm prefix-btn" data-prefix="010">
-                            010
-                        </button>
-                        <button type="button" class="btn btn-outline-primary btn-sm prefix-btn" data-prefix="011">
-                            011
-                        </button>
-                        <button type="button" class="btn btn-outline-primary btn-sm prefix-btn" data-prefix="012">
-                            012
-                        </button>
-                        <button type="button" class="btn btn-outline-primary btn-sm prefix-btn" data-prefix="015">
-                            015
-                        </button>
-                    </div>
-                </div>
-
                 <!-- Store Filter -->
-                <div class="col-md-6">
+                <div class="col-12">
                     <label class="form-label small fw-semibold mb-2">
                         <i class="bi bi-shop me-1"></i>فلتر المتجر
                     </label>
@@ -156,14 +132,13 @@
             class="card-header bg-white d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 py-3">
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <h6 class="mb-0 fw-bold">البيانات</h6>
-                <div class="btn-group btn-group-sm" id="bulkActions" style="display: none;">
-                    <button type="button" class="btn btn-outline-danger btn-sm" id="removeSelectedBtn">
-                        <i class="bi bi-trash"></i> <span class="d-none d-sm-inline">حذف</span>
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="ignoreSelectedBtn">
-                        <i class="bi bi-eye-slash"></i> <span class="d-none d-sm-inline">تجاهل</span>
-                    </button>
-                </div>
+                <!-- Selection Counter -->
+                <span class="badge bg-primary" id="selectionCounter" style="display: none;">
+                    <i class="bi bi-check2-square me-1"></i><span id="selectedCount">0</span> محدد
+                </span>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="deselectAllBtn" style="display: none;">
+                    <i class="bi bi-x-circle me-1"></i>إلغاء التحديد
+                </button>
             </div>
             <div class="btn-group btn-group-sm" role="group">
                 <button type="button" class="btn btn-outline-secondary active" id="showAll">الكل</button>
@@ -185,7 +160,6 @@
                             <th class="d-none d-sm-table-cell">الهاتف</th>
                             <th style="width: 80px;">الحالة</th>
                             <th class="d-none d-xl-table-cell">الأخطاء</th>
-                            <th style="width: 70px;">إجراء</th>
                         </tr>
                     </thead>
                     <tbody id="previewTable">
@@ -195,22 +169,8 @@
             </div>
         </div>
         <!-- Pagination Controls -->
-        <div
-            class="card-footer bg-white d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 py-3 px-3">
-            <div class="d-flex align-items-center gap-2 order-2 order-md-0">
-                <span class="text-muted small">عرض</span>
-                <select class="form-select form-select-sm" id="rowsPerPage" style="width: auto;">
-                    <option value="50">50</option>
-                    <option value="100" selected>100</option>
-                    <option value="200">200</option>
-                    <option value="500">500</option>
-                </select>
-                <span class="text-muted small">صف</span>
-            </div>
-            <div class="d-flex align-items-center order-1 order-md-1">
-                <span class="badge bg-light text-dark px-3 py-2 fs-6" id="paginationInfo">عرض 1-100 من 0</span>
-            </div>
-            <nav aria-label="Page navigation" class="order-0 order-md-2">
+        <div class="card-footer bg-white d-flex justify-content-center py-3 px-3">
+            <nav aria-label="Page navigation">
                 <ul class="pagination mb-0" id="paginationControls">
                     <!-- Pagination buttons will be generated dynamically -->
                 </ul>
@@ -220,28 +180,24 @@
 
     <!-- Import Button -->
     <div class="card mt-3">
-        <div class="card-body">
-            <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
-                <p class="mb-0 text-center text-md-start" id="importMessage">
-                    <i class="bi bi-info-circle text-primary me-1"></i>
-                    سيتم استيراد <strong class="text-success"
-                        id="importCount">{{ $preview['summary']['valid'] }}</strong>
-                    جهة اتصال
-                </p>
-                <div class="d-flex gap-2 w-100 w-md-auto">
-                    <a href="{{ route('contacts.index') }}" class="btn btn-outline-secondary flex-fill flex-md-grow-0">
-                        إلغاء
-                    </a>
-                    <form action="{{ route('contacts.confirm-import') }}" method="POST" id="importForm"
-                        class="flex-fill flex-md-grow-0">
-                        @csrf
-                        <input type="hidden" name="selected_rows" id="selectedRowsInput">
-                        <button type="submit" class="btn btn-success w-100" id="importBtn">
-                            <i class="bi bi-check-lg me-1"></i>استيراد
-                            <span id="importBtnCount">{{ $preview['summary']['valid'] }}</span>
-                        </button>
-                    </form>
-                </div>
+        <div class="card-body py-3">
+            <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2">
+                <a href="{{ route('contacts.index') }}" class="btn btn-outline-secondary flex-fill flex-sm-grow-0">
+                    إلغاء
+                </a>
+                <button type="button" class="btn btn-outline-danger flex-fill flex-sm-grow-0" id="deselectAllBtnBottom"
+                    style="display: none;">
+                    <i class="bi bi-x-circle me-1"></i>إلغاء التحديد
+                </button>
+                <form action="{{ route('contacts.confirm-import') }}" method="POST" id="importForm" class="flex-fill">
+                    @csrf
+                    <input type="hidden" name="selected_rows" id="selectedRowsInput">
+                    <button type="submit" class="btn btn-success w-100" id="importBtn">
+                        <i class="bi bi-check-lg me-1"></i>
+                        <span id="importBtnText">استيراد الكل</span>
+                        (<span id="importBtnCount">{{ $preview['summary']['valid'] }}</span>)
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -249,13 +205,24 @@
 
 @push('styles')
     <style>
-        tr.ignored {
-            opacity: 0.5;
-            background: #f8f9fa;
-        }
-
         tr.removed {
             display: none !important;
+        }
+
+        /* Force dark mode colors for stats */
+        [data-bs-theme="dark"] .text-success,
+        [data-bs-theme="dark"] #validCount {
+            color: #20c997 !important;
+        }
+
+        [data-bs-theme="dark"] .text-danger,
+        [data-bs-theme="dark"] #errorCount {
+            color: #dc3545 !important;
+        }
+
+        [data-bs-theme="dark"] .text-warning,
+        [data-bs-theme="dark"] #duplicateCount {
+            color: #ffc107 !important;
         }
     </style>
 @endpush
@@ -264,8 +231,7 @@
     <script>
         // All row data from the server
         const rowStates = @json($preview['rows']);
-        const ignoredRows = new Set();
-        const removedRows = new Set();
+        const selectedIndices = new Set(); // For manual selection (cross-page persistent)
 
         // Contact limit info from server
         const remainingSlots = {{ $remainingSlots }};
@@ -277,7 +243,6 @@
         let currentFilter = 'all'; // 'all', 'valid', 'error'
 
         // ========== ADVANCED FILTERS STATE ==========
-        let selectedPhonePrefix = 'all'; // 'all', '010', '011', '012', '015'
         let selectedStores = new Set(); // Empty = all stores
         let uniqueStores = []; // Will be populated on init
 
@@ -393,12 +358,6 @@
             let badgesHtml = '';
             let hasFilters = false;
 
-            // Phone filter badge
-            if (selectedPhonePrefix !== 'all') {
-                hasFilters = true;
-                badgesHtml += `<span class="badge bg-primary me-1">${selectedPhonePrefix}</span>`;
-            }
-
             // Store filter badges
             if (selectedStores.size > 0) {
                 hasFilters = true;
@@ -419,24 +378,18 @@
             badges.innerHTML = badgesHtml;
         }
 
-        // Get filtered rows based on ALL filters (status + phone + store)
+        // Get filtered rows based on ALL filters (status + store)
         function getFilteredRows() {
             return rowStates.map((row, index) => ({
                     ...row,
                     originalIndex: index
                 }))
-                .filter(row => !removedRows.has(row.originalIndex))
                 // Status filter (all, valid, error)
                 .filter(row => {
                     if (currentFilter === 'all') return true;
-                    if (currentFilter === 'valid') return row.status === 'valid' && !ignoredRows.has(row.originalIndex);
+                    if (currentFilter === 'valid') return row.status === 'valid';
                     if (currentFilter === 'error') return row.status === 'error' || row.status === 'duplicate';
                     return true;
-                })
-                // Phone prefix filter
-                .filter(row => {
-                    if (selectedPhonePrefix === 'all') return true;
-                    return row.phone && row.phone.startsWith(selectedPhonePrefix);
                 })
                 // Store filter
                 .filter(row => {
@@ -456,8 +409,7 @@
         // Render a single row
         function renderRow(row) {
             const index = row.originalIndex;
-            const isIgnored = ignoredRows.has(index);
-            const displayStatus = isIgnored ? 'ignored' : row.status;
+            const displayStatus = row.status;
 
             let statusBadge = '';
             if (displayStatus === 'valid') {
@@ -488,10 +440,9 @@
 
             return `
                 <tr data-status="${displayStatus}" data-index="${index}" 
-                    data-name="${escapeHtml(row.name)}" data-phone="${escapeHtml(row.phone)}" data-store="${escapeHtml(row.store_name || '')}"
-                    class="${isIgnored ? 'ignored' : ''}">
+                    data-name="${escapeHtml(row.name)}" data-phone="${escapeHtml(row.phone)}" data-store="${escapeHtml(row.store_name || '')}">
                     <td class="ps-3">
-                        <input type="checkbox" class="form-check-input row-checkbox" data-index="${index}">
+                        <input type="checkbox" class="form-check-input row-checkbox" data-index="${index}" ${selectedIndices.has(index) ? 'checked' : ''}>
                     </td>
                     <td class="text-muted d-none d-md-table-cell">${row.row_number}</td>
                     <td class="d-none d-lg-table-cell">${storeNameHtml}</td>
@@ -499,18 +450,6 @@
                     <td class="d-none d-sm-table-cell">${phoneHtml}</td>
                     <td>${statusBadge}</td>
                     <td class="d-none d-xl-table-cell">${errorsHtml}</td>
-                    <td>
-                        <div class="btn-group btn-group-sm">
-                            <button type="button" class="btn btn-outline-secondary btn-sm ignore-btn"
-                                title="تجاهل" data-index="${index}">
-                                <i class="bi bi-eye-slash"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-danger btn-sm remove-btn"
-                                title="حذف" data-index="${index}">
-                                <i class="bi bi-x"></i>
-                            </button>
-                        </div>
-                    </td>
                 </tr>
             `;
         }
@@ -531,14 +470,6 @@
             // Render rows
             const tbody = document.getElementById('previewTable');
             tbody.innerHTML = pageRows.map(renderRow).join('');
-
-            // Update pagination info
-            const paginationInfo = document.getElementById('paginationInfo');
-            if (totalRows > 0) {
-                paginationInfo.textContent = `عرض ${startIndex + 1}-${endIndex} من ${totalRows}`;
-            } else {
-                paginationInfo.textContent = 'لا توجد نتائج';
-            }
 
             // Render pagination controls
             renderPaginationControls(totalPages);
@@ -624,135 +555,126 @@
 
         // Attach event listeners to row elements
         function attachRowEventListeners() {
-            // Row checkboxes
+            // Row checkboxes - track selection globally
             document.querySelectorAll('.row-checkbox').forEach(cb => {
-                cb.addEventListener('change', updateBulkActions);
-            });
-
-            // Remove buttons
-            document.querySelectorAll('.remove-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    removeRow(parseInt(this.dataset.index));
+                cb.addEventListener('change', function() {
+                    const index = parseInt(this.dataset.index);
+                    if (this.checked) {
+                        selectedIndices.add(index);
+                    } else {
+                        selectedIndices.delete(index);
+                    }
+                    updateSelectionUI();
                     updateAll();
-                    renderTable();
-                });
-            });
-
-            // Ignore buttons
-            document.querySelectorAll('.ignore-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    ignoreRow(parseInt(this.dataset.index));
-                    updateAll();
-                    renderTable();
                 });
             });
         }
 
         // Select All - only for visible rows on current page
         document.getElementById('selectAll').addEventListener('change', function() {
+            const isChecked = this.checked;
             document.querySelectorAll('.row-checkbox').forEach(cb => {
-                const row = cb.closest('tr');
-                if (!row.classList.contains('removed')) {
-                    cb.checked = this.checked;
-                }
-            });
-            updateBulkActions();
-        });
-
-        // Bulk remove
-        document.getElementById('removeSelectedBtn').addEventListener('click', function() {
-            document.querySelectorAll('.row-checkbox:checked').forEach(cb => {
-                removeRow(parseInt(cb.dataset.index));
-                cb.checked = false;
-            });
-            updateAll();
-            renderTable();
-        });
-
-        // Bulk ignore
-        document.getElementById('ignoreSelectedBtn').addEventListener('click', function() {
-            document.querySelectorAll('.row-checkbox:checked').forEach(cb => {
-                ignoreRow(parseInt(cb.dataset.index));
-                cb.checked = false;
-            });
-            updateAll();
-            renderTable();
-        });
-
-        // Rows per page change
-        document.getElementById('rowsPerPage').addEventListener('change', function() {
-            rowsPerPage = parseInt(this.value);
-            currentPage = 1;
-            renderTable();
-        });
-
-        function removeRow(index) {
-            removedRows.add(index);
-            ignoredRows.delete(index);
-        }
-
-        function ignoreRow(index) {
-            if (!removedRows.has(index)) {
-                if (ignoredRows.has(index)) {
-                    ignoredRows.delete(index);
+                const index = parseInt(cb.dataset.index);
+                cb.checked = isChecked;
+                if (isChecked) {
+                    selectedIndices.add(index);
                 } else {
-                    ignoredRows.add(index);
+                    selectedIndices.delete(index);
                 }
-            }
+            });
+            updateSelectionUI();
+            updateAll();
+        });
+
+        // Deselect All button (top)
+        document.getElementById('deselectAllBtn').addEventListener('click', deselectAllHandler);
+        // Deselect All button (bottom)
+        document.getElementById('deselectAllBtnBottom').addEventListener('click', deselectAllHandler);
+
+        function deselectAllHandler() {
+            selectedIndices.clear();
+            document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
+            document.getElementById('selectAll').checked = false;
+            updateSelectionUI();
+            updateAll();
         }
 
-        function updateBulkActions() {
-            const count = document.querySelectorAll('.row-checkbox:checked').length;
-            document.getElementById('bulkActions').style.display = count > 0 ? 'flex' : 'none';
+        // Update selection counter and button visibility
+        function updateSelectionUI() {
+            const count = selectedIndices.size;
+            const counter = document.getElementById('selectionCounter');
+            const deselectBtn = document.getElementById('deselectAllBtn');
+            const deselectBtnBottom = document.getElementById('deselectAllBtnBottom');
+            const selectedCountEl = document.getElementById('selectedCount');
+
+            if (count > 0) {
+                counter.style.display = 'inline-flex';
+                deselectBtn.style.display = 'inline-block';
+                deselectBtnBottom.style.display = 'inline-block';
+                selectedCountEl.textContent = count;
+            } else {
+                counter.style.display = 'none';
+                deselectBtn.style.display = 'none';
+                deselectBtnBottom.style.display = 'none';
+            }
         }
 
         function updateAll() {
-            // Get filtered rows based on ALL active filters (status, phone, store)
+            // Get filtered rows based on ALL active filters (status, store)
             const filteredRows = getFilteredRows();
 
             // Count valid rows in filtered result
-            let valid = 0;
+            let validCount = 0;
             filteredRows.forEach(row => {
-                if (!ignoredRows.has(row.originalIndex) && row.status === 'valid') valid++;
+                if (row.status === 'valid') validCount++;
             });
 
-            // Limit to remaining slots
-            const canImport = Math.min(valid, remainingSlots);
-            const limitExceeded = valid > remainingSlots;
-
             // Update UI counts
-            document.getElementById('validCount').textContent = valid;
+            document.getElementById('validCount').textContent = validCount;
 
-            if (limitExceeded) {
-                document.getElementById('importCount').innerHTML =
-                    `<span class="text-warning">${canImport}</span> <small class="text-danger">(من ${valid})</small>`;
-                document.getElementById('importBtnCount').textContent = canImport;
+            // Smart Import Logic
+            const hasSelection = selectedIndices.size > 0;
+            let rowsToImport = [];
+            let importCount = 0;
+
+            if (hasSelection) {
+                // Import ALL selected VALID rows (global, regardless of current filter)
+                rowStates.forEach((row, index) => {
+                    if (selectedIndices.has(index) && row.status === 'valid') {
+                        if (importCount < remainingSlots) {
+                            rowsToImport.push({
+                                name: row.name,
+                                phone: row.phone,
+                                store_name: row.store_name || null
+                            });
+                            importCount++;
+                        }
+                    }
+                });
+                document.getElementById('importBtnText').textContent = 'استيراد المحدد';
             } else {
-                document.getElementById('importCount').textContent = canImport;
-                document.getElementById('importBtnCount').textContent = canImport;
+                // Import all valid rows from filtered result
+                filteredRows.forEach(row => {
+                    if (row.status === 'valid') {
+                        if (importCount < remainingSlots) {
+                            rowsToImport.push({
+                                name: row.name,
+                                phone: row.phone,
+                                store_name: row.store_name || null
+                            });
+                            importCount++;
+                        }
+                    }
+                });
+                document.getElementById('importBtnText').textContent = 'استيراد الكل';
             }
 
-            document.getElementById('importBtn').disabled = canImport === 0;
+            // Update button count and disabled state
+            document.getElementById('importBtnCount').textContent = importCount;
+            document.getElementById('importBtn').disabled = importCount === 0;
 
-            // Build selected rows for import - ONLY filtered valid rows, LIMITED to remainingSlots
-            const selectedRows = [];
-            let addedCount = 0;
-
-            for (const row of filteredRows) {
-                if (addedCount >= remainingSlots) break; // Stop at limit
-
-                if (!ignoredRows.has(row.originalIndex) && row.status === 'valid') {
-                    selectedRows.push({
-                        name: row.name,
-                        phone: row.phone,
-                        store_name: row.store_name || null
-                    });
-                    addedCount++;
-                }
-            }
-
-            document.getElementById('selectedRowsInput').value = JSON.stringify(selectedRows);
-            updateBulkActions();
+            // Update hidden input for form submission
+            document.getElementById('selectedRowsInput').value = JSON.stringify(rowsToImport);
         }
 
         // Filter buttons (status: all/valid/error)
@@ -769,16 +691,6 @@
 
         // ========== ADVANCED FILTER EVENT LISTENERS ==========
 
-        // Phone prefix buttons
-        document.querySelectorAll('.prefix-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.prefix-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                selectedPhonePrefix = this.dataset.prefix;
-                applyFilters();
-            });
-        });
-
         // Store search input
         document.getElementById('storeSearch')?.addEventListener('input', function() {
             renderStoreCheckboxes(this.value);
@@ -786,11 +698,6 @@
 
         // Reset filters button
         document.getElementById('resetFilters')?.addEventListener('click', function() {
-            // Reset phone prefix
-            selectedPhonePrefix = 'all';
-            document.querySelectorAll('.prefix-btn').forEach(b => b.classList.remove('active'));
-            document.querySelector('.prefix-btn[data-prefix="all"]')?.classList.add('active');
-
             // Reset stores
             selectedStores.clear();
             renderStoreCheckboxes();
