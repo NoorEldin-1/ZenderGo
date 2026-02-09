@@ -37,14 +37,54 @@
                     <!-- Last Contacted Filter -->
                     <div class="p-2 border-bottom bg-light">
                         <div class="d-flex gap-2 align-items-center flex-wrap">
-                            <select class="form-select form-select-sm" id="contactFilter"
-                                style="width: auto; min-width: 140px;">
-                                <option value="">جميع الجهات</option>
-                                <option value="featured">جهات مميزة ⭐</option>
-                                <option value="normal">جهات عادية</option>
-                                <option value="never">لم يتم التواصل</option>
-                                <option value="range">تم التواصل في فترة</option>
-                            </select>
+                            <div class="dropdown smart-filter-dropdown" id="contactFilterDropdown">
+                                <button class="btn smart-filter-btn dropdown-toggle d-flex align-items-center gap-2"
+                                    type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                                    id="contactFilterTrigger">
+                                    <i class="bi bi-funnel-fill text-primary filter-icon"></i>
+                                    <span id="contactFilterLabel">جميع الجهات</span>
+                                    <i class="bi bi-chevron-down dropdown-chevron"></i>
+                                </button>
+                                <ul class="dropdown-menu smart-filter-menu" aria-labelledby="contactFilterTrigger">
+                                    <div class="smart-filter-content">
+                                        <li>
+                                            <a class="dropdown-item smart-filter-item rounded-2 active" href="#"
+                                                data-value="">
+                                                <i class="bi bi-people-fill me-2 text-primary"></i>جميع الجهات
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item smart-filter-item rounded-2" href="#"
+                                                data-value="featured">
+                                                <i class="bi bi-star-fill me-2 text-warning"></i>جهات مميزة
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item smart-filter-item rounded-2" href="#"
+                                                data-value="normal">
+                                                <i class="bi bi-person me-2 text-secondary"></i>جهات عادية
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <hr class="dropdown-divider my-1">
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item smart-filter-item rounded-2" href="#"
+                                                data-value="never">
+                                                <i class="bi bi-clock-history me-2 text-danger"></i>لم يتم التواصل
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item smart-filter-item rounded-2" href="#"
+                                                data-value="range">
+                                                <i class="bi bi-calendar-range me-2 text-info"></i>تم التواصل في فترة
+                                            </a>
+                                        </li>
+                                    </div>
+                                </ul>
+                                {{-- Hidden input to hold the actual value for JavaScript --}}
+                                <input type="hidden" id="contactFilter" name="contact_filter" value="">
+                            </div>
                             <div id="dateRangeContainer" class="d-none flex-grow-1">
                                 <input type="text" class="form-control form-control-sm flatpickr-input"
                                     id="dateRangePicker" placeholder="اختر الفترة..." readonly>
@@ -52,11 +92,18 @@
                         </div>
                     </div>
 
-                    <div class="px-3 py-2 bg-light border-bottom d-flex justify-content-between align-items-center">
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="selectAllPage">
-                            <label class="form-check-label small fw-semibold" for="selectAllPage">
-                                تحديد الكل في هذه الصفحة
+                    <div class="px-3 py-2 bg-light border-bottom">
+                        <div class="w-100">
+                            <!-- Hidden checkbox to keep JS working -->
+                            <input type="checkbox" class="d-none" id="selectAllPage">
+
+                            <!-- Smart Toggle Button -->
+                            <label for="selectAllPage"
+                                class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center gap-2 py-2 rounded-3 shadow-sm select-all-label"
+                                style="cursor: pointer; transition: all 0.2s ease; user-select: none;">
+                                <i class="bi bi-check2-circle fs-5 icon-state"></i>
+                                <span class="fw-bold text-state">تحديد الكل في هذه الصفحة</span>
+                                <span class="badge bg-primary ms-1 count-badge">0</span>
                             </label>
                         </div>
                     </div>
@@ -118,22 +165,7 @@
                     </div>
                     <div class="card-body p-0">
                         <!-- Toolbar -->
-                        <div class="d-flex align-items-center gap-1 p-2 border-bottom bg-light flex-wrap">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="emojiBtn" title="إيموجي">
-                                <i class="bi bi-emoji-smile"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="boldBtn" title="عريض">
-                                <i class="bi bi-type-bold"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="italicBtn"
-                                title="مائل">
-                                <i class="bi bi-type-italic"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="strikeBtn"
-                                title="مشطوب">
-                                <i class="bi bi-type-strikethrough"></i>
-                            </button>
-                            <div class="vr mx-1"></div>
+                        <div class="d-flex align-items-center gap-2 p-2 border-bottom bg-light flex-wrap">
                             <button type="button" class="btn btn-sm btn-outline-primary" id="insertNameBtn"
                                 title="إدراج اسم المستلم">
                                 <i class="bi bi-person-badge me-1"></i>اسم الشخص
@@ -143,23 +175,6 @@
                                 data-bs-target="#templatesModal">
                                 <i class="bi bi-lightning me-1"></i>القوالب
                             </button>
-                        </div>
-
-                        <!-- Emoji Picker -->
-                        <div class="emoji-picker p-2 border-bottom bg-white d-none" id="emojiPicker">
-                            <div class="emoji-categories d-flex gap-1 mb-2">
-                                <button type="button" class="btn btn-sm btn-outline-secondary active emoji-cat-btn"
-                                    data-cat="popular">⭐</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary emoji-cat-btn"
-                                    data-cat="faces">😀</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary emoji-cat-btn"
-                                    data-cat="gestures">👍</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary emoji-cat-btn"
-                                    data-cat="symbols">❤️</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary emoji-cat-btn"
-                                    data-cat="objects">🎁</button>
-                            </div>
-                            <div class="emoji-grid" id="emojiGrid"></div>
                         </div>
 
                         <!-- Rich Text Editor with Contenteditable -->
@@ -235,8 +250,7 @@
                         </div>
 
                         <!-- Submit -->
-                        <div class="p-2 border-top d-flex justify-content-between align-items-center">
-                            <small class="text-muted"><i class="bi bi-clock me-1"></i>فاصل 15 ثانية</small>
+                        <div class="p-2 border-top d-flex justify-content-end align-items-center">
                             <button type="submit" class="btn btn-whatsapp" id="sendBtn" disabled>
                                 <i class="bi bi-send me-1"></i>إرسال
                             </button>
@@ -521,6 +535,7 @@
 @push('styles')
     <!-- Flatpickr CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    @include('partials.smart-filter-css')
     <style>
         /* Flatpickr Dark Mode Styles */
         [data-bs-theme="dark"] .flatpickr-input {
@@ -830,20 +845,10 @@
         }
 
         .name-placeholder {
-            background: linear-gradient(135deg, #00c853 0%, #00a844 100%);
-            color: white;
-            padding: 2px 10px;
-            border-radius: 15px;
+            color: #198754;
+            /* Bootstrap Success Green */
             font-weight: 600;
-            font-size: 0.9em;
-            display: inline-block;
-            margin: 0 2px;
-            cursor: default;
-            user-select: all;
-        }
-
-        .name-placeholder::before {
-            content: "👤 ";
+            background-color: transparent;
         }
 
         /* Multi-Image Preview Styles */
@@ -1440,15 +1445,68 @@
 
             function updateSelectAllState() {
                 const checkboxes = document.querySelectorAll('.contact-checkbox');
-                if (checkboxes.length === 0) {
+                const selectAllLabel = document.querySelector('.select-all-label');
+                const iconState = selectAllLabel?.querySelector('.icon-state');
+                const textState = selectAllLabel?.querySelector('.text-state');
+                const countBadge = selectAllLabel?.querySelector('.count-badge');
+
+                const totalOnPage = checkboxes.length;
+
+                // Update count badge
+                if (countBadge) {
+                    countBadge.textContent = totalOnPage;
+                }
+
+                if (totalOnPage === 0) {
                     els.selectAllPage.checked = false;
                     els.selectAllPage.disabled = true;
+                    // Visual: Disabled state
+                    if (selectAllLabel) {
+                        selectAllLabel.classList.remove('btn-primary', 'text-white');
+                        selectAllLabel.classList.add('btn-outline-secondary');
+                        selectAllLabel.style.pointerEvents = 'none';
+                        selectAllLabel.style.opacity = '0.6';
+                    }
+                    if (textState) textState.textContent = 'لا توجد جهات';
+                    if (iconState) iconState.className = 'bi bi-dash-circle fs-5 icon-state';
                     return;
                 }
 
                 els.selectAllPage.disabled = false;
+                if (selectAllLabel) {
+                    selectAllLabel.style.pointerEvents = 'auto';
+                    selectAllLabel.style.opacity = '1';
+                }
+
                 const allChecked = Array.from(checkboxes).every(cb => cb.checked);
                 els.selectAllPage.checked = allChecked;
+
+                // Update visual state based on checked status
+                if (allChecked) {
+                    // Checked: Solid button, "Deselect" text
+                    if (selectAllLabel) {
+                        selectAllLabel.classList.remove('btn-outline-primary', 'btn-outline-secondary');
+                        selectAllLabel.classList.add('btn-primary', 'text-white');
+                    }
+                    if (textState) textState.textContent = 'إلغاء تحديد الكل';
+                    if (iconState) iconState.className = 'bi bi-check-circle-fill fs-5 icon-state';
+                    if (countBadge) {
+                        countBadge.classList.remove('bg-primary');
+                        countBadge.classList.add('bg-light', 'text-primary');
+                    }
+                } else {
+                    // Unchecked: Outline button, "Select All" text
+                    if (selectAllLabel) {
+                        selectAllLabel.classList.remove('btn-primary', 'text-white', 'btn-outline-secondary');
+                        selectAllLabel.classList.add('btn-outline-primary');
+                    }
+                    if (textState) textState.textContent = 'تحديد الكل في هذه الصفحة';
+                    if (iconState) iconState.className = 'bi bi-check2-circle fs-5 icon-state';
+                    if (countBadge) {
+                        countBadge.classList.remove('bg-light', 'text-primary');
+                        countBadge.classList.add('bg-primary');
+                    }
+                }
             }
 
             function updatePaginationUI(data) {
@@ -1749,79 +1807,60 @@
 
             let templateToDelete = null;
 
-            // ========== EMOJIS ==========
-            const emojis = {
-                popular: ['👋', '😊', '🙏', '❤️', '🔥', '⭐', '✨', '💯', '👍', '🎉', '💪', '🚀', '💚', '📢', '⚡',
-                    '🎁', '💰', '📞', '✅', '⏰'
-                ],
-                faces: ['😀', '😃', '😄', '😁', '😊', '🥰', '😍', '🤩', '😘', '😎', '🤗', '🙂', '😉', '😋', '🤔',
-                    '😮', '😲', '🙄', '😏', '😌'
-                ],
-                gestures: ['👍', '👎', '👌', '✌️', '🤞', '🤝', '👏', '🙌', '💪', '🙏', '☝️', '👇', '👈', '👉', '✋',
-                    '🤚', '👋', '🤙', '💅'
-                ],
-                symbols: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘',
-                    '💝', '✨', '⭐', '🌟', '💫'
-                ],
-                objects: ['🎁', '🎉', '🎊', '📱', '💻', '📞', '📧', '💰', '💵', '💳', '🛒', '📦', '🏆', '🥇', '🎯',
-                    '📈', '📊', '🔔', '📢', '✏️'
-                ]
-            };
-
-            const emojiGrid = document.getElementById('emojiGrid');
-            const emojiPicker = document.getElementById('emojiPicker');
-
-            function showEmojis(cat) {
-                emojiGrid.innerHTML = '';
-                emojis[cat].forEach(e => {
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'emoji-btn';
-                    btn.textContent = e;
-                    btn.onclick = () => insertAtCursor(e);
-                    emojiGrid.appendChild(btn);
-                });
+            // Style placeholders: converts @{{ اسم_المستلم }} text to styled span
+            function stylePlaceholders(content) {
+                if (!content) return '';
+                // Regex to match @{{ اسم_المستلم }} with optional @ and whitespace
+                return content.replace(/(@?\{\{\s*اسم_المستلم\s*\}\})/g,
+                    '<span class="name-placeholder" contenteditable="false">$1</span>');
             }
 
-            document.getElementById('emojiBtn')?.addEventListener('click', () => {
-                emojiPicker.classList.toggle('d-none');
-                if (!emojiPicker.classList.contains('d-none')) showEmojis('popular');
-            });
-
-            document.querySelectorAll('.emoji-cat-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    document.querySelectorAll('.emoji-cat-btn').forEach(b => b.classList.remove(
-                        'active'));
-                    this.classList.add('active');
-                    showEmojis(this.dataset.cat);
-                });
-            });
-
-            // Insert text/HTML at cursor in contenteditable
-            function insertAtCursor(text, isHtml = false) {
-                messageEditor.focus();
-                if (isHtml) {
-                    document.execCommand('insertHTML', false, text);
-                } else {
-                    document.execCommand('insertText', false, text);
-                }
-                updateUIState();
-            }
-
-            // Insert name placeholder as styled element
+            // Insert name placeholder as styled element using Range API
             function insertNamePlaceholder() {
-                const placeholder = '<span class="name-placeholder" contenteditable="false">اسم المستلم</span>&nbsp;';
-                messageEditor.focus();
-                document.execCommand('insertHTML', false, placeholder);
+                const selection = window.getSelection();
+                if (!selection.rangeCount) {
+                    messageEditor.focus();
+                    return;
+                }
+
+                // Get the current range
+                const range = selection.getRangeAt(0);
+
+                // Check if the selection is inside the message editor
+                if (!messageEditor.contains(range.commonAncestorContainer)) {
+                    messageEditor.focus();
+                    return;
+                }
+
+                range.deleteContents(); // Remove selected text if any
+
+                // Create the placeholder span
+                const span = document.createElement('span');
+                span.className = 'name-placeholder';
+                span.contentEditable = 'false';
+                span.textContent = '@{{ اسم_المستلم }}';
+
+                // Create a space after it so user can type
+                const space = document.createTextNode('\u00A0'); // Non-breaking space
+
+                // Insert into DOM (order matters: insert space first, then span before it)
+                range.insertNode(space);
+                range.insertNode(span);
+
+                // Move cursor after the space
+                range.setStartAfter(space);
+                range.setEndAfter(space);
+                selection.removeAllRanges();
+                selection.addRange(range);
+
                 updateUIState();
             }
 
             // Sync contenteditable content to hidden textarea for form submission
             function syncEditorToTextarea() {
-                // Get text content, replacing styled placeholders with the actual placeholder text
                 let content = messageEditor.innerHTML;
-                // Replace styled name placeholders with the raw placeholder
-                content = content.replace(/<span class="name-placeholder"[^>]*>.*?<\/span>/g, '@{{ اسم_المستلم }}');
+                // Unwrap the span: remove <span ...> and </span>, keeping inner text
+                content = content.replace(/<span class="name-placeholder"[^>]*>(.*?)<\/span>/g, '$1');
                 // Convert HTML to plain text
                 const temp = document.createElement('div');
                 temp.innerHTML = content;
@@ -1830,27 +1869,9 @@
                 messageTextarea.value = temp.textContent || temp.innerText || '';
             }
 
-            // Format
-            ['bold', 'italic', 'strike'].forEach((type, i) => {
-                const chars = ['*', '_', '~'];
-                document.getElementById(type + 'Btn')?.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    messageEditor.focus();
-
-                    const selection = window.getSelection();
-                    if (!selection.rangeCount) return;
-
-                    const text = selection.toString();
-                    const char = chars[i];
-                    const newValue = `${char}${text}${char}`;
-
-                    document.execCommand('insertText', false, newValue);
-                    updateUIState();
-                });
-            });
-
             // Insert Name Placeholder Button
-            document.getElementById('insertNameBtn')?.addEventListener('click', () => {
+            document.getElementById('insertNameBtn')?.addEventListener('mousedown', (e) => {
+                e.preventDefault(); // Prevent focus loss
                 insertNamePlaceholder();
             });
 
@@ -2093,10 +2114,25 @@
                 btn.onclick = () => {
                     const content = btn.dataset.content;
                     messageTextarea.value = content;
-                    messageEditor.textContent = content;
+                    // Use stylePlaceholders to render @{{ اسم_المستلم }} as green text
+                    messageEditor.innerHTML = stylePlaceholders(content);
                     templatesModal.hide();
                     updateUIState();
                 };
+            });
+
+            // Delegated listener for user templates (.use-tpl buttons are dynamic)
+            document.addEventListener('click', function(e) {
+                const btn = e.target.closest('.use-tpl');
+                if (btn) {
+                    e.preventDefault();
+                    const content = btn.dataset.content;
+                    messageTextarea.value = content;
+                    // Use stylePlaceholders to render @{{ اسم_المستلم }} as green text
+                    messageEditor.innerHTML = stylePlaceholders(content);
+                    templatesModal.hide();
+                    updateUIState();
+                }
             });
 
             document.getElementById('saveCurrentBtn')?.addEventListener('click', () => {
@@ -2298,6 +2334,45 @@
                     }
                 });
             }
+
+            // ========== SMART FILTER DROPDOWN HANDLER ==========
+            document.querySelectorAll('.smart-filter-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const value = this.dataset.value;
+                    const label = this.textContent.trim();
+                    const dropdownMenu = this.closest('.dropdown-menu');
+                    const dropdownContainer = this.closest('.smart-filter-dropdown');
+
+                    // Update hidden input value
+                    const hiddenInput = dropdownContainer.querySelector('#contactFilter');
+                    if (hiddenInput) {
+                        hiddenInput.value = value;
+                    }
+
+                    // Update visible label
+                    const labelEl = dropdownContainer.querySelector('#contactFilterLabel');
+                    if (labelEl) {
+                        labelEl.textContent = label;
+                    }
+
+                    // Update active state in menu
+                    dropdownMenu.querySelectorAll('.smart-filter-item').forEach(i => i.classList.remove(
+                        'active'));
+                    this.classList.add('active');
+
+                    // Close dropdown (Bootstrap 5)
+                    const dropdownToggle = dropdownContainer.querySelector(
+                        '[data-bs-toggle="dropdown"]');
+                    if (dropdownToggle) {
+                        const dropdownInstance = bootstrap.Dropdown.getOrCreateInstance(dropdownToggle);
+                        dropdownInstance.hide();
+                    }
+
+                    // Dispatch change event on hidden input to trigger existing logic
+                    hiddenInput.dispatchEvent(new Event('change'));
+                });
+            });
 
             // Contact filter change handler
             contactFilterEl?.addEventListener('change', function() {

@@ -262,14 +262,13 @@ class CampaignController extends Controller
             // Pre-mark session as intended-active (job will do the real validation)
             $sessionManager->markSessionActive($user->id, $userSession);
 
-            // Dispatch jobs with throttling (15 seconds delay per contact)
-            $delay = 0;
+            // Dispatch jobs immediately - sequential processing handled by blocking locks in the job
             $totalContacts = $contacts->count();
             $currentIndex = 0;
 
             // SERIAL BATCH: Mark campaign as active BEFORE dispatching jobs
-            // TTL = estimated completion time + 60 seconds buffer
-            $estimatedDurationSeconds = ($totalContacts * 15) + 60;
+            // TTL = estimated completion time + 60 seconds buffer (~2s per contact)
+            $estimatedDurationSeconds = ($totalContacts * 2) + 60;
             Cache::put("campaign_active:{$user->id}", true, now()->addSeconds($estimatedDurationSeconds));
             Cache::put("campaign_progress:{$user->id}", ['sent' => 0, 'total' => $totalContacts], now()->addSeconds($estimatedDurationSeconds));
 
@@ -291,9 +290,7 @@ class CampaignController extends Controller
                     $userToken,
                     $user->id,           // Pass userId for session management
                     $isLastInBatch       // Flag to close session after last message
-                )->delay(now()->addSeconds($delay));
-
-                $delay += 15; // Add 15 seconds delay for each subsequent message
+                ); // No delay - jobs process sequentially via blocking lock
             }
 
             // NOTE: Quota was already reserved atomically at the start of send()
@@ -304,7 +301,7 @@ class CampaignController extends Controller
 
             // Increment total messages sent for the user
             $user->increment('total_messages_sent', $count);
-            $estimatedTime = ceil($delay / 60);
+            $estimatedTime = max(1, ceil(($count * 2) / 60)); // ~2s per message
 
             // Get updated quota status for success message
             $newStatus = $this->quotaService->getQuotaStatus($user);

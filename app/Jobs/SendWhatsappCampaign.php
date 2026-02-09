@@ -64,12 +64,15 @@ class SendWhatsappCampaign implements ShouldQueue
             return;
         }
 
-        // ====== THUNDERING HERD PROTECTION ======
-        // Per-user campaign lock (prevents parallel job execution for same user)
+        // ====== SEQUENTIAL PROCESSING VIA BLOCKING LOCK ======
+        // Per-user campaign lock - blocks until previous job completes for instant sequential sending
         $lock = Cache::lock("campaign_job_lock:{$this->userId}", 60);
-        if (!$lock->get()) {
-            Log::info("Job lock held for user {$this->userId}, releasing back to queue");
-            $this->release(5); // Try again in 5 seconds
+
+        // Block for up to 30 seconds waiting for lock (instead of releasing to queue)
+        // This ensures messages are sent immediately one after another
+        if (!$lock->block(30)) {
+            Log::warning("Failed to acquire lock after 30s for user {$this->userId}, releasing to queue");
+            $this->release(2); // Try again in 2 seconds as fallback
             return;
         }
 
