@@ -574,17 +574,18 @@ class WhatsAppService
      * Send a text message via WhatsApp with detailed verification.
      * Returns detailed result including delivery status and disconnection detection.
      */
-    public function sendMessageWithVerification(string $phone, string $message): array
+    public function sendMessageWithVerification(string $phone, string $message, int $typingTime = 0): array
     {
         try {
             $response = Http::withToken($this->token)
-                ->timeout(30)
+                ->timeout(30 + (int) ceil($typingTime / 1000))
                 ->post("{$this->baseUrl}/api/{$this->session}/send-message", [
                     'phone' => $this->formatPhone($phone),
                     'message' => $message,
                     'isGroup' => false,
                     'isNewsletter' => false,
                     'isLid' => false,
+                    'typingTime' => $typingTime,
                 ]);
 
             if ($response->successful()) {
@@ -667,7 +668,7 @@ class WhatsAppService
     /**
      * Send an image with caption via WhatsApp with detailed verification.
      */
-    public function sendImageWithVerification(string $phone, string $message, string $imagePath): array
+    public function sendImageWithVerification(string $phone, string $message, string $imagePath, int $typingTime = 0): array
     {
         try {
             $imageData = base64_encode(file_get_contents($imagePath));
@@ -675,7 +676,7 @@ class WhatsAppService
             $filename = basename($imagePath);
 
             $response = Http::withToken($this->token)
-                ->timeout(60) // Longer timeout for images
+                ->timeout(60 + (int) ceil($typingTime / 1000))
                 ->post("{$this->baseUrl}/api/{$this->session}/send-image", [
                     'phone' => $this->formatPhone($phone),
                     'caption' => $message,
@@ -684,6 +685,7 @@ class WhatsAppService
                     'isLid' => false,
                     'filename' => $filename,
                     'base64' => "data:{$mimeType};base64,{$imageData}",
+                    'typingTime' => $typingTime,
                 ]);
 
             if ($response->successful()) {

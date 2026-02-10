@@ -33,6 +33,20 @@ class SendWhatsappCampaign implements ShouldQueue
     public int $backoff = 30;
 
     /**
+     * Anti-ban delay range in seconds (min, max).
+     * A random value in this range is used between messages.
+     */
+    private const DELAY_MIN_SECONDS = 15;
+    private const DELAY_MAX_SECONDS = 45;
+
+    /**
+     * Typing simulation time range in milliseconds (min, max).
+     * Shows "typing..." indicator to the recipient before sending.
+     */
+    private const TYPING_MIN_MS = 3000;
+    private const TYPING_MAX_MS = 8000;
+
+    /**
      * Create a new job instance.
      */
     public function __construct(
@@ -66,11 +80,12 @@ class SendWhatsappCampaign implements ShouldQueue
 
         // ====== SEQUENTIAL PROCESSING VIA BLOCKING LOCK ======
         // Per-user campaign lock - blocks until previous job completes for instant sequential sending
-        $lock = Cache::lock("campaign_job_lock:{$this->userId}", 60);
+        // Lock timeout increased to accommodate anti-ban delays (up to 120s per message)
+        $lock = Cache::lock("campaign_job_lock:{$this->userId}", 120);
 
-        // Block for up to 30 seconds waiting for lock (instead of releasing to queue)
-        // This ensures messages are sent immediately one after another
-        if (!$lock->block(30)) {
+        // Block for up to 90 seconds waiting for lock (instead of releasing to queue)
+        // Increased to accommodate anti-ban random delays between messages
+        if (!$lock->block(90)) {
             Log::warning("Failed to acquire lock after 30s for user {$this->userId}, releasing to queue");
             $this->release(2); // Try again in 2 seconds as fallback
             return;
@@ -125,6 +140,12 @@ class SendWhatsappCampaign implements ShouldQueue
                 $this->handleDisconnection($user, 'تم فقدان الاتصال أثناء الإرسال');
                 return;
             }
+
+            // ====== ANTI-BAN: RANDOM DELAY BETWEEN MESSAGES ======
+            // Sleep for a random duration to simulate human pacing
+            $delay = rand(self::DELAY_MIN_SECONDS, self::DELAY_MAX_SECONDS);
+            Log::info("Anti-ban delay: sleeping {$delay}s before sending to {$this->phone}");
+            sleep($delay);
 
             // ====== SEND MESSAGE ======
             $this->sendMessage($whatsapp, $sessionManager, $user);
@@ -191,6 +212,10 @@ class SendWhatsappCampaign implements ShouldQueue
      */
     protected function sendMessageCore(WhatsAppService $whatsapp): void
     {
+        // Generate random typing time (anti-ban measure)
+        $typingTime = rand(self::TYPING_MIN_MS, self::TYPING_MAX_MS);
+        Log::info("Anti-ban: typing simulation {$typingTime}ms for {$this->phone}");
+
         // Normalize image path and check if file exists
         $normalizedImagePath = $this->imagePath ? str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $this->imagePath) : null;
 
@@ -204,11 +229,11 @@ class SendWhatsappCampaign implements ShouldQueue
         if ($normalizedImagePath && file_exists($normalizedImagePath)) {
             // Send image with caption (collage or single image)
             Log::info("Sending image with campaign to {$this->phone}");
-            $sendResult = $whatsapp->sendImageWithVerification($this->phone, $this->message, $normalizedImagePath);
+            $sendResult = $whatsapp->sendImageWithVerification($this->phone, $this->message, $normalizedImagePath, $typingTime);
         } else {
             // Send text message only
             Log::info("No image found, sending text only to {$this->phone}");
-            $sendResult = $whatsapp->sendMessageWithVerification($this->phone, $this->message);
+            $sendResult = $whatsapp->sendMessageWithVerification($this->phone, $this->message, $typingTime);
         }
 
         // Check send result
