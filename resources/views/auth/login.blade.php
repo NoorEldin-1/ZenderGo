@@ -12,10 +12,16 @@
                     <p class="text-muted">أدخل رقم هاتفك للمتابعة</p>
                 </div>
 
-                <!-- Info/Error Messages -->
+                <!-- Info/Error/Success Messages -->
                 @if (session('info'))
                     <div class="alert alert-info mb-4">
                         <i class="bi bi-info-circle me-2"></i>{{ session('info') }}
+                    </div>
+                @endif
+
+                @if (session('success'))
+                    <div class="alert alert-success mb-4">
+                        <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
                     </div>
                 @endif
 
@@ -67,6 +73,12 @@
                         </button>
                     </div>
                 </form>
+
+                <div class="text-center mt-3">
+                    <a href="{{ route('password.request') }}" class="text-muted small">
+                        <i class="bi bi-question-circle me-1"></i>نسيت كلمة المرور؟
+                    </a>
+                </div>
             </div>
         </div>
 
