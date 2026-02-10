@@ -267,10 +267,14 @@ class CampaignController extends Controller
             $currentIndex = 0;
 
             // SERIAL BATCH: Mark campaign as active BEFORE dispatching jobs
-            // TTL = estimated completion time + 60 seconds buffer (~2s per contact)
-            $estimatedDurationSeconds = ($totalContacts * 2) + 60;
-            Cache::put("campaign_active:{$user->id}", true, now()->addSeconds($estimatedDurationSeconds));
-            Cache::put("campaign_progress:{$user->id}", ['sent' => 0, 'total' => $totalContacts], now()->addSeconds($estimatedDurationSeconds));
+            // TTL = 24 hours as a safety net. The SendWhatsappCampaign job
+            // explicitly clears these keys via Cache::forget() when the last
+            // message is sent, so the long TTL only guards against edge cases
+            // (e.g. server crash). The old formula of (count * 2) + 60s was
+            // far too short given the 15-45s anti-ban delay per message.
+            $safeTtl = now()->addHours(24);
+            Cache::put("campaign_active:{$user->id}", true, $safeTtl);
+            Cache::put("campaign_progress:{$user->id}", ['sent' => 0, 'total' => $totalContacts], $safeTtl);
 
             foreach ($contacts as $contact) {
                 $currentIndex++;
@@ -301,13 +305,12 @@ class CampaignController extends Controller
 
             // Increment total messages sent for the user
             $user->increment('total_messages_sent', $count);
-            $estimatedTime = max(1, ceil(($count * 2) / 60)); // ~2s per message
 
             // Get updated quota status for success message
             $newStatus = $this->quotaService->getQuotaStatus($user);
 
             return redirect()->route('campaigns.create')
-                ->with('success', "تم جدولة الحملة بنجاح! سيتم الإرسال إلى {$count} مستلم. الوقت المقدر: {$estimatedTime} دقيقة.")
+                ->with('success', "تم جدولة الحملة بنجاح!")
                 ->with('quotaUpdate', $newStatus);
         } finally {
             // Always release the lock when done

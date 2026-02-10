@@ -148,21 +148,8 @@ class CampaignQuotaService
      */
     public function canSend(User $user, int $contactCount): bool
     {
-        $quota = $this->getQuota($user);
-        $limit = SystemSetting::getCampaignQuotaLimit();
-
-        // If window expired, they can definitely send
-        if ($quota->isWindowExpired()) {
-            return true;
-        }
-
-        if ($this->redisAvailable) {
-            // Use Redis for atomic check
-            return $this->atomicCanSend($user->id, $contactCount, $limit);
-        }
-
-        // Fallback to database check with self-healing
-        return $this->databaseCanSend($user, $contactCount, $limit);
+        // Limits removed - unlimited sending
+        return true;
     }
 
     /**
@@ -303,20 +290,8 @@ class CampaignQuotaService
      */
     public function reserveQuota(User $user, int $contactCount): bool
     {
-        $limit = SystemSetting::getCampaignQuotaLimit();
-        $quota = $this->getQuota($user);
-
-        if ($quota->isWindowExpired()) {
-            $quota->resetWindow();
-            $this->resetRedisCounter($user->id);
-        }
-
-        if ($this->redisAvailable) {
-            return $this->atomicReserve($user->id, $contactCount, $limit);
-        }
-
-        // Fallback: Check then increment (not truly atomic, but with DB lock)
-        return $this->databaseReserve($user, $contactCount, $limit);
+        // Limits removed - always allow reservation
+        return true;
     }
 
     /**
@@ -559,24 +534,20 @@ class CampaignQuotaService
      */
     public function getQuotaStatus(User $user): array
     {
-        $quota = $this->getQuota($user);
-        $limit = SystemSetting::getCampaignQuotaLimit();
-        $remaining = $quota->getRemainingQuota();
-        $resetInfo = $quota->getTimeUntilReset();
-
+        // Limits removed - return unlimited status
         return [
-            'limit' => $limit,
-            'used' => $quota->contacts_sent,
-            'remaining' => $remaining,
-            'percentage_used' => $quota->getUsagePercentage(),
-            'percentage_remaining' => 100 - $quota->getUsagePercentage(),
-            'status_color' => $quota->getStatusColor(),
-            'reset_in' => $resetInfo['formatted'],
-            'reset_hours' => $resetInfo['hours'],
-            'reset_minutes' => $resetInfo['minutes'],
-            'is_window_expired' => $resetInfo['is_expired'],
-            'window_starts_at' => $quota->window_starts_at?->toIso8601String(),
-            'window_ends_at' => $quota->window_ends_at?->toIso8601String(),
+            'limit' => PHP_INT_MAX,
+            'used' => 0,
+            'remaining' => PHP_INT_MAX,
+            'percentage_used' => 0,
+            'percentage_remaining' => 100,
+            'status_color' => 'success',
+            'reset_in' => 'غير محدود',
+            'reset_hours' => 0,
+            'reset_minutes' => 0,
+            'is_window_expired' => true,
+            'window_starts_at' => null,
+            'window_ends_at' => null,
             'redis_available' => $this->redisAvailable,
         ];
     }

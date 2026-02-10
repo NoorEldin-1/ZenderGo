@@ -211,44 +211,6 @@
                             </div>
                         </div>
 
-                        <!-- Quota Status Widget -->
-                        <div class="p-3 border-top bg-light">
-                            <div class="quota-widget" id="quotaWidget"
-                                data-reset-at="{{ $quotaStatus['window_ends_at'] ?? '' }}">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <i class="bi bi-speedometer2 text-primary"></i>
-                                        <span class="fw-bold small">حد الإرسال</span>
-                                    </div>
-                                    <span class="badge bg-{{ $quotaStatus['status_color'] ?? 'success' }}"
-                                        id="quotaRemaining">
-                                        {{ $quotaStatus['remaining'] ?? 50 }} / {{ $quotaStatus['limit'] ?? 50 }} متبقي
-                                    </span>
-                                </div>
-                                <div class="progress mb-2" style="height: 8px;">
-                                    <div class="progress-bar bg-{{ $quotaStatus['status_color'] ?? 'success' }}"
-                                        id="quotaProgress" role="progressbar"
-                                        style="width: {{ $quotaStatus['percentage_remaining'] ?? 100 }}%"
-                                        aria-valuenow="{{ $quotaStatus['percentage_remaining'] ?? 100 }}"
-                                        aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <small class="text-muted" id="quotaResetTime">
-                                        <i class="bi bi-clock me-1"></i>
-                                        @if ($quotaStatus['is_window_expired'] ?? true)
-                                            الكوتا متاحة (لم تبدأ بعد)
-                                        @else
-                                            تتجدد بعد: {{ $quotaStatus['reset_in'] ?? '' }}
-                                        @endif
-                                    </small>
-                                    <small class="text-{{ $quotaStatus['status_color'] ?? 'success' }} fw-semibold"
-                                        id="quotaUsed">
-                                        استخدمت {{ $quotaStatus['used'] ?? 0 }} رسالة
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- Submit -->
                         <div class="p-2 border-top d-flex justify-content-end align-items-center">
                             <button type="submit" class="btn btn-whatsapp" id="sendBtn" disabled>
