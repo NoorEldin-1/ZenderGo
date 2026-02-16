@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\SendWhatsappCampaign;
+use App\Models\Campaign;
 use App\Services\CampaignQuotaService;
 use App\Services\ImageCollageService;
 use App\Models\SystemSetting;
@@ -94,8 +95,9 @@ class CampaignController extends Controller
 
         $user = Auth::user();
 
-        // BLOCKER RULE: Check if user has an active campaign
-        if (Cache::has("campaign_active:{$user->id}")) {
+        // BLOCKER RULE: Check if user has an active campaign (DB-backed)
+        $activeCampaign = Campaign::getActiveForUser($user->id);
+        if ($activeCampaign) {
             return back()->withErrors([
                 'campaign' => 'يرجى انتظار انتهاء الحملة الحالية قبل إرسال دفعة جديدة.'
             ])->withInput();
@@ -266,15 +268,14 @@ class CampaignController extends Controller
             $totalContacts = $contacts->count();
             $currentIndex = 0;
 
-            // SERIAL BATCH: Mark campaign as active BEFORE dispatching jobs
-            // TTL = 24 hours as a safety net. The SendWhatsappCampaign job
-            // explicitly clears these keys via Cache::forget() when the last
-            // message is sent, so the long TTL only guards against edge cases
-            // (e.g. server crash). The old formula of (count * 2) + 60s was
-            // far too short given the 15-45s anti-ban delay per message.
-            $safeTtl = now()->addHours(24);
-            Cache::put("campaign_active:{$user->id}", true, $safeTtl);
-            Cache::put("campaign_progress:{$user->id}", ['sent' => 0, 'total' => $totalContacts], $safeTtl);
+            // ====== DB-BACKED CAMPAIGN TRACKING ======
+            // Create a Campaign record as the single source of truth.
+            // This replaces the old Cache-based tracking which could get stuck.
+            $campaign = Campaign::create([
+                'user_id' => $user->id,
+                'total_contacts' => $totalContacts,
+                'status' => Campaign::STATUS_PROCESSING,
+            ]);
 
             foreach ($contacts as $contact) {
                 $currentIndex++;
@@ -292,8 +293,9 @@ class CampaignController extends Controller
                     $imagePath,
                     $userSession,
                     $userToken,
-                    $user->id,           // Pass userId for session management
-                    $isLastInBatch       // Flag to close session after last message
+                    $user->id,
+                    $isLastInBatch,
+                    $campaign->id        // Pass campaign ID for DB-backed tracking
                 ); // No delay - jobs process sequentially via blocking lock
             }
 
@@ -396,19 +398,45 @@ class CampaignController extends Controller
 
     /**
      * Get current campaign status via AJAX.
-     * Used for polling to check if a campaign is active.
+     * Uses DB-backed Campaign model instead of Cache for reliability.
      */
     public function campaignStatus(Request $request)
     {
         $user = Auth::user();
-        $isActive = Cache::has("campaign_active:{$user->id}");
-        $progress = Cache::get("campaign_progress:{$user->id}", ['sent' => 0, 'total' => 0]);
+
+        // Find the latest campaign for this user
+        $campaign = Campaign::getLatestForUser($user->id);
+
+        if (!$campaign) {
+            return response()->json([
+                'active' => false,
+                'sent' => 0,
+                'total' => 0,
+                'status' => 'idle',
+                'message' => 'جاهز للإرسال',
+                'failure_reason' => null,
+            ]);
+        }
+
+        $isActive = $campaign->isActive();
+
+        // Build user-friendly status message
+        $message = match ($campaign->status) {
+            Campaign::STATUS_PROCESSING => 'جاري الإرسال...',
+            Campaign::STATUS_PENDING => 'في انتظار البدء...',
+            Campaign::STATUS_COMPLETED => 'تم الإرسال بنجاح',
+            Campaign::STATUS_FAILED => 'فشل الإرسال',
+            Campaign::STATUS_CANCELLED => 'تم إلغاء الحملة',
+            default => 'جاهز للإرسال',
+        };
 
         return response()->json([
             'active' => $isActive,
-            'sent' => $progress['sent'],
-            'total' => $progress['total'],
-            'message' => $isActive ? 'جاري الإرسال...' : 'جاهز للإرسال',
+            'sent' => $campaign->sent_count,
+            'total' => $campaign->total_contacts,
+            'status' => $campaign->status,
+            'message' => $message,
+            'failure_reason' => $campaign->failure_reason,
         ]);
     }
 }

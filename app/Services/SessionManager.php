@@ -379,7 +379,7 @@ class SessionManager
         // Filter out sessions with active campaigns - don't interrupt them!
         $closeable = array_filter($sessions, function ($data) {
             $userId = $data['user_id'];
-            return !Cache::has("campaign_active:{$userId}");
+            return !\App\Models\Campaign::getActiveForUser($userId);
         });
 
         if (empty($closeable)) {

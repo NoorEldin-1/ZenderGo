@@ -986,11 +986,13 @@
                     resetIn: '{{ $quotaStatus['reset_in'] ?? '' }}',
                     isExpired: {{ $quotaStatus['is_window_expired'] ?? true ? 'true' : 'false' }}
                 },
-                // Serial Batch: Campaign status tracking
+                // DB-Backed: Campaign status tracking
                 campaign: {
                     active: false,
                     sent: 0,
-                    total: 0
+                    total: 0,
+                    status: 'idle',
+                    failureReason: null
                 }
             };
 
@@ -1131,7 +1133,7 @@
                 }
             }
 
-            // --- SERIAL BATCH: Campaign Status Polling ---
+            // --- DB-BACKED: Campaign Status Polling ---
             async function pollCampaignStatus() {
                 try {
                     const response = await fetch('{{ route('campaigns.status') }}', {
@@ -1145,15 +1147,22 @@
                     state.campaign.active = data.active;
                     state.campaign.sent = data.sent;
                     state.campaign.total = data.total;
+                    state.campaign.status = data.status || 'idle';
+                    state.campaign.failureReason = data.failure_reason || null;
 
                     updateCampaignUI();
 
-                    // Continue polling while active
+                    // Continue polling only while campaign is active
                     if (data.active) {
                         setTimeout(pollCampaignStatus, 5000);
-                    } else {
-                        // Campaign completed - refresh quota
+                    } else if (data.status === 'completed') {
+                        // Campaign just finished successfully
                         refreshQuota();
+                    } else if (data.status === 'failed' || data.status === 'cancelled') {
+                        // Campaign failed/cancelled - show error and refresh quota
+                        refreshQuota();
+                        const reason = data.failure_reason || 'حدث خطأ أثناء الإرسال';
+                        showAlert(`توقفت الحملة: ${reason} (تم إرسال ${data.sent} من ${data.total})`, 'error');
                     }
                 } catch (error) {
                     console.error('Error polling campaign status:', error);
@@ -1161,7 +1170,10 @@
             }
 
             function updateCampaignUI() {
+                const status = state.campaign.status;
+
                 if (state.campaign.active) {
+                    // Campaign in progress - show spinner
                     sendBtn.disabled = true;
                     const progress = state.campaign.total > 0 ?
                         `(${state.campaign.sent}/${state.campaign.total})` :
@@ -1175,9 +1187,10 @@
                     // Also disable contact selection during active campaign
                     els.selectAllPage.disabled = true;
                 } else {
-                    // Restore normal button state
+                    // Campaign not active - restore normal button state
                     els.selectAllPage.disabled = false;
                     sendBtn.title = '';
+                    sendBtn.classList.remove('btn-secondary');
                     updateSendButtonState();
                 }
             }

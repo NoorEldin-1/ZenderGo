@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Exceptions\WhatsAppDisconnectedException;
+use App\Models\Campaign;
 use App\Models\Contact;
 use App\Models\User;
 use App\Services\SessionManager;
@@ -56,7 +57,8 @@ class SendWhatsappCampaign implements ShouldQueue
         public ?string $whatsappSession = null,
         public ?string $whatsappToken = null,
         public ?int $userId = null,
-        public bool $isLastInBatch = false
+        public bool $isLastInBatch = false,
+        public ?int $campaignId = null
     ) {
     }
 
@@ -86,8 +88,18 @@ class SendWhatsappCampaign implements ShouldQueue
         // Block for up to 90 seconds waiting for lock (instead of releasing to queue)
         // Increased to accommodate anti-ban random delays between messages
         if (!$lock->block(90)) {
-            Log::warning("Failed to acquire lock after 30s for user {$this->userId}, releasing to queue");
+            Log::warning("Failed to acquire lock after 90s for user {$this->userId}, releasing to queue");
             $this->release(2); // Try again in 2 seconds as fallback
+            return;
+        }
+
+        // ====== PRE-FLIGHT: Check if campaign is still active ======
+        // If a previous job marked the campaign as failed/cancelled,
+        // abort immediately instead of sending more messages.
+        $campaign = $this->campaignId ? Campaign::find($this->campaignId) : null;
+        if ($campaign && $campaign->isFinished()) {
+            Log::info("Campaign {$campaign->id} already finished (status: {$campaign->status}), skipping message to {$this->phone}");
+            $lock->forceRelease();
             return;
         }
 
@@ -193,10 +205,12 @@ class SendWhatsappCampaign implements ShouldQueue
             Log::debug("Updated last_sent_at for contact {$this->phone} (user {$this->userId})");
         }
 
-        // Update campaign progress
-        $progress = Cache::get("campaign_progress:{$user->id}", ['sent' => 0, 'total' => 0]);
-        $progress['sent']++;
-        Cache::put("campaign_progress:{$user->id}", $progress, now()->addMinutes(30));
+        // ====== DB-BACKED PROGRESS UPDATE ======
+        $campaign = $this->campaignId ? Campaign::find($this->campaignId) : null;
+        if ($campaign && $campaign->isActive()) {
+            $campaign->recordSuccess();
+            Log::debug("Campaign {$campaign->id} progress: {$campaign->sent_count}/{$campaign->total_contacts}");
+        }
 
         // Update session activity
         $sessionManager->markSessionActive($user->id, $this->whatsappSession);
@@ -270,14 +284,20 @@ class SendWhatsappCampaign implements ShouldQueue
         Log::info("Last message in batch sent for user {$user->id}, closing session to free RAM");
         $sessionManager->closeSession($user);
 
-        // SERIAL BATCH: Clear campaign active flag - allows user to send next batch
-        Cache::forget("campaign_active:{$user->id}");
-        Cache::forget("campaign_progress:{$user->id}");
-        Log::info("Campaign batch completed for user {$user->id}, active flag cleared");
+        // ====== DB-BACKED: Ensure campaign is marked complete ======
+        // The Campaign::recordSuccess() already handles completion detection,
+        // but we do a final safety check here for the last-in-batch edge case.
+        $campaign = $this->campaignId ? Campaign::find($this->campaignId) : null;
+        if ($campaign && $campaign->isActive()) {
+            $campaign->update(['status' => Campaign::STATUS_COMPLETED]);
+            Log::info("Campaign {$campaign->id} marked completed (batch cleanup)");
+        }
+
+        Log::info("Campaign batch completed for user {$user->id}");
     }
 
     /**
-     * Handle disconnection: mark session invalid and cancel pending jobs for this user.
+     * Handle disconnection: mark session and campaign as failed, cancel pending jobs.
      */
     protected function handleDisconnection(User $user, string $message): void
     {
@@ -287,6 +307,14 @@ class SendWhatsappCampaign implements ShouldQueue
         $user->update([
             'session_state' => 'disconnected',
         ]);
+
+        // ====== DB-BACKED: Mark campaign as failed immediately ======
+        // This instantly stops the UI spinner on the next poll cycle.
+        $campaign = $this->campaignId ? Campaign::find($this->campaignId) : null;
+        if ($campaign && $campaign->isActive()) {
+            $campaign->markFailed($message);
+            Log::info("Campaign {$campaign->id} marked as FAILED due to disconnection");
+        }
 
         // Cancel all pending jobs for this user
         $this->cancelPendingJobsForUser($user->id);
@@ -327,6 +355,18 @@ class SendWhatsappCampaign implements ShouldQueue
             'session' => $this->whatsappSession,
             'exception_class' => get_class($exception),
         ]);
+
+        // ====== DB-BACKED: Record failure in campaign ======
+        $campaign = $this->campaignId ? Campaign::find($this->campaignId) : null;
+        if ($campaign && $campaign->isActive()) {
+            if ($exception instanceof WhatsAppDisconnectedException) {
+                // Disconnection = entire campaign fails
+                $campaign->markFailed($exception->getMessage());
+            } else {
+                // Individual message failure = record it, campaign may continue
+                $campaign->recordFailure();
+            }
+        }
 
         // If it's a disconnection error, update user session state
         if ($exception instanceof WhatsAppDisconnectedException && $this->userId) {

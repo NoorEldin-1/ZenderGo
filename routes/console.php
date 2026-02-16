@@ -23,6 +23,9 @@ Schedule::command('sessions:kill-zombies --max-age=300')->everyFiveMinutes()->na
 // Monitor RAM usage every minute (auto-cleanup if critical)
 Schedule::command('ram:check --auto-cleanup')->everyMinute()->name('ram-monitor');
 
+// Detect and resolve stuck campaigns every 10 minutes
+Schedule::command('campaigns:monitor-stuck --minutes=30')->everyTenMinutes()->name('stuck-campaign-monitor');
+
 // Check expired subscriptions daily at midnight
 Schedule::command('subscriptions:check-expired')->daily();
 
