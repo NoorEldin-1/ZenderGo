@@ -16,9 +16,11 @@ class Contact extends Model
         'user_id',
         'name',
         'phone',
-        'store_name',
         'last_sent_at',
         'is_featured',
+        'label_text',
+        'label_color',
+        'notes',
     ];
 
     /**

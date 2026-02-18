@@ -44,6 +44,7 @@
             --whatsapp-green: #25D366;
             --whatsapp-dark: #128C7E;
             --sidebar-width: 220px;
+            --sidebar-collapsed-width: 80px;
         }
 
         /* ========== DARK MODE THEME ========== */
@@ -322,19 +323,38 @@
             color: #adb5bd !important;
         }
 
-        /* Dark Mode: Scrollbar */
-        [data-bs-theme="dark"] ::-webkit-scrollbar {
+        /* Global Checkbox/Radio Enhancement */
+        .form-check-input:checked {
+            background-color: var(--whatsapp-green);
+            border-color: var(--whatsapp-green);
+        }
+
+        /* Global Scrollbar - Apply to both Light and Dark modes */
+        ::-webkit-scrollbar {
             width: 10px;
             height: 10px;
         }
 
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        /* Dark Mode: Scrollbar Overrides */
         [data-bs-theme="dark"] ::-webkit-scrollbar-track {
             background: #1a1d21;
         }
 
         [data-bs-theme="dark"] ::-webkit-scrollbar-thumb {
             background: #495057;
-            border-radius: 5px;
         }
 
         [data-bs-theme="dark"] ::-webkit-scrollbar-thumb:hover {
@@ -1201,50 +1221,131 @@
         }
 
         /* Sidebar - Desktop */
-        .sidebar {
-            width: var(--sidebar-width);
-            min-height: calc(100vh - 60px);
-            background: linear-gradient(180deg, #1a1d21 0%, #212529 100%);
-            position: fixed;
-            top: 60px;
-            right: 0;
-            padding-top: 1rem;
-        }
+        @media (min-width: 992px) {
+            .sidebar {
+                width: var(--sidebar-width);
+                min-height: calc(100vh - 60px);
+                background: linear-gradient(180deg, #1a1d21 0%, #212529 100%);
+                position: fixed;
+                top: 60px;
+                right: 0;
+                padding-top: 1rem;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                z-index: 1000;
+                /* Overflow moved to inner container to allow button to pop out */
+            }
 
-        .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.75);
-            padding: 0.875rem 1.25rem;
-            border-radius: 8px;
-            margin: 4px 12px;
-            font-weight: 500;
-            font-size: 0.9rem;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+            .sidebar-scroll-container {
+                height: calc(100vh - 80px);
+                /* Adjust for header + padding */
+                overflow-y: auto;
+                overflow-x: hidden;
+                padding-bottom: 2rem;
+            }
 
-        .sidebar .nav-link:hover {
-            background: rgba(255, 255, 255, 0.08);
-            color: white;
-        }
+            .sidebar.collapsed {
+                width: var(--sidebar-collapsed-width);
+            }
 
-        .sidebar .nav-link.active {
-            background: rgba(37, 211, 102, 0.15);
-            color: var(--whatsapp-green);
-        }
+            /* Sidebar Toggle Button */
+            .sidebar-toggle-btn {
+                position: absolute;
+                top: 24px;
+                left: -14px;
+                /* Half outside */
+                width: 28px;
+                height: 28px;
+                background: #fff;
+                border: 1px solid #dee2e6;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                z-index: 1010;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+                padding: 0;
+                transition: all 0.2s ease;
+                color: #6c757d;
+            }
 
-        .sidebar .nav-link i {
-            font-size: 1.1rem;
-            width: 22px;
-            text-align: center;
-        }
+            .sidebar-toggle-btn:hover {
+                background: #f8f9fa;
+                color: var(--whatsapp-green);
+                transform: scale(1.1);
+            }
 
-        /* Main Content */
-        .main-content {
-            margin-right: var(--sidebar-width);
-            min-height: calc(100vh - 60px);
-            padding: 1.5rem;
+            [data-bs-theme="dark"] .sidebar-toggle-btn {
+                background: #212529;
+                border-color: #495057;
+                color: #adb5bd;
+            }
+
+            [data-bs-theme="dark"] .sidebar-toggle-btn:hover {
+                background: #343a40;
+                color: #fff;
+            }
+
+            .sidebar .nav-link {
+                color: rgba(255, 255, 255, 0.75);
+                padding: 0.875rem 1.25rem;
+                border-radius: 8px;
+                margin: 4px 12px;
+                font-weight: 500;
+                font-size: 0.9rem;
+                transition: all 0.2s ease;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                white-space: nowrap;
+                overflow: hidden;
+            }
+
+            .sidebar.collapsed .nav-link {
+                padding: 0.875rem 0;
+                justify-content: center;
+                margin: 4px 10px;
+            }
+
+            .sidebar.collapsed .nav-link span {
+                opacity: 0;
+                width: 0;
+                display: none;
+            }
+
+            .sidebar.collapsed .nav-link i {
+                margin: 0;
+                font-size: 1.3rem;
+            }
+
+            .sidebar .nav-link:hover {
+                background: rgba(255, 255, 255, 0.08);
+                color: white;
+            }
+
+            .sidebar .nav-link.active {
+                background: rgba(37, 211, 102, 0.15);
+                color: var(--whatsapp-green);
+            }
+
+            .sidebar .nav-link i {
+                font-size: 1.1rem;
+                width: 22px;
+                text-align: center;
+                transition: all 0.2s;
+            }
+
+            /* Main Content */
+            .main-content {
+                margin-right: var(--sidebar-width);
+                min-height: calc(100vh - 60px);
+                padding: 1.5rem;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .main-content.expanded {
+                margin-right: var(--sidebar-collapsed-width);
+            }
         }
 
         /* Mobile Bottom Navigation */
@@ -1712,35 +1813,42 @@
 
     @auth
         <!-- Sidebar - Desktop Only -->
-        <nav class="sidebar d-none d-lg-block">
-            <ul class="nav flex-column">
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('contacts.*') ? 'active' : '' }}"
-                        href="{{ route('contacts.index') }}">
-                        <i class="bi bi-people"></i>
-                        جهات الاتصال
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('campaigns.*') ? 'active' : '' }}"
-                        href="{{ route('campaigns.create') }}">
-                        <i class="bi bi-megaphone"></i>
-                        الحملات
-                    </a>
-                </li>
+        <nav class="sidebar d-none d-lg-block" id="sidebar">
+            <!-- Sidebar Toggle Button -->
+            <button class="btn sidebar-toggle-btn" id="sidebarToggle">
+                <i class="bi bi-chevron-right"></i>
+            </button>
 
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('subscription.*') ? 'active' : '' }}"
-                        href="{{ route('subscription.index') }}">
-                        <i class="bi bi-gem"></i>
-                        اشتراكي
-                    </a>
-                </li>
-            </ul>
+            <div class="sidebar-scroll-container">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('contacts.*') ? 'active' : '' }}"
+                            href="{{ route('contacts.index') }}">
+                            <i class="bi bi-people"></i>
+                            <span>جهات الاتصال</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('campaigns.*') ? 'active' : '' }}"
+                            href="{{ route('campaigns.create') }}">
+                            <i class="bi bi-megaphone"></i>
+                            <span>الحملات</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('subscription.*') ? 'active' : '' }}"
+                            href="{{ route('subscription.index') }}">
+                            <i class="bi bi-gem"></i>
+                            <span>اشتراكي</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </nav>
 
         <!-- Main Content -->
-        <main class="main-content">
+        <main class="main-content" id="mainContent">
             @if (session('success'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
                     <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
@@ -1938,6 +2046,47 @@
                         .catch(error => {
                             console.error('Error saving theme:', error);
                         });
+                });
+            }
+
+            // Sidebar Toggle Logic
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebarIcon = sidebarToggle?.querySelector('i');
+
+            // Function to update UI based on state
+            function updateSidebarState(isCollapsed) {
+                if (isCollapsed) {
+                    sidebar?.classList.add('collapsed');
+                    mainContent?.classList.add('expanded');
+                    sidebarIcon?.classList.replace('bi-chevron-right', 'bi-chevron-left');
+                } else {
+                    sidebar?.classList.remove('collapsed');
+                    mainContent?.classList.remove('expanded');
+                    sidebarIcon?.classList.replace('bi-chevron-left', 'bi-chevron-right');
+                }
+            }
+
+            // Load saved state
+            const savedState = localStorage.getItem('sidebarCollapsed') === 'true';
+            updateSidebarState(savedState);
+
+            // Toggle Event
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', function() {
+                    const isCollapsed = sidebar.classList.toggle('collapsed');
+                    mainContent.classList.toggle('expanded');
+
+                    // Update Icon
+                    if (isCollapsed) {
+                        sidebarIcon.classList.replace('bi-chevron-right', 'bi-chevron-left');
+                    } else {
+                        sidebarIcon.classList.replace('bi-chevron-left', 'bi-chevron-right');
+                    }
+
+                    // Save state
+                    localStorage.setItem('sidebarCollapsed', isCollapsed);
                 });
             }
         });

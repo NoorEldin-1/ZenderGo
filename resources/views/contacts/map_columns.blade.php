@@ -63,17 +63,7 @@
                                 @enderror
                             </div>
 
-                            <!-- Store Field (Optional) -->
-                            <div class="col-md-12">
-                                <label class="form-label fw-bold small text-uppercase text-muted">اسم المتجر
-                                    (اختياري)</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light"><i class="bi bi-shop"></i></span>
-                                    <input class="form-control @error('store_column') is-invalid @enderror"
-                                        list="headersList" name="store_column" placeholder="اكتب أو اختر اسم عمود المتجر..."
-                                        value="{{ old('store_column', $suggested_store !== '' ? ($headers[$suggested_store] ?: 'عمود ' . ($suggested_store + 1)) : '') }}">
-                                </div>
-                            </div>
+                            <!-- Store Field Removed -->
                         </div>
 
                         <div class="d-flex justify-content-between align-items-center mt-5 pt-3 border-top">

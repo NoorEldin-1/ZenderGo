@@ -13,7 +13,7 @@
     <form action="{{ route('campaigns.send') }}" method="POST" enctype="multipart/form-data" id="campaignForm">
         @csrf
 
-        <div class="row g-3">
+        <div class="row gy-3 gx-0 gx-lg-3">
             <!-- Contact Selection -->
             <div class="col-lg-5">
                 <div class="card h-100">
@@ -492,6 +492,122 @@
             </div>
         </div>
     </div>
+
+    <!-- Label Modal -->
+    <div class="modal fade" id="labelModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <form id="labelForm">
+                    @csrf
+                    <div class="modal-header py-2 border-0">
+                        <h6 class="modal-title fw-bold">
+                            <i class="bi bi-tag text-primary me-2"></i>تسمية جهة الاتصال
+                        </h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body pt-0">
+                        <input type="hidden" id="labelContactId">
+                        <div class="mb-3">
+                            <label for="labelText" class="form-label small fw-semibold text-muted">نص العلامة
+                                (Label)</label>
+                            <input type="text" class="form-control form-control-sm" id="labelText" maxlength="20"
+                                placeholder="مثال: عميل مهم">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold text-muted">لون العلامة</label>
+                            <div class="d-flex flex-wrap gap-2" id="colorPalette">
+                                <!-- Preset Colors -->
+                                @php
+                                    $labelColors = [
+                                        '#0d6efd',
+                                        '#6610f2',
+                                        '#6f42c1',
+                                        '#d63384',
+                                        '#dc3545',
+                                        '#fd7e14',
+                                        '#ffc107',
+                                        '#198754',
+                                        '#20c997',
+                                        '#0dcaf0',
+                                        '#6c757d',
+                                        '#212529',
+                                    ];
+                                @endphp
+                                @foreach ($labelColors as $color)
+                                    <div class="color-swatch-wrapper">
+                                        <input type="radio" class="btn-check" name="color_option"
+                                            id="campaign-color-{{ $loop->index }}" value="{{ $color }}"
+                                            autocomplete="off">
+                                        <label
+                                            class="btn p-0 rounded-circle border-0 position-relative d-flex align-items-center justify-content-center shrink-0"
+                                            for="campaign-color-{{ $loop->index }}"
+                                            style="width: 32px; height: 32px; background-color: {{ $color }}; cursor: pointer; transition: transform 0.2s;">
+                                            <i class="bi bi-check2 text-white opacity-0 check-icon"></i>
+                                        </label>
+                                    </div>
+                                @endforeach
+
+                                <!-- Custom Color Input -->
+                                <div class="w-100 mt-2 position-relative">
+                                    <input type="color" id="customColorInput" value="#0d6efd"
+                                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;">
+                                    <button type="button" id="customColorBtn"
+                                        class="btn btn-outline-secondary btn-sm w-100 d-flex align-items-center justify-content-center gap-2"
+                                        style="border-style: dashed;">
+                                        <i class="bi bi-palette" id="customColorIcon"></i>
+                                        <span id="customColorText">لون مخصص</span>
+                                    </button>
+                                </div>
+                                <input type="hidden" id="labelColor" value="#0d6efd">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer py-2 border-0">
+                        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-primary btn-sm px-4">
+                            حفظ
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Note Modal (Quill Editor) -->
+    <div class="modal fade" id="noteModal" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title fw-bold">
+                        <i class="bi bi-journal-text text-info me-2"></i>ملاحظات العميل
+                    </h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <input type="hidden" id="noteContactId">
+                    <div id="quill-toolbar-container">
+                        <!-- Custom Toolbar -->
+                        <span class="ql-formats">
+                            <button class="ql-bold"></button>
+                            <button class="ql-underline"></button>
+                            <select class="ql-color"></select>
+                            <select class="ql-background"></select>
+                            <button class="ql-clean"></button>
+                        </span>
+                    </div>
+                    <div id="quill-editor" style="height: 200px; border: none;"></div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" id="saveNoteBtn" class="btn btn-primary btn-sm px-4">
+                        <span class="spinner-border spinner-border-sm d-none me-1" role="status"
+                            aria-hidden="true"></span>
+                        <i class="bi bi-check-lg me-1"></i>حفظ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('styles')
@@ -947,6 +1063,146 @@
         .quota-exceeded .badge {
             background-color: #dc3545 !important;
         }
+
+        /* Label Modal Styles */
+        .btn-check:checked+label {
+            transform: scale(1.1);
+            box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-check:checked+label .check-icon {
+            opacity: 1 !important;
+        }
+
+        /* Quill Editor Professional Styling */
+        #quill-editor {
+            font-family: inherit;
+            /* Use system font */
+            font-size: 1rem;
+        }
+
+        .ql-toolbar.ql-snow {
+            border: 1px solid #dee2e6;
+            border-bottom: none;
+            background-color: #f8f9fa;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            padding: 8px;
+        }
+
+        .ql-container.ql-snow {
+            border: 1px solid #dee2e6;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+            background-color: #fff;
+            min-height: 150px;
+        }
+
+        /* Toolbar Icons refinement */
+        .ql-snow.ql-toolbar button {
+            width: 28px;
+            height: 28px;
+            margin-right: 2px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .ql-snow.ql-toolbar button:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            color: var(--bs-primary);
+        }
+
+        .ql-snow.ql-toolbar button.ql-active {
+            background-color: rgba(var(--bs-primary-rgb), 0.1) !important;
+            color: var(--bs-primary) !important;
+        }
+
+        .ql-snow.ql-toolbar button.ql-active .ql-stroke {
+            stroke: var(--bs-primary) !important;
+        }
+
+        .ql-snow.ql-toolbar button.ql-active .ql-fill {
+            fill: var(--bs-primary) !important;
+        }
+
+        .ql-snow.ql-toolbar button:hover .ql-stroke {
+            stroke: var(--bs-primary) !important;
+        }
+
+        .ql-snow.ql-toolbar button:hover .ql-fill {
+            fill: var(--bs-primary) !important;
+        }
+
+        /* Dark Mode for Quill */
+        [data-bs-theme="dark"] .ql-toolbar.ql-snow {
+            background-color: #2b3035;
+            border-color: #495057;
+        }
+
+        [data-bs-theme="dark"] .ql-container.ql-snow {
+            background-color: #212529;
+            border-color: #495057;
+            color: #e9ecef;
+        }
+
+        [data-bs-theme="dark"] .ql-snow .ql-stroke {
+            stroke: #adb5bd;
+        }
+
+        [data-bs-theme="dark"] .ql-snow .ql-fill {
+            fill: #adb5bd;
+        }
+
+        [data-bs-theme="dark"] .ql-snow .ql-picker {
+            color: #adb5bd;
+        }
+
+        [data-bs-theme="dark"] .ql-snow.ql-toolbar button:hover,
+        [data-bs-theme="dark"] .ql-snow.ql-toolbar button.ql-active {
+            color: #20c997;
+        }
+
+        [data-bs-theme="dark"] .ql-snow.ql-toolbar button:hover .ql-stroke,
+        [data-bs-theme="dark"] .ql-snow.ql-toolbar button.ql-active .ql-stroke {
+            stroke: #20c997 !important;
+        }
+
+        [data-bs-theme="dark"] .ql-snow.ql-toolbar button:hover .ql-fill,
+        [data-bs-theme="dark"] .ql-snow.ql-toolbar button.ql-active .ql-fill {
+            fill: #20c997 !important;
+        }
+
+        [data-bs-theme="dark"] .ql-snow .ql-picker-options {
+            background-color: #2b3035;
+            border-color: #495057;
+        }
+
+        [data-bs-theme="dark"] .ql-snow .ql-picker-item {
+            color: #e9ecef;
+        }
+
+        [data-bs-theme="dark"] .ql-snow .ql-picker-item:hover,
+        [data-bs-theme="dark"] .ql-snow .ql-picker-item.ql-selected {
+            color: #20c997;
+        }
+
+        /* Enforce RTL */
+        #quill-editor .ql-editor {
+            direction: rtl;
+            text-align: right;
+        }
+
+        .ql-snow .ql-editor.ql-blank::before {
+            right: 15px;
+            left: auto;
+            text-align: right;
+            font-style: normal;
+        }
+
+        /* Dark Mode Placeholder */
+        [data-bs-theme="dark"] .ql-snow .ql-editor.ql-blank::before {
+            color: #adb5bd;
+        }
     </style>
 @endpush
 
@@ -954,6 +1210,9 @@
     <!-- Flatpickr JS -->
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/ar.js"></script>
+    <!-- Quill CSS/JS -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
     <script>
         (function() {
             const csrf = document.querySelector('meta[name="csrf-token"]').content;
@@ -1285,51 +1544,211 @@
                         else timeAgo = lastSentDate.toLocaleDateString('ar-EG');
 
                         lastSentHtml =
-                            `<div class="last-sent-badge mt-1"><span class="badge bg-success-subtle text-success"><i class="bi bi-check2-circle me-1"></i>${timeAgo}</span></div>`;
+                            `<div class="mt-1"><span class="badge bg-success-subtle text-success px-2 py-1"><i class="bi bi-check2-circle me-1"></i>${timeAgo}</span></div>`;
                     } else {
                         lastSentHtml =
-                            `<div class="last-sent-badge mt-1"><span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-dash-circle me-1"></i>لم يتم التواصل</span></div>`;
+                            `<div class="mt-1"><span class="badge bg-secondary-subtle text-secondary px-2 py-1"><i class="bi bi-dash-circle me-1"></i>لم يتم التواصل</span></div>`;
                     }
 
                     const starIcon = contact.is_featured ?
-                        `<i class="bi bi-star-fill text-warning star-btn fs-5" data-id="${contact.id}" style="cursor: pointer; transition: transform 0.2s;" title="إزالة من المميزة"></i>` :
-                        `<i class="bi bi-star text-muted star-btn fs-5" data-id="${contact.id}" style="cursor: pointer; transition: transform 0.2s;" title="إضافة للمميزة"></i>`;
+                        `<i class="bi bi-star-fill text-warning star-btn fs-5 flex-shrink-0" data-id="${contact.id}" style="cursor: pointer; z-index: 2;" title="إزالة من المميزة"></i>` :
+                        `<i class="bi bi-star text-muted star-btn fs-5 flex-shrink-0" data-id="${contact.id}" style="cursor: pointer; z-index: 2;" title="إضافة للمميزة"></i>`;
+
+                    // Row Label HTML
+                    const labelHtml = contact.label_text ?
+                        `<div class="mt-1"><span class="badge rounded-pill" style="background-color: ${contact.label_color || '#6c757d'};">${escapeHtml(contact.label_text)}</span></div>` :
+                        '';
+
+                    // Note Snippet HTML
+                    const noteSnippetHtml = contact.notes ?
+                        `<div class="mt-1 d-flex align-items-center text-muted small">
+                             <i class="bi bi-journal-text me-1 text-info opacity-75"></i>
+                             <span class="text-truncate" style="max-width: 180px;">${escapeHtml(stripHtml(contact.notes))}</span>
+                           </div>` :
+                        '';
 
                     return `
-                    <div class="contact-item d-flex align-items-center px-3 py-2 border-bottom m-0 w-100">
-                        <label class="d-flex align-items-center gap-2 flex-grow-1 min-w-0 m-0" style="cursor: pointer; user-select: none;">
-                            <input type="checkbox" class="form-check-input contact-checkbox mt-0 bg-transparent"
-                                value="${contact.id}" 
+                    <div class="contact-item d-flex align-items-start px-3 py-2 border-bottom m-0 w-100 position-relative contact-row-${contact.id}"
+                         data-id="${contact.id}"
+                         style="cursor: pointer;">
+                         
+                        <div class="form-check m-0 mt-1 d-flex align-items-center">
+                             <input type="checkbox" class="form-check-input contact-checkbox shadow-none"
+                                style="cursor: pointer; width: 1.1em; height: 1.1em;"
+                                value="${contact.id}"
                                 ${state.selectedContacts.has(String(contact.id)) ? 'checked' : ''}>
-                            ${starIcon}
-                            <div class="flex-grow-1 min-w-0">
-                                <div class="fw-medium small text-truncate">${escapeHtml(contact.name)}</div>
-                                <small class="text-muted" dir="ltr">${escapeHtml(contact.phone)}</small>
-                                ${lastSentHtml}
-                            </div>
-                        </label>
+                        </div>
                         
-                        <div class="dropdown ms-2">
-                            <button class="btn btn-sm text-muted border-0 p-1 rounded-circle action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation()">
+                        <div class="ms-3 mt-1">
+                             ${starIcon}
+                        </div>
+
+                        <div class="flex-grow-1 ms-3 d-flex flex-column" style="min-width: 0;">
+                            
+                            <!-- 1. Name -->
+                            <div class="fw-bold text-dark text-truncate" style="font-size: 0.9rem; max-width: 150px;">${escapeHtml(contact.name)}</div>
+                            
+                            <!-- 2. Label -->
+                            ${labelHtml}
+
+                            <!-- 3. Phone -->
+                            <div class="mt-1"><div dir="ltr" class="font-monospace small text-muted text-truncate" style="max-width: 120px; text-align: right;">${escapeHtml(contact.phone)}</div></div>
+                            
+                            <!-- 4. Last Sent Status -->
+                            ${lastSentHtml}
+                            
+                            <!-- 5. Notes -->
+                            ${contact.notes ? 
+                                `<div class="mt-1 d-flex align-items-center text-muted small">
+                                                         <i class="bi bi-journal-text me-1 text-info opacity-75 flex-shrink-0"></i>
+                                                         <span class="text-truncate" style="max-width: 130px;">${escapeHtml(stripHtml(contact.notes))}</span>
+                                                    </div>` : ''}
+                        </div>
+                        
+                        <div class="dropdown ms-2 mt-1">
+                            <button class="btn btn-sm btn-light border-0 p-1 rounded-circle action-btn text-muted" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-three-dots-vertical"></i>
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                <li><a class="dropdown-item edit-contact-btn small" href="#" data-id="${contact.id}" data-name="${escapeHtml(contact.name)}" data-phone="${escapeHtml(contact.phone)}"><i class="bi bi-pencil me-2 text-primary"></i>تعديل</a></li>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                <li><h6 class="dropdown-header small text-muted">إجراءات</h6></li>
+                                <li><a class="dropdown-item small label-contact-btn" href="#" data-id="${contact.id}" data-label="${escapeHtml(contact.label_text || '')}" data-color="${contact.label_color || '#0d6efd'}"><i class="bi bi-tag me-2 text-primary"></i>تسمية (Label)</a></li>
+                                <li><a class="dropdown-item small note-contact-btn" href="#" data-id="${contact.id}" data-notes="${escapeHtml(contact.notes || '')}"><i class="bi bi-journal-plus me-2 text-info"></i>ملاحظة</a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item delete-contact-btn small text-danger" href="#" data-id="${contact.id}"><i class="bi bi-trash me-2"></i>حذف</a></li>
+                                <li><a class="dropdown-item small edit-contact-btn" href="#" data-id="${contact.id}" data-name="${escapeHtml(contact.name)}" data-phone="${escapeHtml(contact.phone)}"><i class="bi bi-pencil me-2 text-secondary"></i>تعديل</a></li>
+                                <li><a class="dropdown-item small text-danger delete-contact-btn" href="#" data-id="${contact.id}"><i class="bi bi-trash me-2"></i>حذف</a></li>
                             </ul>
                         </div>
                     </div>
                 `;
                 }).join('');
 
-                // Attach event listeners to new checkboxes
-                document.querySelectorAll('.contact-checkbox').forEach(cb => {
-                    cb.addEventListener('change', (e) => toggleSelection(e.target));
-                });
-
                 updateSelectAllState();
             }
+
+            els.contactsList.onclick = function(e) {
+                const row = e.target.closest('.contact-item');
+                if (!row) return;
+
+                // Label button — inline modal logic (no external function dependency)
+                const labelBtn = e.target.closest('.label-contact-btn');
+                if (labelBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const contactId = labelBtn.dataset.id;
+                    const labelText = labelBtn.dataset.label || '';
+                    const labelColor = labelBtn.dataset.color || '#0d6efd';
+
+                    const labelModalEl = document.getElementById('labelModal');
+                    if (labelModalEl) {
+                        document.getElementById('labelContactId').value = contactId;
+                        document.getElementById('labelText').value = labelText;
+                        document.getElementById('labelColor').value = labelColor;
+
+                        // Set color radio selection
+                        const radios = labelModalEl.querySelectorAll('input[name="color_option"]');
+                        let found = false;
+                        radios.forEach(radio => {
+                            if (radio.value.toLowerCase() === labelColor.toLowerCase()) {
+                                radio.checked = true;
+                                found = true;
+                            } else {
+                                radio.checked = false;
+                            }
+                        });
+
+                        // Update custom color preview if needed
+                        if (!found) {
+                            const customInput = document.getElementById('customColorInput');
+                            if (customInput) customInput.value = labelColor;
+                        }
+
+                        // Initialize UI state using the global function if available
+                        if (window.updateLabelColorUI) {
+                            window.updateLabelColorUI(found ? null : labelColor, !found);
+                        }
+
+                        new bootstrap.Modal(labelModalEl).show();
+                    }
+                    return;
+                }
+
+                // Note button — inline modal logic (no external function dependency)
+                const noteBtn = e.target.closest('.note-contact-btn');
+                if (noteBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const contactId = noteBtn.dataset.id;
+                    const noteModalEl = document.getElementById('noteModal');
+                    if (noteModalEl) {
+                        document.getElementById('noteContactId').value = contactId;
+                        const modal = new bootstrap.Modal(noteModalEl);
+
+                        // Fetch note content then show modal
+                        fetch(`/contacts/${contactId}/note`)
+                            .then(r => r.json())
+                            .then(data => {
+                                // Initialize or update Quill editor
+                                const editorEl = document.getElementById('quill-editor');
+                                if (editorEl) {
+                                    if (!window._campaignQuillNote) {
+                                        window._campaignQuillNote = new Quill('#quill-editor', {
+                                            theme: 'snow',
+                                            placeholder: 'اكتب ملاحظاتك هنا...',
+                                            modules: {
+                                                toolbar: '#quill-toolbar-container'
+                                            }
+                                        });
+                                    }
+                                    window._campaignQuillNote.root.innerHTML = data.note || '';
+                                }
+                                modal.show();
+                            })
+                            .catch(err => {
+                                console.error('Error fetching note:', err);
+                                modal.show(); // Show modal anyway
+                            });
+                    }
+                    return;
+                }
+
+                // Edit button
+                const editBtn = e.target.closest('.edit-contact-btn');
+                if (editBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openEditContactModal(editBtn.dataset);
+                    return;
+                }
+
+                // Delete button
+                const deleteBtn = e.target.closest('.delete-contact-btn');
+                if (deleteBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openDeleteContactModal(deleteBtn.dataset.id);
+                    return;
+                }
+
+                if (e.target.closest('.dropdown-toggle') ||
+                    e.target.closest('.dropdown-menu') ||
+                    e.target.closest('.star-btn') ||
+                    e.target.closest('a')) { // Other links in dropdown
+                    return;
+                }
+
+                const checkbox = row.querySelector('.contact-checkbox');
+                if (!checkbox) return;
+
+                if (e.target === checkbox) {
+                    toggleSelection(checkbox);
+                    return;
+                }
+
+                checkbox.checked = !checkbox.checked;
+                toggleSelection(checkbox);
+            };
 
             function toggleSelection(checkbox) {
                 const id = checkbox.value;
@@ -1500,6 +1919,33 @@
                     return;
                 }
 
+                // Label Button
+                const labelBtn = e.target.closest('.label-contact-btn');
+                if (labelBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    try {
+                        openLabelModal(e, labelBtn.dataset.id, labelBtn.dataset.label || '', labelBtn.dataset
+                            .color || '#0d6efd');
+                    } catch (err) {
+                        console.error('[DEBUG] openLabelModal error:', err);
+                    }
+                    return;
+                }
+
+                // Note Button
+                const noteBtn = e.target.closest('.note-contact-btn');
+                if (noteBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    try {
+                        openNoteModal(e, noteBtn.dataset.id);
+                    } catch (err) {
+                        console.error('[DEBUG] openNoteModal error:', err);
+                    }
+                    return;
+                }
+
                 // Edit Button
                 const editBtn = e.target.closest('.edit-contact-btn');
                 if (editBtn) {
@@ -1597,6 +2043,13 @@
                 return text.toString().replace(/[&<>"']/g, function(m) {
                     return map[m];
                 });
+            }
+
+            function stripHtml(html) {
+                if (!html) return '';
+                const tmp = document.createElement("DIV");
+                tmp.innerHTML = html;
+                return tmp.textContent || tmp.innerText || "";
             }
 
             // Open Edit Modal
@@ -2483,7 +2936,346 @@
 
             // Start initially
             startQuotaTimer();
+
+            // --- Label Modal Logic ---
+            window.openLabelModal = function(event, contactId, labelText, labelColor) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                document.getElementById('labelContactId').value = contactId;
+                document.getElementById('labelText').value = labelText;
+                document.getElementById('labelColor').value = labelColor;
+
+                // Color logic
+                const radios = document.querySelectorAll('input[name="color_option"]');
+                let found = false;
+                radios.forEach(radio => {
+                    if (radio.value.toLowerCase() === labelColor.toLowerCase()) {
+                        radio.checked = true;
+                        found = true;
+                    }
+                });
+
+                if (found) {
+                    updateCustomPreviewUI(null, false);
+                } else {
+                    radios.forEach(r => r.checked = false);
+                    updateCustomPreviewUI(labelColor, true);
+                    const customInput = document.getElementById('customColorInput');
+                    if (customInput) customInput.value = labelColor;
+                }
+
+                new bootstrap.Modal(document.getElementById('labelModal')).show();
+            };
+
+            // Custom Color Logic
+            const customColorInput = document.getElementById('customColorInput');
+            const customColorBtn = document.getElementById('customColorBtn');
+            const customColorText = document.getElementById('customColorText');
+            const customColorIcon = document.getElementById('customColorIcon');
+            const colorRadios = document.querySelectorAll('input[name="color_option"]');
+
+            function updateCustomPreviewUI(color, isCustom) {
+                if (!customColorBtn) return;
+                if (isCustom) {
+                    customColorBtn.style.backgroundColor = color;
+                    customColorBtn.style.color = '#fff';
+                    customColorBtn.style.border = 'none';
+                    customColorText.textContent = color;
+                    customColorIcon.classList.remove('bi-palette');
+                    customColorIcon.classList.add('bi-check2');
+                    customColorBtn.classList.remove('btn-outline-secondary');
+                } else {
+                    customColorBtn.style.backgroundColor = '';
+                    customColorBtn.style.color = '';
+                    customColorBtn.style.border = '1px dashed #adb5bd';
+                    customColorText.textContent = 'لون مخصص';
+                    customColorIcon.classList.remove('bi-check2');
+                    customColorIcon.classList.add('bi-palette');
+                    customColorBtn.classList.add('btn-outline-secondary');
+                }
+            }
+
+            colorRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    document.getElementById('labelColor').value = this.value;
+                    updateCustomPreviewUI(null, false);
+                });
+            });
+
+            if (customColorInput) {
+                customColorInput.addEventListener('input', function() {
+                    const color = this.value;
+                    document.getElementById('labelColor').value = color;
+                    document.querySelectorAll('input[name="color_option"]').forEach(r => r.checked = false);
+                    updateCustomPreviewUI(color, true);
+                });
+            }
         })();
+    </script>
+
+    {{-- Independent script for Label & Note modals (runs outside IIFE to guarantee execution) --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const csrf = document.querySelector('meta[name="csrf-token"]').content;
+
+            // --- Color Picker Logic (Global for access from main script) ---
+            window.updateLabelColorUI = function(color, isCustom) {
+                const customBtn = document.getElementById('customColorBtn');
+                const customText = document.getElementById('customColorText');
+                const customIcon = document.getElementById('customColorIcon');
+
+                if (!customBtn) return;
+
+                if (isCustom) {
+                    customBtn.style.backgroundColor = color;
+                    customBtn.style.color = '#fff';
+                    customBtn.style.border = 'none';
+                    customText.textContent = color;
+                    if (customIcon) {
+                        customIcon.className = 'bi bi-check2';
+                    }
+                    customBtn.classList.remove('btn-outline-secondary');
+                } else {
+                    customBtn.style.backgroundColor = '';
+                    customBtn.style.color = '';
+                    customBtn.style.border = ''; // fallback to css
+                    customBtn.style.borderStyle = 'dashed';
+                    customText.textContent = 'لون مخصص';
+                    if (customIcon) {
+                        customIcon.className = 'bi bi-palette';
+                    }
+                    customBtn.classList.add('btn-outline-secondary');
+                }
+            };
+
+            // Attach listeners to color inputs
+            const colorRadios = document.querySelectorAll('input[name="color_option"]');
+            colorRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (this.checked) {
+                        document.getElementById('labelColor').value = this.value;
+                        window.updateLabelColorUI(null, false);
+                    }
+                });
+            });
+
+            const customColorInput = document.getElementById('customColorInput');
+            if (customColorInput) {
+                customColorInput.addEventListener('input', function() {
+                    const color = this.value;
+                    document.getElementById('labelColor').value = color;
+                    // Uncheck presets
+                    document.querySelectorAll('input[name="color_option"]').forEach(r => r.checked = false);
+                    window.updateLabelColorUI(color, true);
+                });
+            }
+
+            // --- Label Form Submit (AJAX) ---
+            const labelForm = document.getElementById('labelForm');
+            if (labelForm) {
+                labelForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    const contactId = document.getElementById('labelContactId').value;
+                    const text = document.getElementById('labelText').value;
+                    const color = document.getElementById('labelColor').value;
+                    const btn = this.querySelector('button[type="submit"]');
+                    const originalBtnHtml = btn.innerHTML;
+
+                    btn.disabled = true;
+                    btn.innerHTML =
+                        '<span class="spinner-border spinner-border-sm me-1"></span> جاري الحفظ...';
+
+                    fetch(`/contacts/${contactId}/label`, {
+                            method: 'PATCH',
+                            headers: {
+                                'X-CSRF-TOKEN': csrf,
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                label_text: text,
+                                label_color: color
+                            })
+                        })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Close modal
+                                const modalEl = document.getElementById('labelModal');
+                                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                                if (modalInstance) modalInstance.hide();
+
+                                // Optimistic UI: update the contact row label in-place
+                                const contactRow = document.querySelector(`.contact-row-${contactId}`);
+                                if (contactRow) {
+                                    // Update data attributes on the label button
+                                    const labelBtn = contactRow.querySelector('.label-contact-btn');
+                                    if (labelBtn) {
+                                        labelBtn.dataset.label = text;
+                                        labelBtn.dataset.color = color;
+                                    }
+
+                                    // Find or create the label badge area in the contact row
+                                    // The label is after the name div
+                                    const nameDiv = contactRow.querySelector('.fw-bold.text-dark');
+                                    if (nameDiv) {
+                                        let labelContainer = nameDiv.nextElementSibling;
+                                        // Check if the next sibling is a label container (has a badge)
+                                        const isLabelContainer = labelContainer &&
+                                            labelContainer.querySelector('.badge.rounded-pill');
+
+                                        if (text) {
+                                            const badgeHtml =
+                                                `<div class="mt-1"><span class="badge rounded-pill" style="background-color: ${color};">${text}</span></div>`;
+                                            if (isLabelContainer) {
+                                                labelContainer.outerHTML = badgeHtml;
+                                            } else {
+                                                nameDiv.insertAdjacentHTML('afterend', badgeHtml);
+                                            }
+                                        } else if (isLabelContainer) {
+                                            labelContainer.remove();
+                                        }
+                                    }
+                                }
+                            } else {
+                                alert('حدث خطأ: ' + (data.message || 'فشل حفظ العلامة'));
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Label save error:', err);
+                            alert('فشل حفظ العلامة. يرجى المحاولة مرة أخرى.');
+                        })
+                        .finally(() => {
+                            btn.disabled = false;
+                            btn.innerHTML = originalBtnHtml;
+                        });
+                });
+            }
+
+            // --- Note Modal (Quill Editor) ---
+            let campaignQuill = null;
+            const noteModalEl = document.getElementById('noteModal');
+
+            // Initialize Quill eagerly on page load
+            const editorEl = document.getElementById('quill-editor');
+            if (editorEl) {
+                campaignQuill = new Quill('#quill-editor', {
+                    theme: 'snow',
+                    placeholder: 'اكتب ملاحظاتك هنا...',
+                    modules: {
+                        toolbar: '#quill-toolbar-container'
+                    }
+                });
+            }
+
+            // Note button click handler — show modal immediately, fetch content in background
+            document.addEventListener('click', function(e) {
+                const noteBtn = e.target.closest('.note-contact-btn');
+                if (!noteBtn) return;
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                const contactId = noteBtn.dataset.id;
+                if (!noteModalEl) return;
+
+                document.getElementById('noteContactId').value = contactId;
+
+                // Load note content from data attribute (no network request needed)
+                const noteContent = noteBtn.dataset.notes || '';
+                if (campaignQuill) {
+                    campaignQuill.root.innerHTML = noteContent;
+                }
+                const modal = bootstrap.Modal.getOrCreateInstance(noteModalEl);
+                modal.show();
+            }, true); // Use capture phase to fire before the contactsList.onclick
+
+            // Save Note Button
+            const saveNoteBtn = document.getElementById('saveNoteBtn');
+            if (saveNoteBtn) {
+                saveNoteBtn.addEventListener('click', function() {
+                    if (!campaignQuill) return;
+
+                    const contactId = document.getElementById('noteContactId').value;
+                    const content = campaignQuill.root.innerHTML;
+                    const btn = this;
+                    const originalBtnHtml = btn.innerHTML;
+
+                    btn.disabled = true;
+                    btn.innerHTML =
+                        '<span class="spinner-border spinner-border-sm me-1"></span> جاري الحفظ...';
+
+                    fetch(`/contacts/${contactId}/note`, {
+                            method: 'PATCH',
+                            headers: {
+                                'X-CSRF-TOKEN': csrf,
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                note: content
+                            })
+                        })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                const modalInstance = bootstrap.Modal.getInstance(noteModalEl);
+                                if (modalInstance) modalInstance.hide();
+
+                                // Update note snippet in contact row
+                                const stripHtmlFn = (html) => {
+                                    const tmp = document.createElement('div');
+                                    tmp.innerHTML = html;
+                                    return tmp.textContent || tmp.innerText || '';
+                                };
+                                const contactRow = document.querySelector(`.contact-row-${contactId}`);
+                                if (contactRow) {
+                                    // Update data-notes on the button for next open
+                                    const noteBtnInRow = contactRow.querySelector('.note-contact-btn');
+                                    if (noteBtnInRow) {
+                                        noteBtnInRow.dataset.notes = content;
+                                    }
+
+                                    const noteIcon = contactRow.querySelector('.bi-journal-text');
+                                    if (noteIcon) {
+                                        const noteContainer = noteIcon.closest('.d-flex');
+                                        if (noteContainer) {
+                                            const snippetEl = noteContainer.querySelector(
+                                                '.text-truncate');
+                                            if (snippetEl) {
+                                                snippetEl.textContent = stripHtmlFn(content).substring(
+                                                    0, 50);
+                                            }
+                                        }
+                                    } else if (content && stripHtmlFn(content).trim()) {
+                                        const infoCol = contactRow.querySelector('.flex-grow-1.ms-3');
+                                        if (infoCol) {
+                                            const snippet = stripHtmlFn(content).substring(0, 50);
+                                            infoCol.insertAdjacentHTML('beforeend',
+                                                `<div class="mt-1 d-flex align-items-center text-muted small">
+                                                     <i class="bi bi-journal-text me-1 text-info opacity-75"></i>
+                                                     <span class="text-truncate" style="max-width: 180px;">${snippet}</span>
+                                                   </div>`);
+                                        }
+                                    }
+                                }
+                            } else {
+                                alert('حدث خطأ في حفظ الملاحظة');
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Note save error:', err);
+                            alert('فشل حفظ الملاحظة');
+                        })
+                        .finally(() => {
+                            btn.disabled = false;
+                            btn.innerHTML = originalBtnHtml;
+                        });
+                });
+            }
+        });
     </script>
 @endpush
 

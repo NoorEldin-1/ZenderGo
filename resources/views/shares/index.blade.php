@@ -112,7 +112,6 @@
                                                         <tr>
                                                             <th>الاسم</th>
                                                             <th>الهاتف</th>
-                                                            <th>المتجر</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -120,7 +119,6 @@
                                                             <tr>
                                                                 <td>{{ $contact->name }}</td>
                                                                 <td dir="ltr">{{ $contact->phone }}</td>
-                                                                <td>{{ $contact->store_name ?? '-' }}</td>
                                                             </tr>
                                                         @endforeach
                                                     </tbody>
@@ -213,7 +211,6 @@
                                                         <tr>
                                                             <th>الاسم</th>
                                                             <th>الهاتف</th>
-                                                            <th>المتجر</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -221,7 +218,6 @@
                                                             <tr>
                                                                 <td>{{ $contact->name }}</td>
                                                                 <td dir="ltr">{{ $contact->phone }}</td>
-                                                                <td>{{ $contact->store_name ?? '-' }}</td>
                                                             </tr>
                                                         @endforeach
                                                     </tbody>

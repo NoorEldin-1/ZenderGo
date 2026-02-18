@@ -24,7 +24,6 @@ class ShareRequestContact extends Model
         'contact_id',
         'name',
         'phone',
-        'store_name',
     ];
 
     /**

@@ -487,6 +487,134 @@
         </div>
     </div>
 
+    <!-- Label Modal -->
+    <!-- Note Modal (Quill Editor) -->
+    <div class="modal fade" id="noteModal" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title fw-bold">
+                        <i class="bi bi-journal-text text-info me-2"></i>ملاحظات العميل
+                    </h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <input type="hidden" id="noteContactId">
+                    <div id="quill-toolbar-container">
+                        <!-- Custom Toolbar -->
+                        <span class="ql-formats">
+                            <button class="ql-bold"></button>
+                            <button class="ql-underline"></button>
+                            <select class="ql-color"></select>
+                            <select class="ql-background"></select>
+                            <button class="ql-clean"></button>
+                        </span>
+                    </div>
+                    <div id="quill-editor" style="height: 200px; border: none;"></div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" id="saveNoteBtn" class="btn btn-primary btn-sm px-4">
+                        <span class="spinner-border spinner-border-sm d-none me-1" role="status"
+                            aria-hidden="true"></span>
+                        <i class="bi bi-check-lg me-1"></i>حفظ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Label Modal -->
+    <!-- Label Modal -->
+    <div class="modal fade" id="labelModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <form id="labelForm">
+                    @csrf
+                    <div class="modal-header py-2 border-0">
+                        <h6 class="modal-title fw-bold">
+                            <i class="bi bi-tag text-primary me-2"></i>تسمية جهة الاتصال
+                        </h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body pt-0">
+                        <input type="hidden" id="labelContactId">
+                        <div class="mb-3">
+                            <label for="labelText" class="form-label small fw-semibold text-muted">نص العلامة
+                                (Label)</label>
+                            <input type="text" class="form-control form-control-sm" id="labelText" maxlength="20"
+                                placeholder="مثال: عميل مهم">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold text-muted">لون العلامة</label>
+                            <div class="d-flex flex-wrap gap-2" id="colorPalette">
+                                <!-- Preset Colors -->
+                                @php
+                                    $colors = [
+                                        '#0d6efd',
+                                        '#6610f2',
+                                        '#6f42c1',
+                                        '#d63384',
+                                        '#dc3545',
+                                        '#fd7e14',
+                                        '#ffc107',
+                                        '#198754',
+                                        '#20c997',
+                                        '#0dcaf0',
+                                        '#6c757d',
+                                        '#212529',
+                                    ];
+                                @endphp
+                                @foreach ($colors as $color)
+                                    <div class="color-swatch-wrapper">
+                                        <input type="radio" class="btn-check" name="color_option"
+                                            id="color-{{ $loop->index }}" value="{{ $color }}"
+                                            autocomplete="off">
+                                        <label
+                                            class="btn p-0 rounded-circle border-0 position-relative d-flex align-items-center justify-content-center shrink-0"
+                                            for="color-{{ $loop->index }}"
+                                            style="width: 32px; height: 32px; background-color: {{ $color }}; cursor: pointer; transition: transform 0.2s;">
+                                            <i class="bi bi-check2 text-white opacity-0 check-icon"></i>
+                                        </label>
+                                    </div>
+                                @endforeach
+
+                                <!-- Custom Color Input -->
+                                <div class="w-100 mt-2 position-relative">
+                                    <input type="color" id="customColorInput" value="#0d6efd"
+                                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;">
+                                    <button type="button" id="customColorBtn"
+                                        class="btn btn-outline-secondary btn-sm w-100 d-flex align-items-center justify-content-center gap-2"
+                                        style="border-style: dashed;">
+                                        <i class="bi bi-palette" id="customColorIcon"></i>
+                                        <span id="customColorText">لون مخصص</span>
+                                    </button>
+                                </div>
+                                <input type="hidden" id="labelColor" value="#0d6efd">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer py-2 border-0">
+                        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-primary btn-sm px-4">
+                            حفظ
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <style>
+        .btn-check:checked+label {
+            transform: scale(1.1);
+            box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-check:checked+label .check-icon {
+            opacity: 1 !important;
+        }
+    </style>
+
     {{-- Mobile Floating Bulk Action Bar --}}
     @include('contacts.partials.mobile_bulk_actions')
 @endsection
@@ -494,7 +622,158 @@
 @push('styles')
     <!-- Flatpickr CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <!-- Quill CSS -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <style>
+        /* Quill Editor Professional Styling */
+        #quill-editor {
+            font-family: inherit;
+            /* Use system font */
+            font-size: 1rem;
+        }
+
+        .ql-toolbar.ql-snow {
+            border: 1px solid #dee2e6;
+            border-bottom: none;
+            background-color: #f8f9fa;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            padding: 8px;
+        }
+
+        .ql-container.ql-snow {
+            border: 1px solid #dee2e6;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+            background-color: #fff;
+            min-height: 150px;
+        }
+
+        /* Toolbar Icons refinement */
+        .ql-snow.ql-toolbar button {
+            width: 28px;
+            height: 28px;
+            margin-right: 2px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .ql-snow.ql-toolbar button:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            color: var(--bs-primary);
+        }
+
+        .ql-snow.ql-toolbar button.ql-active {
+            background-color: rgba(var(--bs-primary-rgb), 0.1) !important;
+            color: var(--bs-primary) !important;
+        }
+
+        .ql-snow.ql-toolbar button.ql-active .ql-stroke {
+            stroke: var(--bs-primary) !important;
+        }
+
+        .ql-snow.ql-toolbar button.ql-active .ql-fill {
+            fill: var(--bs-primary) !important;
+        }
+
+        .ql-snow.ql-toolbar button:hover .ql-stroke {
+            stroke: var(--bs-primary) !important;
+        }
+
+        .ql-snow.ql-toolbar button:hover .ql-fill {
+            fill: var(--bs-primary) !important;
+        }
+
+        /* Selects (Align) */
+        .ql-snow.ql-toolbar .ql-picker-label {
+            padding-right: 8px;
+        }
+
+        /* Dark Mode for Quill */
+        [data-bs-theme="dark"] .ql-toolbar.ql-snow {
+            background-color: #2b3035;
+            border-color: #495057;
+        }
+
+        [data-bs-theme="dark"] .ql-container.ql-snow {
+            background-color: #212529;
+            border-color: #495057;
+            color: #e9ecef;
+        }
+
+        [data-bs-theme="dark"] .ql-snow .ql-stroke {
+            stroke: #adb5bd;
+        }
+
+        [data-bs-theme="dark"] .ql-snow .ql-fill {
+            fill: #adb5bd;
+        }
+
+        [data-bs-theme="dark"] .ql-snow .ql-picker {
+            color: #adb5bd;
+        }
+
+        [data-bs-theme="dark"] .ql-snow.ql-toolbar button:hover,
+        [data-bs-theme="dark"] .ql-snow.ql-toolbar button.ql-active {
+            color: #20c997;
+        }
+
+        [data-bs-theme="dark"] .ql-snow.ql-toolbar button:hover .ql-stroke,
+        [data-bs-theme="dark"] .ql-snow.ql-toolbar button.ql-active .ql-stroke {
+            stroke: #20c997 !important;
+        }
+
+        [data-bs-theme="dark"] .ql-snow.ql-toolbar button:hover .ql-fill,
+        [data-bs-theme="dark"] .ql-snow.ql-toolbar button.ql-active .ql-fill {
+            fill: #20c997 !important;
+        }
+
+        [data-bs-theme="dark"] .ql-snow .ql-picker-options {
+            background-color: #2b3035;
+            border-color: #495057;
+        }
+
+        [data-bs-theme="dark"] .ql-snow .ql-picker-item {
+            color: #e9ecef;
+        }
+
+        [data-bs-theme="dark"] .ql-snow .ql-picker-item:hover,
+        [data-bs-theme="dark"] .ql-snow .ql-picker-item.ql-selected {
+            color: #20c997;
+        }
+
+        /* Enforce RTL */
+        #quill-editor .ql-editor {
+            direction: rtl;
+            text-align: right;
+        }
+
+        .ql-snow .ql-editor.ql-blank::before {
+            right: 15px;
+            left: auto;
+            text-align: right;
+            font-style: normal;
+        }
+
+        /* Dark Mode Placeholder */
+        [data-bs-theme="dark"] .ql-snow .ql-editor.ql-blank::before {
+            color: #adb5bd;
+        }
+
+        /* Dark Mode Placeholder */
+        [data-bs-theme="dark"] .ql-snow .ql-editor.ql-blank::before {
+            color: #adb5bd;
+        }
+
+        /* Direct Link Navigation */
+        .ql-tooltip {
+            display: none !important;
+        }
+
+        .ql-editor a {
+            cursor: pointer !important;
+        }
+
         /* ========== SMART FILTER DROPDOWN ========== */
         .smart-filter-dropdown .smart-filter-btn {
             background: var(--bs-body-bg);
@@ -1867,6 +2146,393 @@
                 }
                 // Trigger search for 'never' or 'all'
                 performSearch(searchInput.value.trim());
+            }
+        });
+    </script>
+    <!-- JavaScript for Labels -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+
+
+            // Open Label Modal
+            const labelModal = document.getElementById('labelModal');
+            if (labelModal) {
+                labelModal.addEventListener('show.bs.modal', function(event) {
+                    const button = event.relatedTarget;
+                    const contactId = button.getAttribute('data-id');
+                    const labelText = button.getAttribute('data-text') || '';
+                    const labelColor = button.getAttribute('data-color') || '#0d6efd';
+
+                    document.getElementById('labelContactId').value = contactId;
+                    document.getElementById('labelText').value = labelText;
+                    document.getElementById('labelColor').value = labelColor;
+
+                    // Reset custom color
+                    const customColorInput = document.getElementById('customColorInput');
+                    if (customColorInput) customColorInput.value = labelColor;
+
+                    // Check appropriate radio
+                    const radios = document.querySelectorAll('input[name="color_option"]');
+                    let found = false;
+                    radios.forEach(radio => {
+                        if (radio.value.toLowerCase() === labelColor.toLowerCase()) {
+                            radio.checked = true;
+                            found = true;
+                        }
+                    });
+
+                    // Update UI state
+                    if (found) {
+                        updateCustomPreviewUI(null, false);
+                    } else {
+                        radios.forEach(r => r.checked = false);
+                        updateCustomPreviewUI(labelColor, true);
+                        if (customColorInput) customColorInput.value = labelColor;
+                    }
+                });
+            }
+
+            // Handle Color Selection (Radio & Custom)
+            const colorRadios = document.querySelectorAll('input[name="color_option"]');
+            const customColorInput = document.getElementById('customColorInput');
+            const customColorBtn = document.getElementById('customColorBtn');
+            const customColorText = document.getElementById('customColorText');
+            const customColorIcon = document.getElementById('customColorIcon');
+
+            function updateCustomPreviewUI(color, isCustom) {
+                if (isCustom) {
+                    customColorBtn.style.backgroundColor = color;
+                    customColorBtn.style.color = '#fff';
+                    customColorBtn.style.border = 'none';
+                    customColorText.textContent = color;
+                    customColorIcon.classList.remove('bi-palette');
+                    customColorIcon.classList.add('bi-check2');
+                    customColorBtn.classList.remove('btn-outline-secondary');
+                } else {
+                    customColorBtn.style.backgroundColor = '';
+                    customColorBtn.style.color = '';
+                    customColorBtn.style.border = '1px dashed #adb5bd';
+                    customColorText.textContent = 'لون مخصص';
+                    customColorIcon.classList.remove('bi-check2');
+                    customColorIcon.classList.add('bi-palette');
+                    customColorBtn.classList.add('btn-outline-secondary');
+                }
+            }
+
+            colorRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    document.getElementById('labelColor').value = this.value;
+                    updateCustomPreviewUI(null, false);
+                });
+            });
+
+            if (customColorBtn && customColorInput) {
+                // Input is overlaying the button, handling changes directly
+                const handleCustomColorChange = function() {
+                    const color = this.value;
+                    document.getElementById('labelColor').value = color;
+                    // Uncheck presets
+                    document.querySelectorAll('input[name="color_option"]').forEach(r => r.checked = false);
+                    updateCustomPreviewUI(color, true);
+                };
+
+                customColorInput.addEventListener('input', handleCustomColorChange);
+                customColorInput.addEventListener('change', handleCustomColorChange);
+
+                // Ensure clicking it doesn't just do nothing visually if already selected
+                customColorInput.addEventListener('click', function() {
+                    // We can't know the color yet if it's a new pick, 
+                    // but we can ensure presets are unchecked if we want to force custom mode logic
+                    // However, best to wait for input/change. 
+                    // But if user clicks and cancels, we might want to stay in previous state.
+                    // If user clicks, logic is handled by input/change. 
+                });
+            }
+
+            // Handle Label Form Submit with Optimistic UI
+            const labelForm = document.getElementById('labelForm');
+            if (labelForm) {
+                labelForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    const contactId = document.getElementById('labelContactId').value;
+                    const text = document.getElementById('labelText').value;
+                    const color = document.getElementById('labelColor').value;
+
+                    // Get modal instance
+                    const modalEl = document.getElementById('labelModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+
+                    // 1. Optimistic Update: Update UI immediately
+                    const previousText = document.querySelector(`.btn-label[data-id="${contactId}"]`)
+                        ?.getAttribute('data-text');
+                    const previousColor = document.querySelector(`.btn-label[data-id="${contactId}"]`)
+                        ?.getAttribute('data-color');
+
+                    updateLabelUI(contactId, text, color);
+                    modal.hide();
+
+                    // 2. Send Request in Background
+                    fetch(`/contacts/${contactId}/label`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                                    .getAttribute('content'),
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                label_text: text,
+                                label_color: color
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (!data.success) {
+                                throw new Error(data.message || 'خطأ في الحفظ');
+                            }
+                            // Success - UI is already updated
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            // Revert UI on failure
+                            updateLabelUI(contactId, previousText, previousColor);
+                            alert('فشل حفظ العلامة. يرجى المحاولة مرة أخرى.');
+                        });
+                });
+            }
+
+            function updateLabelUI(contactId, text, color) {
+                // Update Desktop Row
+                const desktopLabelContainer = document.querySelector(`.contact-row-label-${contactId}`);
+                const editButtons = document.querySelectorAll(`.btn-label[data-id="${contactId}"]`);
+
+                if (text) {
+                    // Update badge
+                    if (desktopLabelContainer) {
+                        desktopLabelContainer.innerHTML =
+                            `<span class="badge rounded-pill" style="background-color: ${color}; font-size: 0.75rem;">${text}</span>`;
+                    }
+                    // Update button data attributes
+                    editButtons.forEach(btn => {
+                        btn.setAttribute('data-text', text);
+                        btn.setAttribute('data-color', color);
+                    });
+                } else {
+                    // Remove badge
+                    if (desktopLabelContainer) {
+                        desktopLabelContainer.innerHTML = '';
+                    }
+                    editButtons.forEach(btn => {
+                        btn.setAttribute('data-text', '');
+                        btn.setAttribute('data-color', '#0d6efd');
+                    });
+                }
+
+                // Update Mobile Card
+                const mobileLabelContainer = document.querySelector(
+                    `#mobile-contact-${contactId} .mobile-label-container`);
+                if (text) {
+                    if (mobileLabelContainer) {
+                        mobileLabelContainer.innerHTML =
+                            `<span class="badge rounded-pill" style="background-color: ${color};">${text}</span>`;
+                    }
+                } else {
+                    if (mobileLabelContainer) {
+                        mobileLabelContainer.innerHTML = '';
+                    }
+                }
+            }
+        });
+    </script>
+@endpush
+
+@push('scripts')
+    <!-- Quill JS -->
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Customize Link Blot to enforce target="_blank"
+            var Link = Quill.import('formats/link');
+            class MyLink extends Link {
+                static create(value) {
+                    let node = super.create(value);
+                    value = this.sanitize(value);
+                    node.setAttribute('href', value);
+                    node.setAttribute('target', '_blank');
+                    return node;
+                }
+            }
+            Quill.register(MyLink);
+
+            // Initialize Quill
+            var quill = new Quill('#quill-editor', {
+                theme: 'snow',
+                modules: {
+                    toolbar: '#quill-toolbar-container',
+                    keyboard: {
+                        bindings: {
+                            // custom bindings if needed
+                        }
+                    }
+                },
+                placeholder: 'اكتب ملاحظاتك هنا...'
+            });
+
+            // Auto-link URL matching regex
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+            quill.on('text-change', function(delta, oldDelta, source) {
+                if (source == 'user') {
+                    const sel = quill.getSelection();
+                    if (!sel) return;
+
+                    const leaf = quill.getLeaf(sel.index);
+                    if (!leaf || !leaf[0] || !leaf[0].text) return;
+
+                    const text = leaf[0].text;
+                    // Check for space or enter (trigger characters)
+                    // We look at the content inserted in the delta
+                    const ops = delta.ops;
+                    const lastOp = ops[ops.length - 1];
+
+                    if (lastOp.insert && (lastOp.insert === ' ' || lastOp.insert === '\n')) {
+                        // Scan the text node for URLs that are NOT already linked
+                        // This is a naive implementation; for robustness we might iterate over all words
+                        // But for "as you type", checking the word before the cursor is usually enough.
+
+                        // Because 'text' is the whole node text, we need to find the word just ending before the cursor.
+                        // However, leaf[0].text might be just a fragment if formats change. 
+                        // A simpler approach: Get text before cursor.
+
+                        const cursorIndex = sel.index;
+                        // get 100 chars before cursor
+                        const startSearch = Math.max(0, cursorIndex - 100);
+                        const textBefore = quill.getText(startSearch, cursorIndex - startSearch);
+
+                        // split by whitespace
+                        const words = textBefore.split(/\s+/);
+                        const lastWord = words[words.length -
+                            2]; // -1 is empty string if we just typed space
+
+                        if (lastWord && lastWord.match(/^https?:\/\/[^\s]+$/)) {
+                            // It's a URL
+                            // Calculate position
+                            const wordLength = lastWord.length;
+                            // Index of the word end is cursorIndex - 1 (the space we just typed)
+                            const wordStart = cursorIndex - 1 - wordLength;
+
+                            // Check if already linked
+                            const format = quill.getFormat(wordStart, wordLength);
+                            if (!format.link) {
+                                quill.formatText(wordStart, wordLength, 'link', lastWord);
+                                // Reset selection to after the space (Quill sometimes moves it)
+                                // quill.setSelection(cursorIndex); 
+                            }
+                        }
+                    }
+                }
+            });
+
+
+            // Direct Link Click Handler
+            const quillEditor = document.getElementById('quill-editor');
+            quillEditor.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    e.preventDefault();
+                    const href = e.target.getAttribute('href');
+                    if (href) {
+                        window.open(href, '_blank');
+                    }
+                }
+            });
+
+            const noteModal = document.getElementById('noteModal');
+            const noteContactIdInput = document.getElementById('noteContactId');
+            const saveNoteBtn = document.getElementById('saveNoteBtn');
+            const saveSpinner = saveNoteBtn.querySelector('.spinner-border');
+            const saveIcon = saveNoteBtn.querySelector('.bi-check-lg');
+
+            // Handle Modal Show
+            noteModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const contactId = button.getAttribute('data-id');
+                const noteContent = button.getAttribute('data-note') || '';
+
+                noteContactIdInput.value = contactId;
+
+                // Set content
+                if (noteContent) {
+                    quill.root.innerHTML = noteContent;
+                } else {
+                    quill.setText('');
+                }
+            });
+
+            // Handle Save
+            saveNoteBtn.addEventListener('click', function() {
+                const contactId = noteContactIdInput.value;
+                const htmlContent = quill.root.innerHTML;
+
+                // Loading state
+                saveNoteBtn.disabled = true;
+                saveSpinner.classList.remove('d-none');
+                saveIcon.classList.add('d-none');
+
+                fetch(`/contacts/${contactId}/note`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                                .getAttribute('content'),
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            note: htmlContent
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Update UI
+                            updateNoteSnippet(contactId, data.snippet, htmlContent);
+
+                            // Close Modal
+                            const modalInstance = bootstrap.Modal.getInstance(noteModal);
+                            modalInstance.hide();
+                        } else {
+                            alert(data.message || 'خطأ في الحفظ');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('حدث خطأ أثناء الحفظ');
+                    })
+                    .finally(() => {
+                        // Reset loading state
+                        saveNoteBtn.disabled = false;
+                        saveSpinner.classList.add('d-none');
+                        saveIcon.classList.remove('d-none');
+                    });
+            });
+
+            function updateNoteSnippet(contactId, snippet, fullNote) {
+                // Update snippets in Desktop (rows)
+                const snippetEls = document.querySelectorAll(`.contact-note-snippet[data-id="${contactId}"]`);
+                snippetEls.forEach(el => {
+                    if (snippet) {
+                        el.innerHTML = `<i class="bi bi-journal-text me-1"></i>${snippet}`;
+                    } else {
+                        el.innerHTML = '';
+                    }
+                });
+
+                // Update data attribute on buttons (desktop & mobile)
+                const buttons = document.querySelectorAll(
+                    `.note-btn[data-id="${contactId}"], .btn-note-mobile[data-id="${contactId}"]`);
+                buttons.forEach(btn => {
+                    btn.setAttribute('data-note', fullNote);
+                });
             }
         });
     </script>

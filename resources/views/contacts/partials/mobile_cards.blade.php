@@ -1,7 +1,6 @@
 @foreach ($contacts as $contact)
     <div class="contact-card card mb-3 shadow-sm border-0" id="mobile-contact-{{ $contact->id }}"
-        data-id="{{ $contact->id }}" data-name="{{ strtolower($contact->name) }}"
-        data-phone="{{ $contact->phone }}">
+        data-id="{{ $contact->id }}" data-name="{{ strtolower($contact->name) }}" data-phone="{{ $contact->phone }}">
         <div class="card-body p-3">
             {{-- Header: Checkbox + Name + Star --}}
             <div class="d-flex justify-content-between align-items-start mb-3">
@@ -10,6 +9,14 @@
                         value="{{ $contact->id }}" style="width: 1.25rem; height: 1.25rem;">
                     <div class="min-width-0 flex-grow-1">
                         <h6 class="fw-bold mb-0 text-truncate contact-name">{{ $contact->name }}</h6>
+                        @if ($contact->label_text)
+                            <div class="mobile-label-container mt-1">
+                                <span class="badge rounded-pill"
+                                    style="background-color: {{ $contact->label_color ?? '#6c757d' }}; font-size: 0.7rem; font-weight: normal;">
+                                    {{ $contact->label_text }}
+                                </span>
+                            </div>
+                        @endif
                         @if (!empty($contact->share_history))
                             <div class="mt-1">
                                 <i class="bi bi-share-fill text-info me-1" style="font-size: 0.7rem;"></i>
@@ -20,6 +27,13 @@
                                         {{ $share->shared_with }}
                                     </span>
                                 @endforeach
+                            </div>
+                        @endif
+                        @if ($contact->notes)
+                            <div class="mt-1 text-muted small contact-note-snippet" data-id="{{ $contact->id }}"
+                                style="font-size: 0.75rem;">
+                                <i
+                                    class="bi bi-journal-text me-1"></i>{{ Str::limit(strip_tags($contact->notes), 20) }}
                             </div>
                         @endif
                     </div>
@@ -50,7 +64,8 @@
                         <small class="text-muted d-block">آخر تواصل</small>
                         @if ($contact->last_sent_at)
                             <span class="text-success small fw-semibold">
-                                <i class="bi bi-check2-circle me-1"></i>{{ $contact->last_sent_at->locale('ar')->diffForHumans() }}
+                                <i
+                                    class="bi bi-check2-circle me-1"></i>{{ $contact->last_sent_at->locale('ar')->diffForHumans() }}
                             </span>
                         @else
                             <span class="text-secondary small">
@@ -65,25 +80,44 @@
             {{-- Call Client Button (Mobile Only - Full Width for easy tap) --}}
             <div class="d-grid mb-2">
                 <a href="tel:{{ $contact->phone }}"
-                   class="btn btn-success d-flex align-items-center justify-content-center gap-2 py-2">
+                    class="btn btn-success d-flex align-items-center justify-content-center gap-2 py-2">
                     <i class="bi bi-telephone-outbound-fill"></i>
                     <span class="fw-semibold">كلم العميل</span>
                 </a>
             </div>
             {{-- Edit & Delete Buttons --}}
-            <div class="d-flex gap-2">
+            {{-- Edit & Delete Buttons (Row 2) --}}
+            <div class="d-flex gap-2 mb-2">
                 <button type="button"
-                    class="btn btn-outline-primary flex-grow-1 edit-btn d-flex align-items-center justify-content-center gap-2"
+                    class="btn btn-outline-primary flex-grow-1 edit-btn d-flex align-items-center justify-content-center gap-1 btn-sm py-2"
                     data-id="{{ $contact->id }}" data-name="{{ $contact->name }}"
                     data-phone="{{ $contact->phone }}">
                     <i class="bi bi-pencil-square"></i>
-                    <span>تعديل</span>
+                    <span style="font-size: 0.8rem;">تعديل</span>
                 </button>
                 <button type="button"
-                    class="btn btn-outline-danger flex-grow-1 delete-btn d-flex align-items-center justify-content-center gap-2"
+                    class="btn btn-outline-danger flex-grow-1 delete-btn d-flex align-items-center justify-content-center gap-1 btn-sm py-2"
                     data-id="{{ $contact->id }}" data-name="{{ $contact->name }}">
                     <i class="bi bi-trash3"></i>
-                    <span>حذف</span>
+                    <span style="font-size: 0.8rem;">حذف</span>
+                </button>
+            </div>
+
+            {{-- Label & Note Buttons (Row 3) --}}
+            <div class="d-flex gap-2">
+                <button type="button"
+                    class="btn btn-outline-secondary flex-grow-1 btn-label-mobile d-flex align-items-center justify-content-center btn-sm py-2"
+                    data-id="{{ $contact->id }}" data-text="{{ $contact->label_text }}"
+                    data-color="{{ $contact->label_color }}" data-bs-toggle="modal" data-bs-target="#labelModal"
+                    title="تسمية">
+                    <i class="bi bi-tag"></i>
+                    {{-- Optional label text if user wants them to look similar to above, otherwise just icon centered --}}
+                </button>
+                <button type="button"
+                    class="btn btn-outline-info flex-grow-1 btn-note-mobile d-flex align-items-center justify-content-center btn-sm py-2"
+                    data-id="{{ $contact->id }}" data-note="{{ $contact->notes }}" data-bs-toggle="modal"
+                    data-bs-target="#noteModal" title="ملاحظات">
+                    <i class="bi bi-journal-text"></i>
                 </button>
             </div>
         </div>

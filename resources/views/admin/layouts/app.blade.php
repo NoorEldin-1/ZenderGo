@@ -34,6 +34,7 @@
             --whatsapp-green: #25D366;
             --whatsapp-dark: #128C7E;
             --sidebar-width: 220px;
+            --sidebar-collapsed-width: 80px;
         }
 
         /* ========== DARK MODE THEME ========== */
@@ -299,19 +300,38 @@
             color: #adb5bd !important;
         }
 
-        /* Dark Mode: Scrollbar */
-        [data-bs-theme="dark"] ::-webkit-scrollbar {
+        /* Global Checkbox/Radio Enhancement */
+        .form-check-input:checked {
+            background-color: var(--whatsapp-green);
+            border-color: var(--whatsapp-green);
+        }
+
+        /* Global Scrollbar - Apply to both Light and Dark modes */
+        ::-webkit-scrollbar {
             width: 10px;
             height: 10px;
         }
 
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        /* Dark Mode: Scrollbar Overrides */
         [data-bs-theme="dark"] ::-webkit-scrollbar-track {
             background: #1a1d21;
         }
 
         [data-bs-theme="dark"] ::-webkit-scrollbar-thumb {
             background: #495057;
-            border-radius: 5px;
         }
 
         [data-bs-theme="dark"] ::-webkit-scrollbar-thumb:hover {
@@ -444,50 +464,131 @@
         }
 
         /* Sidebar - Desktop */
-        .sidebar {
-            width: var(--sidebar-width);
-            min-height: calc(100vh - 60px);
-            background: linear-gradient(180deg, #1a1d21 0%, #212529 100%);
-            position: fixed;
-            top: 60px;
-            right: 0;
-            padding-top: 1rem;
-        }
+        @media (min-width: 992px) {
+            .sidebar {
+                width: var(--sidebar-width);
+                min-height: calc(100vh - 60px);
+                background: linear-gradient(180deg, #1a1d21 0%, #212529 100%);
+                position: fixed;
+                top: 60px;
+                right: 0;
+                padding-top: 1rem;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                z-index: 1000;
+                /* Overflow moved to inner container to allow button to pop out */
+            }
 
-        .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.75);
-            padding: 0.875rem 1.25rem;
-            border-radius: 8px;
-            margin: 4px 12px;
-            font-weight: 500;
-            font-size: 0.9rem;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+            .sidebar-scroll-container {
+                height: calc(100vh - 80px);
+                /* Adjust for header + padding */
+                overflow-y: auto;
+                overflow-x: hidden;
+                padding-bottom: 2rem;
+            }
 
-        .sidebar .nav-link:hover {
-            background: rgba(255, 255, 255, 0.08);
-            color: white;
-        }
+            .sidebar.collapsed {
+                width: var(--sidebar-collapsed-width);
+            }
 
-        .sidebar .nav-link.active {
-            background: rgba(37, 211, 102, 0.15);
-            color: var(--whatsapp-green);
-        }
+            /* Sidebar Toggle Button */
+            .sidebar-toggle-btn {
+                position: absolute;
+                top: 24px;
+                left: -14px;
+                /* Half outside */
+                width: 28px;
+                height: 28px;
+                background: #fff;
+                border: 1px solid #dee2e6;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                z-index: 1010;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+                padding: 0;
+                transition: all 0.2s ease;
+                color: #6c757d;
+            }
 
-        .sidebar .nav-link i {
-            font-size: 1.1rem;
-            width: 22px;
-            text-align: center;
-        }
+            .sidebar-toggle-btn:hover {
+                background: #f8f9fa;
+                color: var(--whatsapp-green);
+                transform: scale(1.1);
+            }
 
-        /* Main Content */
-        .main-content {
-            margin-right: var(--sidebar-width);
-            min-height: calc(100vh - 60px);
-            padding: 1.5rem;
+            [data-bs-theme="dark"] .sidebar-toggle-btn {
+                background: #212529;
+                border-color: #495057;
+                color: #adb5bd;
+            }
+
+            [data-bs-theme="dark"] .sidebar-toggle-btn:hover {
+                background: #343a40;
+                color: #fff;
+            }
+
+            .sidebar .nav-link {
+                color: rgba(255, 255, 255, 0.75);
+                padding: 0.875rem 1.25rem;
+                border-radius: 8px;
+                margin: 4px 12px;
+                font-weight: 500;
+                font-size: 0.9rem;
+                transition: all 0.2s ease;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                white-space: nowrap;
+                overflow: hidden;
+            }
+
+            .sidebar.collapsed .nav-link {
+                padding: 0.875rem 0;
+                justify-content: center;
+                margin: 4px 10px;
+            }
+
+            .sidebar.collapsed .nav-link span {
+                opacity: 0;
+                width: 0;
+                display: none;
+            }
+
+            .sidebar.collapsed .nav-link i {
+                margin: 0;
+                font-size: 1.3rem;
+            }
+
+            .sidebar .nav-link:hover {
+                background: rgba(255, 255, 255, 0.08);
+                color: white;
+            }
+
+            .sidebar .nav-link.active {
+                background: rgba(37, 211, 102, 0.15);
+                color: var(--whatsapp-green);
+            }
+
+            .sidebar .nav-link i {
+                font-size: 1.1rem;
+                width: 22px;
+                text-align: center;
+                transition: all 0.2s;
+            }
+
+            /* Main Content */
+            .main-content {
+                margin-right: var(--sidebar-width);
+                min-height: calc(100vh - 60px);
+                padding: 1.5rem;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .main-content.expanded {
+                margin-right: var(--sidebar-collapsed-width);
+            }
         }
 
         /* Mobile Bottom Navigation */
@@ -716,41 +817,48 @@
 
     @if (auth('admin')->check())
         <!-- Sidebar - Desktop Only -->
-        <nav class="sidebar d-none d-lg-block">
-            <ul class="nav flex-column">
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"
-                        href="{{ route('admin.dashboard') }}">
-                        <i class="bi bi-speedometer2"></i>
-                        لوحة الإدارة
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"
-                        href="{{ route('admin.users.index') }}">
-                        <i class="bi bi-people"></i>
-                        إدارة المستخدمين
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.payment-requests.*') ? 'active' : '' }}"
-                        href="{{ route('admin.payment-requests.index') }}">
-                        <i class="bi bi-credit-card"></i>
-                        طلبات الدفع
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.settings') ? 'active' : '' }}"
-                        href="{{ route('admin.settings') }}">
-                        <i class="bi bi-sliders"></i>
-                        الإعدادات
-                    </a>
-                </li>
-            </ul>
+        <!-- Sidebar - Desktop Only -->
+        <nav class="sidebar d-none d-lg-block" id="sidebar">
+            <button class="sidebar-toggle-btn" id="sidebarToggle">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+
+            <div class="sidebar-scroll-container">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"
+                            href="{{ route('admin.dashboard') }}">
+                            <i class="bi bi-speedometer2"></i>
+                            <span>لوحة الإدارة</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"
+                            href="{{ route('admin.users.index') }}">
+                            <i class="bi bi-people"></i>
+                            <span>إدارة المستخدمين</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('admin.payment-requests.*') ? 'active' : '' }}"
+                            href="{{ route('admin.payment-requests.index') }}">
+                            <i class="bi bi-credit-card"></i>
+                            <span>طلبات الدفع</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('admin.settings') ? 'active' : '' }}"
+                            href="{{ route('admin.settings') }}">
+                            <i class="bi bi-sliders"></i>
+                            <span>الإعدادات</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </nav>
 
         <!-- Main Content -->
-        <main class="main-content">
+        <main class="main-content" id="mainContent">
             @if (session('success'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
                     <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
@@ -857,72 +965,91 @@
                     <button type="button" class="btn btn-light btn-sm px-4" data-bs-dismiss="modal">إلغاء</button>
                     <form action="{{ route('admin.logout') }}" method="POST" class="d-inline">
                         @csrf
-                        <button type="submit" class="btn btn-danger btn-sm px-4">
-                            تسجيل الخروج
-                        </button>
-                    </form>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Bootstrap 5.3 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous">
-    </script>
+        <!-- jQuery -->
+        <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
-    <!-- Theme Toggle Script -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const themeToggle = document.getElementById('themeToggle');
-            const themeIcon = document.getElementById('themeIcon');
-            const html = document.documentElement;
+        <!-- Bootstrap Bundle with Popper -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous">
+        </script>
 
-            if (themeToggle) {
-                themeToggle.addEventListener('click', function() {
-                    const currentTheme = html.getAttribute('data-bs-theme') || 'light';
-                    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Sidebar Toggle Logic
+                const sidebar = document.getElementById('sidebar');
+                const mainContent = document.getElementById('mainContent');
+                const toggleBtn = document.getElementById('sidebarToggle');
+                const toggleIcon = toggleBtn ? toggleBtn.querySelector('i') : null;
 
-                    // Immediately update UI for instant feedback
-                    html.setAttribute('data-bs-theme', newTheme);
-
-                    // Update icon
-                    if (themeIcon) {
-                        themeIcon.className = newTheme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
+                if (sidebar && mainContent && toggleBtn) {
+                    // Load saved state
+                    const isCollapsed = localStorage.getItem('adminSidebarState') === 'collapsed';
+                    if (isCollapsed) {
+                        sidebar.classList.add('collapsed');
+                        mainContent.classList.add('expanded');
+                        if (toggleIcon) {
+                            toggleIcon.classList.remove('bi-chevron-right');
+                            toggleIcon.classList.add('bi-chevron-left');
+                        }
                     }
 
-                    // Update title
-                    themeToggle.title = newTheme === 'dark' ? 'التبديل للوضع الفاتح' :
-                        'التبديل للوضع الداكن';
+                    // Toggle click handler
+                    toggleBtn.addEventListener('click', function() {
+                        sidebar.classList.toggle('collapsed');
+                        mainContent.classList.toggle('expanded');
 
-                    // Save to database via AJAX (Admin route)
-                    fetch('/admin/theme/toggle', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
-                                    .getAttribute('content'),
-                                'Accept': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                theme: newTheme
-                            })
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (!data.success) {
-                                console.error('Failed to save theme preference');
+                        // Save state
+                        const collapsed = sidebar.classList.contains('collapsed');
+                        localStorage.setItem('adminSidebarState', collapsed ? 'collapsed' : 'expanded');
+
+                        // Update icon
+                        if (toggleIcon) {
+                            if (collapsed) {
+                                toggleIcon.classList.remove('bi-chevron-right');
+                                toggleIcon.classList.add('bi-chevron-left');
+                            } else {
+                                toggleIcon.classList.remove('bi-chevron-left');
+                                toggleIcon.classList.add('bi-chevron-right');
                             }
-                        })
-                        .catch(error => {
-                            console.error('Error saving theme:', error);
-                        });
-                });
-            }
-        });
-    </script>
+                        }
+                    });
+                }
 
-    @stack('scripts')
+                // Theme Toggle Logic
+                const themeToggle = document.getElementById('themeToggle');
+                const themeIcon = document.getElementById('themeIcon');
+                const htmlElement = document.documentElement;
+
+                if (themeToggle) {
+                    themeToggle.addEventListener('click', () => {
+                        const currentTheme = htmlElement.getAttribute('data-bs-theme');
+                        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+                        htmlElement.setAttribute('data-bs-theme', newTheme);
+
+                        // Update Icon
+                        if (newTheme === 'dark') {
+                            themeIcon.classList.remove('bi-moon-fill');
+                            themeIcon.classList.add('bi-sun-fill');
+                            themeToggle.title = 'التبديل للوضع الفاتح';
+                        } else {
+                            themeIcon.classList.remove('bi-sun-fill');
+                            themeIcon.classList.add('bi-moon-fill');
+                            themeToggle.title = 'التبديل للوضع الداكن';
+                        }
+
+                        // Save preference via AJAX if needed, or localStorage
+                        // localStorage.setItem('theme', newTheme);
+                    });
+                }
+            });
+        </script>
+
+        @stack('scripts')
 </body>
 
 </html>

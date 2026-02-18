@@ -9,7 +9,17 @@
                 data-id="{{ $contact->id }}" style="cursor: pointer; font-size: 1.1rem; transition: transform 0.2s;"
                 title="{{ $contact->is_featured ? 'إزالة من المميزة' : 'إضافة للمميزة' }}"></i>
             <div>
-                <div class="fw-semibold contact-name">{{ $contact->name }}</div>
+                <div class="fw-semibold contact-name d-flex align-items-center gap-2">
+                    {{ $contact->name }}
+                    <div class="contact-row-label-{{ $contact->id }}">
+                        @if ($contact->label_text)
+                            <span class="badge rounded-pill"
+                                style="background-color: {{ $contact->label_color ?? '#6c757d' }}; font-size: 0.75rem;">
+                                {{ $contact->label_text }}
+                            </span>
+                        @endif
+                    </div>
+                </div>
                 @if (!empty($contact->share_history))
                     <small class="d-block mt-1">
                         <i class="bi bi-share-fill text-info me-1" style="font-size: 0.7rem;"></i>
@@ -23,6 +33,12 @@
                         @endforeach
                     </small>
                 @endif
+                <small class="d-block mt-1 text-muted contact-note-snippet" data-id="{{ $contact->id }}"
+                    style="font-size: 0.75rem;">
+                    @if ($contact->notes)
+                        <i class="bi bi-journal-text me-1"></i>{{ Str::limit(strip_tags($contact->notes), 20) }}
+                    @endif
+                </small>
                 <small class="text-muted d-md-none contact-phone" dir="ltr">{{ $contact->phone }}</small>
             </div>
         </td>
@@ -45,6 +61,16 @@
         </td>
         <td class="text-center">
             <div class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-outline-secondary btn-label" data-id="{{ $contact->id }}"
+                    data-text="{{ $contact->label_text }}" data-color="{{ $contact->label_color }}"
+                    data-bs-toggle="modal" data-bs-target="#labelModal" title="تسمية">
+                    <i class="bi bi-tag"></i>
+                </button>
+                <button type="button" class="btn btn-outline-info note-btn" data-id="{{ $contact->id }}"
+                    data-note="{{ $contact->notes }}" data-bs-toggle="modal"
+                    data-bs-target="#noteModal" title="ملاحظات">
+                    <i class="bi bi-journal-text"></i>
+                </button>
                 <button type="button" class="btn btn-outline-primary edit-btn" data-id="{{ $contact->id }}"
                     data-name="{{ $contact->name }}" data-phone="{{ $contact->phone }}" title="تعديل">
                     <i class="bi bi-pencil"></i>

@@ -79,52 +79,7 @@
     </div>
 
     <!-- Advanced Filters Panel -->
-    <div class="card mb-3" id="filtersCard">
-        <div class="card-header bg-white py-2">
-            <div class="d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 fw-bold">
-                    <i class="bi bi-funnel text-primary me-2"></i>الفلاتر المتقدمة
-                </h6>
-                <button type="button" class="btn btn-outline-secondary btn-sm" id="resetFilters">
-                    <i class="bi bi-arrow-clockwise me-1"></i>إعادة تعيين
-                </button>
-            </div>
-        </div>
-        <div class="card-body py-3">
-            <div class="row g-3">
-                <!-- Store Filter -->
-                <div class="col-12">
-                    <label class="form-label small fw-semibold mb-2">
-                        <i class="bi bi-shop me-1"></i>فلتر المتجر
-                    </label>
-                    <div class="dropdown w-100">
-                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start" type="button"
-                            id="storeFilterBtn" data-bs-toggle="dropdown" data-bs-auto-close="outside"
-                            aria-expanded="false">
-                            <span id="storeFilterLabel">الكل</span>
-                        </button>
-                        <div class="dropdown-menu w-100 p-2" id="storeDropdown"
-                            style="max-height: 300px; overflow-y: auto;">
-                            <input type="text" class="form-control form-control-sm mb-2" id="storeSearch"
-                                placeholder="بحث عن متجر...">
-                            <div id="storeCheckboxes">
-                                <!-- Will be populated dynamically -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Active Filters Summary -->
-            <div class="mt-3 pt-2 border-top" id="filterSummary" style="display: none;">
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <span class="text-muted small">الفلاتر النشطة:</span>
-                    <div id="activeFilterBadges"></div>
-                    <span class="badge bg-primary" id="filteredCountBadge">0 نتيجة</span>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Advanced Filters Removed -->
 
     <!-- Data Table -->
     <div class="card">
@@ -155,7 +110,7 @@
                                 <input type="checkbox" class="form-check-input" id="selectAll">
                             </th>
                             <th class="d-none d-md-table-cell" style="width: 50px;">#</th>
-                            <th class="d-none d-lg-table-cell">المتجر</th>
+                            <!-- Store Column Removed -->
                             <th>الاسم</th>
                             <th class="d-none d-sm-table-cell">الهاتف</th>
                             <th style="width: 80px;">الحالة</th>
@@ -242,143 +197,17 @@
         let rowsPerPage = 100;
         let currentFilter = 'all'; // 'all', 'valid', 'error'
 
-        // ========== ADVANCED FILTERS STATE ==========
-        let selectedStores = new Set(); // Empty = all stores
-        let uniqueStores = []; // Will be populated on init
-
-        // Initialize unique stores from data
-        function initStoreFilter() {
-            const stores = new Set();
-            rowStates.forEach(row => {
-                if (row.store_name && row.store_name.trim()) {
-                    stores.add(row.store_name.trim());
-                }
-            });
-            uniqueStores = [...stores].sort();
-            renderStoreCheckboxes();
-        }
-
-        // Render store checkboxes in dropdown
-        function renderStoreCheckboxes(searchQuery = '') {
-            const container = document.getElementById('storeCheckboxes');
-            const query = searchQuery.toLowerCase();
-
-            let html = `
-                <div class="form-check mb-1">
-                    <input class="form-check-input" type="checkbox" id="storeAll" 
-                        ${selectedStores.size === 0 ? 'checked' : ''}>
-                    <label class="form-check-label small" for="storeAll">
-                        <strong>الكل</strong> <span class="text-muted">(${uniqueStores.length})</span>
-                    </label>
-                </div>
-                <hr class="my-2">
-            `;
-
-            const filteredStores = query ?
-                uniqueStores.filter(s => s.toLowerCase().includes(query)) :
-                uniqueStores;
-
-            if (filteredStores.length === 0) {
-                html += '<p class="text-muted small mb-0">لا توجد نتائج</p>';
-            } else {
-                filteredStores.forEach(store => {
-                    const id = `store_${store.replace(/[^a-zA-Z0-9]/g, '_')}`;
-                    const checked = selectedStores.has(store) ? 'checked' : '';
-                    html += `
-                        <div class="form-check mb-1">
-                            <input class="form-check-input store-checkbox" type="checkbox" 
-                                id="${id}" value="${escapeHtml(store)}" ${checked}>
-                            <label class="form-check-label small text-truncate d-block" for="${id}" 
-                                style="max-width: 200px;" title="${escapeHtml(store)}">
-                                ${escapeHtml(store)}
-                            </label>
-                        </div>
-                    `;
-                });
-            }
-
-            container.innerHTML = html;
-            attachStoreCheckboxListeners();
-        }
-
-        // Attach store checkbox event listeners
-        function attachStoreCheckboxListeners() {
-            // "All" checkbox
-            document.getElementById('storeAll')?.addEventListener('change', function() {
-                if (this.checked) {
-                    selectedStores.clear();
-                    document.querySelectorAll('.store-checkbox').forEach(cb => cb.checked = false);
-                }
-                applyFilters();
-            });
-
-            // Individual store checkboxes
-            document.querySelectorAll('.store-checkbox').forEach(cb => {
-                cb.addEventListener('change', function() {
-                    if (this.checked) {
-                        selectedStores.add(this.value);
-                    } else {
-                        selectedStores.delete(this.value);
-                    }
-                    // Update "All" checkbox
-                    const allCb = document.getElementById('storeAll');
-                    if (allCb) allCb.checked = selectedStores.size === 0;
-                    applyFilters();
-                });
-            });
-        }
-
-        // Update store filter button label
-        function updateStoreFilterLabel() {
-            const label = document.getElementById('storeFilterLabel');
-            if (selectedStores.size === 0) {
-                label.textContent = 'الكل';
-            } else if (selectedStores.size === 1) {
-                label.textContent = [...selectedStores][0];
-            } else {
-                label.textContent = `${selectedStores.size} متاجر`;
-            }
-        }
-
         // Apply all filters and refresh table
         function applyFilters() {
             currentPage = 1;
-            updateStoreFilterLabel();
-            updateFilterSummary();
+            renderTable();
             renderTable();
             updateAll();
         }
 
-        // Update filter summary badges
-        function updateFilterSummary() {
-            const summary = document.getElementById('filterSummary');
-            const badges = document.getElementById('activeFilterBadges');
-            const countBadge = document.getElementById('filteredCountBadge');
 
-            let badgesHtml = '';
-            let hasFilters = false;
 
-            // Store filter badges
-            if (selectedStores.size > 0) {
-                hasFilters = true;
-                if (selectedStores.size <= 2) {
-                    selectedStores.forEach(s => {
-                        badgesHtml += `<span class="badge bg-success me-1">${escapeHtml(s)}</span>`;
-                    });
-                } else {
-                    badgesHtml += `<span class="badge bg-success me-1">${selectedStores.size} متاجر</span>`;
-                }
-            }
-
-            // Update count
-            const filteredCount = getFilteredRows().length;
-            countBadge.textContent = `${filteredCount} نتيجة`;
-
-            summary.style.display = hasFilters ? 'block' : 'none';
-            badges.innerHTML = badgesHtml;
-        }
-
-        // Get filtered rows based on ALL filters (status + store)
+        // Get filtered rows based on ALL filters (status)
         function getFilteredRows() {
             return rowStates.map((row, index) => ({
                     ...row,
@@ -390,11 +219,6 @@
                     if (currentFilter === 'valid') return row.status === 'valid';
                     if (currentFilter === 'error') return row.status === 'error' || row.status === 'duplicate';
                     return true;
-                })
-                // Store filter
-                .filter(row => {
-                    if (selectedStores.size === 0) return true; // All stores
-                    return selectedStores.has(row.store_name);
                 });
         }
 
@@ -436,16 +260,15 @@
                 '<span class="text-danger fst-italic">فارغ</span>' :
                 `<code dir="ltr">${escapeHtml(row.phone)}</code>`;
 
-            const storeNameHtml = row.store_name ? escapeHtml(row.store_name) : '<span class="text-muted">-</span>';
+
 
             return `
-                <tr data-status="${displayStatus}" data-index="${index}" 
-                    data-name="${escapeHtml(row.name)}" data-phone="${escapeHtml(row.phone)}" data-store="${escapeHtml(row.store_name || '')}">
+                 <tr data-status="${displayStatus}" data-index="${index}" 
+                    data-name="${escapeHtml(row.name)}" data-phone="${escapeHtml(row.phone)}">
                     <td class="ps-3">
                         <input type="checkbox" class="form-check-input row-checkbox" data-index="${index}" ${selectedIndices.has(index) ? 'checked' : ''}>
                     </td>
                     <td class="text-muted d-none d-md-table-cell">${row.row_number}</td>
-                    <td class="d-none d-lg-table-cell">${storeNameHtml}</td>
                     <td>${nameHtml}</td>
                     <td class="d-none d-sm-table-cell">${phoneHtml}</td>
                     <td>${statusBadge}</td>
@@ -644,8 +467,7 @@
                         if (importCount < remainingSlots) {
                             rowsToImport.push({
                                 name: row.name,
-                                phone: row.phone,
-                                store_name: row.store_name || null
+                                phone: row.phone
                             });
                             importCount++;
                         }
@@ -659,8 +481,7 @@
                         if (importCount < remainingSlots) {
                             rowsToImport.push({
                                 name: row.name,
-                                phone: row.phone,
-                                store_name: row.store_name || null
+                                phone: row.phone
                             });
                             importCount++;
                         }
@@ -685,38 +506,13 @@
                 currentFilter = id === 'showAll' ? 'all' : (id === 'showValid' ? 'valid' : 'error');
                 currentPage = 1;
                 renderTable();
-                updateFilterSummary();
             });
         });
 
-        // ========== ADVANCED FILTER EVENT LISTENERS ==========
 
-        // Store search input
-        document.getElementById('storeSearch')?.addEventListener('input', function() {
-            renderStoreCheckboxes(this.value);
-        });
-
-        // Reset filters button
-        document.getElementById('resetFilters')?.addEventListener('click', function() {
-            // Reset stores
-            selectedStores.clear();
-            renderStoreCheckboxes();
-
-            // Reset status filter
-            currentFilter = 'all';
-            document.querySelectorAll('#showAll, #showValid, #showErrors').forEach(b => b.classList.remove(
-                'active'));
-            document.getElementById('showAll')?.classList.add('active');
-
-            // Reset search
-            const storeSearch = document.getElementById('storeSearch');
-            if (storeSearch) storeSearch.value = '';
-
-            applyFilters();
-        });
 
         // Initial render
-        initStoreFilter(); // Initialize store filter from data
+
         updateAll();
         renderTable();
 

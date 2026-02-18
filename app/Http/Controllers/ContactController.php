@@ -252,8 +252,6 @@ class ContactController extends Controller
                 return trim($h ?? '');
             }, $rows[0]);
 
-            // Try to auto-detect columns
-            $storeNameIndex = $this->findColumnIndex($headers, ['storename', 'store_name', 'store', 'الفرع', 'اسم الفرع']);
             $nameIndex = $this->findColumnIndex($headers, ['custfullname', 'cust_fullname', 'fullname', 'name', 'customername', 'customer', 'الاسم', 'اسم العميل', 'لعميل']);
             $phoneIndex = $this->findColumnIndex($headers, ['custmobile', 'cust_mobile', 'mobile', 'phone', 'telephone', 'tel', 'p_h_o_n_e', 'الهاتف', 'الموبايل', 'رقم الهاتف']);
 
@@ -270,7 +268,6 @@ class ContactController extends Controller
                 return $this->processImportData($rows, [
                     'name_index' => $nameIndex,
                     'phone_index' => $phoneIndex,
-                    'store_index' => $storeNameIndex,
                 ], $file->getClientOriginalName());
             }
 
@@ -280,7 +277,6 @@ class ContactController extends Controller
                 'filename' => $file->getClientOriginalName(),
                 'suggested_name' => $nameIndex !== false ? $nameIndex : '',
                 'suggested_phone' => $phoneIndex !== false ? $phoneIndex : '',
-                'suggested_store' => $storeNameIndex !== false ? $storeNameIndex : '',
             ]);
 
         } catch (\Exception $e) {
@@ -332,7 +328,6 @@ class ContactController extends Controller
 
         $nameIndex = $findIndex($request->name_column);
         $phoneIndex = $findIndex($request->phone_column);
-        $storeIndex = $request->filled('store_column') ? $findIndex($request->store_column) : false;
 
         if ($nameIndex === false) {
             return back()->withErrors(['name_column' => 'العمود غير موجود في الملف'])->withInput();
@@ -344,7 +339,6 @@ class ContactController extends Controller
         $mapping = [
             'name_index' => $nameIndex,
             'phone_index' => $phoneIndex,
-            'store_index' => $storeIndex,
         ];
 
         return $this->processImportData($rawData['rows'], $mapping, $rawData['filename']);
@@ -357,7 +351,6 @@ class ContactController extends Controller
     {
         $nameIndex = $mapping['name_index'];
         $phoneIndex = $mapping['phone_index'];
-        $storeNameIndex = $mapping['store_index'];
 
         // Optimization: Use flip() for O(1) lookup
         $existingPhones = Auth::user()->contacts()->pluck('phone')->flip()->toArray();
@@ -365,7 +358,6 @@ class ContactController extends Controller
 
         $preview = [
             'filename' => $filename,
-            'has_store_name' => $storeNameIndex !== false,
             'rows' => [],
             'summary' => [
                 'total' => 0,
@@ -378,7 +370,6 @@ class ContactController extends Controller
         $rowCount = count($rows);
         for ($i = 1; $i < $rowCount; $i++) {
             $row = $rows[$i];
-            $storeName = ($storeNameIndex !== false && isset($row[$storeNameIndex])) ? trim($row[$storeNameIndex]) : '';
             $name = isset($row[$nameIndex]) ? trim($row[$nameIndex]) : '';
             $phone = isset($row[$phoneIndex]) ? trim($row[$phoneIndex]) : '';
 
@@ -443,7 +434,6 @@ class ContactController extends Controller
 
             $preview['rows'][] = [
                 'row_number' => $i + 1,
-                'store_name' => $storeName,
                 'name' => $name,
                 'phone' => $phone,
                 'status' => $status,
@@ -571,7 +561,6 @@ class ContactController extends Controller
 
         // Try to auto-detect columns again to provide suggestions
         $headers = $rawData['headers'];
-        $storeNameIndex = $this->findColumnIndex($headers, ['storename', 'store_name', 'store', 'الفرع', 'اسم الفرع']);
         $nameIndex = $this->findColumnIndex($headers, ['custfullname', 'cust_fullname', 'fullname', 'name', 'customername', 'customer', 'الاسم', 'اسم العميل', 'لعميل']);
         $phoneIndex = $this->findColumnIndex($headers, ['custmobile', 'cust_mobile', 'mobile', 'phone', 'telephone', 'tel', 'p_h_o_n_e', 'الهاتف', 'الموبايل', 'رقم الهاتف']);
 
@@ -580,7 +569,6 @@ class ContactController extends Controller
             'filename' => $rawData['filename'],
             'suggested_name' => $nameIndex !== false ? $nameIndex : '',
             'suggested_phone' => $phoneIndex !== false ? $phoneIndex : '',
-            'suggested_store' => $storeNameIndex !== false ? $storeNameIndex : '',
         ]);
     }
 
@@ -652,7 +640,6 @@ class ContactController extends Controller
                     'user_id' => $userId,
                     'name' => $row['name'],
                     'phone' => $phone,
-                    'store_name' => $row['store_name'] ?? null,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ];
@@ -731,7 +718,6 @@ class ContactController extends Controller
                 'user_id' => $userId,
                 'name' => $row['name'],
                 'phone' => $phone,
-                'store_name' => $row['store_name'] ?? null,
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
@@ -818,12 +804,9 @@ class ContactController extends Controller
 
         if ($exists) {
             if ($request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'رقم الهاتف موجود مسبقاً'
-                ]);
+                return response()->json(['success' => false, 'message' => 'رقم الهاتف موجود مسبقاً'], 422);
             }
-            return back()->withErrors(['phone' => 'رقم الهاتف موجود مسبقاً'])->withInput();
+            return back()->withErrors(['phone' => 'This phone number already exists in your contacts.'])->withInput();
         }
 
         $contact->update($validated);
@@ -832,16 +815,70 @@ class ContactController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'تم تحديث جهة الاتصال بنجاح',
-                'contact' => [
-                    'id' => $contact->id,
-                    'name' => $contact->name,
-                    'phone' => $contact->phone,
-                ]
+                'contact' => $contact
             ]);
         }
 
         return redirect()->route('contacts.index')->with('success', 'تم تحديث جهة الاتصال بنجاح!');
     }
+
+    /**
+     * Update the contact's note.
+     */
+    public function updateNote(Request $request, Contact $contact)
+    {
+        // Ensure user owns the contact
+        if ($contact->user_id !== Auth::id()) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح'], 403);
+        }
+
+        $validated = $request->validate([
+            'note' => 'nullable|string',
+        ]);
+
+        $contact->update(['notes' => $validated['note']]);
+
+        // Return truncated plain text snippet for UI update
+        $plainText = strip_tags($validated['note'] ?? '');
+        $snippet = mb_substr($plainText, 0, 20) . (mb_strlen($plainText) > 20 ? '...' : '');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم حفظ الملاحظة بنجاح',
+            'snippet' => $snippet,
+            'full_note' => $validated['note'] // Return full note in case we need to update data attribute
+        ]);
+    }
+
+
+    /**
+     * Update the label for the specified contact.
+     */
+    public function updateLabel(Request $request, Contact $contact)
+    {
+        // Ensure user owns the contact
+        if ($contact->user_id !== Auth::id()) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح'], 403);
+        }
+
+        $validated = $request->validate([
+            'label_text' => 'nullable|string|max:20',
+            'label_color' => 'nullable|string|max:7',
+        ]);
+
+        $contact->update([
+            'label_text' => $validated['label_text'] ?? null,
+            'label_color' => $validated['label_color'] ?? null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تحديث العلامة بنجاح',
+            'label_text' => $contact->label_text,
+            'label_color' => $contact->label_color,
+        ]);
+    }
+
 
     /**
      * Bulk delete contacts.

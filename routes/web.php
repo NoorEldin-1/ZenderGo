@@ -83,6 +83,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/contacts/process-mapping', [ContactController::class, 'processMapping'])->name('contacts.process-mapping');
         Route::get('/contacts/remap', [ContactController::class, 'remap'])->name('contacts.remap');
         Route::post('/contacts/{contact}/toggle-featured', [ContactController::class, 'toggleFeatured'])->name('contacts.toggle-featured');
+        Route::patch('/contacts/{contact}/label', [ContactController::class, 'updateLabel'])->name('contacts.update-label');
+        Route::patch('/contacts/{contact}/note', [ContactController::class, 'updateNote'])->name('contacts.update-note');
         Route::resource('contacts', ContactController::class)->except(['show', 'edit']);
 
         // Campaigns (quota system handles rate limiting based on contacts sent)
