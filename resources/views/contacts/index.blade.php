@@ -31,6 +31,9 @@
             <button type="button" class="btn btn-outline-primary btn-sm" id="btnFetchChats">
                 <i class="bi bi-whatsapp me-1"></i>سحب المحادثات
             </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnFetchGroups">
+                <i class="bi bi-people me-1"></i>سحب الجروبات
+            </button>
             <a href="{{ route('contacts.create') }}" class="btn btn-primary btn-sm">
                 <i class="bi bi-plus-lg me-1"></i>إضافة جهة
             </a>
@@ -646,6 +649,75 @@
                         <span class="visually-hidden">جاري التحميل...</span>
                     </div>
                     <h5 class="mb-2" id="fetchChatsStatusText">جاري الاتصال بالواتساب...</h5>
+                    <p class="text-muted mb-0 mx-auto" style="max-width: 300px;">يرجى عدم إغلاق هذه النافذة أو تحديث
+                        الصفحة حتى تكتمل العملية.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fetch Groups Loading Modal -->
+    <div class="modal fade" id="fetchGroupsLoadingModal" tabindex="-1" data-bs-backdrop="static"
+        data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center py-5">
+                    <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">جاري التحميل...</span>
+                    </div>
+                    <h5 class="mb-2" id="fetchGroupsStatusText">جاري الاتصال وسحب الجروبات...</h5>
+                    <p class="text-muted mb-0 mx-auto" style="max-width: 300px;">يرجى الانتظار حتى تكتمل العملية.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Groups Selection Modal -->
+    <div class="modal fade" id="groupsSelectionModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-people text-primary me-2"></i>اختيار الجروبات
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="fw-bold mb-0">تم العثور على <span id="groupsCountBadge"
+                                    class="badge bg-primary">0</span> جروب</span>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="selectAllGroups" checked>
+                            <label class="form-check-label user-select-none" style="cursor: pointer;"
+                                for="selectAllGroups">تحديد الكل</label>
+                        </div>
+                    </div>
+                    <div class="list-group list-group-flush" id="groupsContainer">
+                        <!-- Groups will be populated here via JS -->
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" id="btnStartExtraction">
+                        <i class="bi bi-download me-1"></i>استخراج جهات الاتصال (<span id="selectedGroupsCount">0</span>)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Extracting Groups Loading Modal -->
+    <div class="modal fade" id="extractingGroupsLoadingModal" tabindex="-1" data-bs-backdrop="static"
+        data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center py-5">
+                    <div class="spinner-border text-success mb-3" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">جاري التحميل...</span>
+                    </div>
+                    <h5 class="mb-2">جاري استخراج جهات الاتصال...</h5>
                     <p class="text-muted mb-0 mx-auto" style="max-width: 300px;">يرجى عدم إغلاق هذه النافذة أو تحديث
                         الصفحة حتى تكتمل العملية.</p>
                 </div>
@@ -2718,6 +2790,246 @@
                         .catch(error => {
                             fetchChatsLoadingModal.hide();
                             console.error('Fetch Chats Error:', error);
+                            systemSwal.fire({
+                                icon: 'error',
+                                title: 'خطأ في الاتصال',
+                                text: 'حدث خطأ أثناء محاولة الاتصال بالخادم.',
+                                confirmButtonText: 'حسناً'
+                            });
+                        });
+                });
+            }
+
+            // --- Extract Groups Feature ---
+            const btnFetchGroups = document.getElementById('btnFetchGroups');
+            const btnFetchGroupsMobile = document.getElementById('btnFetchGroupsMobile');
+
+            const fetchGroupsLoadingModal = document.getElementById('fetchGroupsLoadingModal') ? new bootstrap
+                .Modal(document.getElementById('fetchGroupsLoadingModal')) : null;
+            const groupsSelectionModal = document.getElementById('groupsSelectionModal') ? new bootstrap.Modal(
+                document.getElementById('groupsSelectionModal')) : null;
+            const extractingGroupsLoadingModal = document.getElementById('extractingGroupsLoadingModal') ?
+                new bootstrap.Modal(document.getElementById('extractingGroupsLoadingModal')) : null;
+
+            const groupsContainer = document.getElementById('groupsContainer');
+            const selectAllGroups = document.getElementById('selectAllGroups');
+            const btnStartExtraction = document.getElementById('btnStartExtraction');
+            const selectedGroupsCount = document.getElementById('selectedGroupsCount');
+            const groupsCountBadge = document.getElementById('groupsCountBadge');
+
+            let fetchedGroups = [];
+
+            const showFetchGroupsModal = function() {
+                if (fetchGroupsLoadingModal) {
+                    fetchGroupsLoadingModal.show();
+
+                    fetch("{{ route('contacts.fetch-groups') }}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                                    .getAttribute('content'),
+                                'Accept': 'application/json'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            fetchGroupsLoadingModal.hide();
+
+                            if (data.needs_reauth) {
+                                systemSwal.fire({
+                                    icon: 'warning',
+                                    title: 'غير متصل بالواتساب',
+                                    text: data.message,
+                                    confirmButtonText: 'فتح صفحة الربط',
+                                    showCancelButton: true,
+                                    cancelButtonText: 'إلغاء'
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        window.location.href = "{{ route('login.reconnect') }}";
+                                    }
+                                });
+                                return;
+                            }
+
+                            if (data.success) {
+                                fetchedGroups = data.groups || [];
+                                renderGroupsList();
+                                groupsSelectionModal.show();
+                            } else {
+                                systemSwal.fire({
+                                    icon: 'error',
+                                    title: 'خطأ',
+                                    text: data.message || 'حدث خطأ أثناء جلب الجروبات',
+                                    confirmButtonText: 'حسناً'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            fetchGroupsLoadingModal.hide();
+                            console.error('Fetch Groups Error:', error);
+                            systemSwal.fire({
+                                icon: 'error',
+                                title: 'خطأ في الاتصال',
+                                text: 'حدث خطأ أثناء محاولة الاتصال بالخادم.',
+                                confirmButtonText: 'حسناً'
+                            });
+                        });
+                }
+            };
+
+            if (btnFetchGroups) btnFetchGroups.addEventListener('click', showFetchGroupsModal);
+            if (btnFetchGroupsMobile) btnFetchGroupsMobile.addEventListener('click', showFetchGroupsModal);
+
+            const renderGroupsList = () => {
+                groupsCountBadge.textContent = fetchedGroups.length;
+                groupsContainer.innerHTML = '';
+
+                if (fetchedGroups.length === 0) {
+                    groupsContainer.innerHTML =
+                        '<div class="p-4 text-center text-muted">لا توجد جروبات متاحة للرقم الخاص بك.</div>';
+                    if (btnStartExtraction) btnStartExtraction.disabled = true;
+                    if (selectAllGroups) selectAllGroups.disabled = true;
+                    if (selectedGroupsCount) selectedGroupsCount.textContent = '0';
+                    return;
+                }
+
+                if (btnStartExtraction) btnStartExtraction.disabled = false;
+                if (selectAllGroups) {
+                    selectAllGroups.disabled = false;
+                    selectAllGroups.checked = true;
+                }
+                if (selectedGroupsCount) selectedGroupsCount.textContent = fetchedGroups.length;
+
+                fetchedGroups.forEach(group => {
+                    const id = group.id;
+                    const subject = group.subject || 'جروب بدون اسم';
+                    const count = group.participantsCount || 0;
+
+                    const div = document.createElement('label');
+                    div.className =
+                        'list-group-item list-group-item-action d-flex justify-content-between align-items-center form-check-label';
+                    div.style.cursor = 'pointer';
+
+                    div.innerHTML = `
+                        <div class="d-flex align-items-center gap-2">
+                            <input class="form-check-input mt-0 group-checkbox" type="checkbox" value="${id}" checked>
+                            <div class="d-flex flex-column">
+                                <span class="fw-bold text-truncate" style="max-width: 200px;">${subject}</span>
+                                <small class="text-muted">${count} عضو</small>
+                            </div>
+                        </div>
+                    `;
+                    groupsContainer.appendChild(div);
+                });
+
+                document.querySelectorAll('.group-checkbox').forEach(cb => {
+                    cb.addEventListener('change', updateSelectedCount);
+                });
+            };
+
+            const updateSelectedCount = () => {
+                const checked = document.querySelectorAll('.group-checkbox:checked').length;
+                if (selectedGroupsCount) selectedGroupsCount.textContent = checked;
+
+                const total = document.querySelectorAll('.group-checkbox').length;
+                if (selectAllGroups) {
+                    if (checked === 0) {
+                        selectAllGroups.checked = false;
+                        selectAllGroups.indeterminate = false;
+                        if (btnStartExtraction) btnStartExtraction.disabled = true;
+                    } else if (checked === total) {
+                        selectAllGroups.checked = true;
+                        selectAllGroups.indeterminate = false;
+                        if (btnStartExtraction) btnStartExtraction.disabled = false;
+                    } else {
+                        selectAllGroups.checked = false;
+                        selectAllGroups.indeterminate = true;
+                        if (btnStartExtraction) btnStartExtraction.disabled = false;
+                    }
+                }
+            };
+
+            if (selectAllGroups) {
+                selectAllGroups.addEventListener('change', (e) => {
+                    const isChecked = e.target.checked;
+                    document.querySelectorAll('.group-checkbox').forEach(cb => {
+                        cb.checked = isChecked;
+                    });
+                    updateSelectedCount();
+                });
+            }
+
+            if (btnStartExtraction) {
+                btnStartExtraction.addEventListener('click', () => {
+                    const selectedIds = Array.from(document.querySelectorAll('.group-checkbox:checked'))
+                        .map(cb => cb.value);
+
+                    if (selectedIds.length === 0) return;
+
+                    groupsSelectionModal.hide();
+                    extractingGroupsLoadingModal.show();
+
+                    fetch("{{ route('contacts.extract-groups-contacts') }}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                                    .getAttribute('content'),
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                group_ids: selectedIds
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            extractingGroupsLoadingModal.hide();
+
+                            if (data.needs_reauth) {
+                                systemSwal.fire({
+                                    icon: 'warning',
+                                    title: 'غير متصل بالواتساب',
+                                    text: data.message,
+                                    confirmButtonText: 'فتح صفحة الربط',
+                                    showCancelButton: true,
+                                    cancelButtonText: 'إلغاء'
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        window.location.href =
+                                            "{{ route('login.reconnect') }}";
+                                    }
+                                });
+                                return;
+                            }
+
+                            if (data.success) {
+                                let msg = `<p class="mb-0">${data.message}</p>`;
+                                if (data.limit_reached) {
+                                    msg +=
+                                        `<p class="text-danger mt-2 mb-0"><i class="bi bi-exclamation-triangle-fill me-1"></i> تم الوصول للحد الأقصى لجهات الاتصال المسموح بها في باقتك.</p>`;
+                                }
+
+                                systemSwal.fire({
+                                    icon: 'success',
+                                    title: 'اكتمل الاستخراج',
+                                    html: msg,
+                                    confirmButtonText: 'حسناً'
+                                }).then(() => {
+                                    window.location.reload();
+                                });
+                            } else {
+                                systemSwal.fire({
+                                    icon: 'error',
+                                    title: 'خطأ',
+                                    text: data.message || 'حدث خطأ أثناء استخراج جهات الاتصال',
+                                    confirmButtonText: 'حسناً'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            extractingGroupsLoadingModal.hide();
+                            console.error('Extract Groups Error:', error);
                             systemSwal.fire({
                                 icon: 'error',
                                 title: 'خطأ في الاتصال',

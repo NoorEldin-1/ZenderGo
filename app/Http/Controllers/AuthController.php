@@ -86,15 +86,18 @@ class AuthController extends Controller
      */
     public function showReconnectForm()
     {
-        // Check for session-based flow (from login)
-        $sessionUserId = session('login_user_id');
-
-        // Also support already logged-in users
+        // Get currently authenticated user first (highest priority)
         $authUserId = Auth::id();
 
-        $userId = $sessionUserId ?? $authUserId;
+        // Check for session-based flow (from login only if not authenticated)
+        $sessionUserId = session('login_user_id');
+
+        $userId = $authUserId ?? $sessionUserId;
+
+        Log::info("showReconnectForm accessed", ['sessionUser' => $sessionUserId, 'authUser' => $authUserId, 'finalId' => $userId]);
 
         if (!$userId) {
+            Log::info("showReconnectForm: No user ID, redirecting to login");
             return redirect()->route('login');
         }
 
@@ -110,6 +113,8 @@ class AuthController extends Controller
                 'login_user_id' => $user->id,
             ]);
         }
+
+        Log::info("showReconnectForm: Returning view auth.reconnect for user {$user->id}");
 
         return view('auth.reconnect', [
             'phone' => $user->phone,
@@ -134,8 +139,8 @@ class AuthController extends Controller
 
         $method = $request->input('method', 'code');
 
-        // Support both session-based and authenticated users
-        $userId = session('login_user_id') ?? Auth::id();
+        // Support both session-based and authenticated users (Auth has higher priority)
+        $userId = Auth::id() ?? session('login_user_id');
 
         if (!$userId) {
             return response()->json([
@@ -293,8 +298,8 @@ class AuthController extends Controller
      */
     public function checkReconnect()
     {
-        // Support both session-based and authenticated users
-        $userId = session('login_user_id') ?? Auth::id();
+        // Support both session-based and authenticated users (Auth has higher priority)
+        $userId = Auth::id() ?? session('login_user_id');
 
         if (!$userId) {
             return response()->json([

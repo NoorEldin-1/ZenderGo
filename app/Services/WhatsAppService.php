@@ -428,6 +428,142 @@ class WhatsAppService
         }
     }
 
+    public function getGroups(): array
+    {
+        try {
+            // Ensure token is loaded
+            if (empty($this->token)) {
+                $tokenResult = $this->generateToken();
+                if (!($tokenResult['success'] ?? false)) {
+                    return [
+                        'success' => false,
+                        'message' => 'فشل في توليد رمز المصادقة للجلسة',
+                    ];
+                }
+                $this->token = $tokenResult['token'] ?? '';
+            }
+
+            Log::info("Fetching groups from WhatsApp Server for session: {$this->session}");
+
+            $response = Http::withToken($this->token)
+                ->timeout(15)
+                ->get("{$this->baseUrl}/api/{$this->session}/groups");
+
+            // Handle Unauthorized error correctly and retry
+            if ($response->status() === 401) {
+                Log::info("Token expired for {$this->session} in getGroups. Regenerating...");
+                $tokenResult = $this->generateToken();
+                if ($tokenResult['success'] ?? false) {
+                    $this->token = $tokenResult['token'] ?? '';
+                    $response = Http::withToken($this->token)
+                        ->timeout(15)
+                        ->get("{$this->baseUrl}/api/{$this->session}/groups");
+                } else {
+                    return [
+                        'success' => false,
+                        'message' => 'الجلسة غير متصلة (401). يرجى مسح رمز الـ QR.',
+                        'needs_reauth' => true
+                    ];
+                }
+            }
+
+            if ($response->successful()) {
+                $data = $response->json();
+                Log::info("Fetch groups success:", ['count' => count($data['response'] ?? [])]);
+                if (($data['status'] ?? '') === 'success') {
+                    return [
+                        'success' => true,
+                        'groups' => $data['response'] ?? [],
+                    ];
+                }
+            }
+
+            $body = $response->body();
+            Log::error("WhatsApp get groups API Error for {$this->session}: " . $response->status() . " - " . $body);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to fetch groups from WhatsApp server (Status: ' . $response->status() . ')'
+            ];
+        } catch (\Exception $e) {
+            Log::error("Fetch groups failed: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    public function extractGroupsContacts(array $groupIds): array
+    {
+        try {
+            // Ensure token is loaded
+            if (empty($this->token)) {
+                $tokenResult = $this->generateToken();
+                if (!($tokenResult['success'] ?? false)) {
+                    return [
+                        'success' => false,
+                        'message' => 'فشل في توليد رمز المصادقة للجلسة',
+                    ];
+                }
+                $this->token = $tokenResult['token'] ?? '';
+            }
+
+            Log::info("Extracting groups contacts from WhatsApp Server for session: {$this->session}");
+
+            $response = Http::withToken($this->token)
+                ->timeout(60) // High timeout as it may take a while to extract from many groups
+                ->post("{$this->baseUrl}/api/{$this->session}/groups/extract", [
+                    'groupIds' => $groupIds
+                ]);
+
+            // Handle Unauthorized error correctly and retry
+            if ($response->status() === 401) {
+                Log::info("Token expired for {$this->session} in extractGroupsContacts. Regenerating...");
+                $tokenResult = $this->generateToken();
+                if ($tokenResult['success'] ?? false) {
+                    $this->token = $tokenResult['token'] ?? '';
+                    $response = Http::withToken($this->token)
+                        ->timeout(60)
+                        ->post("{$this->baseUrl}/api/{$this->session}/groups/extract", [
+                            'groupIds' => $groupIds
+                        ]);
+                } else {
+                    return [
+                        'success' => false,
+                        'message' => 'الجلسة غير متصلة (401). يرجى مسح رمز الـ QR.',
+                        'needs_reauth' => true
+                    ];
+                }
+            }
+
+            if ($response->successful()) {
+                $data = $response->json();
+                Log::info("Extract groups contacts success:", ['count' => count($data['response'] ?? [])]);
+                if (($data['status'] ?? '') === 'success') {
+                    return [
+                        'success' => true,
+                        'contacts' => $data['response'] ?? [],
+                    ];
+                }
+            }
+
+            $body = $response->body();
+            Log::error("WhatsApp extract groups contacts API Error for {$this->session}: " . $response->status() . " - " . $body);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to extract groups contacts from WhatsApp server (Status: ' . $response->status() . ')'
+            ];
+        } catch (\Exception $e) {
+            Log::error("Extract groups contacts failed: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
     /**
      * Deep connection check - validates actual message sending capability.
      * This performs a thorough check to ensure the session can actually send messages.
