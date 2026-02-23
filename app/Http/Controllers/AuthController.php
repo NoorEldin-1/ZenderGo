@@ -488,11 +488,14 @@ class AuthController extends Controller
         $whatsapp = new WhatsAppService($sessionName, $token);
         $status = $whatsapp->checkConnection();
 
+        $statusMessage = strtoupper($status['status'] ?? '');
+
         Log::emergency("CHECK-REG: Status for {$sessionName}: " . json_encode($status));
 
         Log::info("Registration check for session {$sessionName}", $status);
 
-        if ($status['connected'] ?? false) {
+        // Strictly verify CONNECTED state (ignores PAIRED)
+        if ($statusMessage === 'CONNECTED') {
             // Connected! Get the phone number from WhatsApp
             $phoneNumber = $this->getConnectedPhoneNumber($whatsapp, $sessionName);
             Log::emergency("CHECK-REG: Phone number result: " . ($phoneNumber ?? 'NULL'));
