@@ -28,6 +28,9 @@
                 data-bs-target="#importModal">
                 <i class="bi bi-file-earmark-excel me-1"></i>استيراد ملف
             </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnFetchChats">
+                <i class="bi bi-whatsapp me-1"></i>سحب المحادثات
+            </button>
             <a href="{{ route('contacts.create') }}" class="btn btn-primary btn-sm">
                 <i class="bi bi-plus-lg me-1"></i>إضافة جهة
             </a>
@@ -601,6 +604,51 @@
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fetch Chats Confirm Modal -->
+    <div class="modal fade" id="fetchChatsConfirmModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-whatsapp text-success me-2"></i>سحب المحادثات
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">سيتم فحص المحادثات النشطة الخاصة بك واستخراج الأرقام والأسماء لتسجيلها كجهات اتصال.
+                    </p>
+                    <ul class="text-muted small mb-0">
+                        <li>لن يتم تضمين المجموعات (Groups).</li>
+                        <li>سيتم تخطي الأرقام المسجلة مسبقاً لمنع التكرار.</li>
+                        <li>قد تستغرق هذه العملية بضع الوقت بناءً على عدد محادثاتك.</li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-success" id="btnStartFetchChats">يبدو جيداً، ابدأ
+                        السحب</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fetch Chats Loading Modal -->
+    <div class="modal fade" id="fetchChatsLoadingModal" tabindex="-1" data-bs-backdrop="static"
+        data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center py-5">
+                    <div class="spinner-border text-success mb-3" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">جاري التحميل...</span>
+                    </div>
+                    <h5 class="mb-2" id="fetchChatsStatusText">جاري الاتصال بالواتساب...</h5>
+                    <p class="text-muted mb-0 mx-auto" style="max-width: 300px;">يرجى عدم إغلاق هذه النافذة أو تحديث
+                        الصفحة حتى تكتمل العملية.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -2348,6 +2396,46 @@
 @endpush
 
 @push('scripts')
+    <style>
+        /* SweetAlert native theme integration */
+        [data-bs-theme="dark"] .system-swal {
+            background-color: var(--bs-card-bg) !important;
+            color: var(--bs-body-color) !important;
+            border: 1px solid var(--bs-border-color) !important;
+        }
+
+        [data-bs-theme="light"] .system-swal {
+            background-color: #ffffff !important;
+            color: #212529 !important;
+            border: 1px solid #dee2e6 !important;
+        }
+
+        .system-swal .swal2-title,
+        .system-swal .swal2-html-container {
+            color: inherit !important;
+        }
+
+        /* Mobile Responsive Adjustments */
+        @media (max-width: 768px) {
+            .system-swal {
+                width: 92% !important;
+                /* Take up most of the screen width */
+                padding: 1rem !important;
+                /* Reduce padding slightly */
+                font-size: 0.95rem;
+                /* Better readability on small screens */
+            }
+
+            .system-swal .swal2-confirm,
+            .system-swal .swal2-cancel {
+                font-size: 0.9rem !important;
+                /* Scale down buttons slightly */
+                padding: 0.4rem 1rem !important;
+            }
+        }
+    </style>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- Quill JS -->
     <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
     <script>
@@ -2532,6 +2620,111 @@
                     `.note-btn[data-id="${contactId}"], .btn-note-mobile[data-id="${contactId}"]`);
                 buttons.forEach(btn => {
                     btn.setAttribute('data-note', fullNote);
+                });
+            }
+
+            // Fetch Chats Feature
+            const btnFetchChats = document.getElementById('btnFetchChats');
+            const btnFetchChatsMobile = document.getElementById('btnFetchChatsMobile');
+            const fetchChatsConfirmModal = document.getElementById('fetchChatsConfirmModal') ? new bootstrap.Modal(
+                document.getElementById('fetchChatsConfirmModal')) : null;
+            const fetchChatsLoadingModal = document.getElementById('fetchChatsLoadingModal') ? new bootstrap.Modal(
+                document.getElementById('fetchChatsLoadingModal')) : null;
+            const btnStartFetchChats = document.getElementById('btnStartFetchChats');
+            const fetchChatsStatusText = document.getElementById('fetchChatsStatusText');
+
+            // Configure SweetAlert to match system theme (Dark/Light mode) & Bootstrap buttons
+            const systemSwal = Swal.mixin({
+                customClass: {
+                    popup: 'system-swal rounded-4 shadow',
+                    confirmButton: 'btn btn-primary px-4 mx-2',
+                    cancelButton: 'btn btn-secondary px-4 mx-2'
+                },
+                buttonsStyling: false
+            });
+
+            // Bind click event to both desktop and mobile buttons
+            const showFetchModal = function() {
+                fetchChatsConfirmModal.show();
+            };
+
+            if (btnFetchChats && fetchChatsConfirmModal) {
+                btnFetchChats.addEventListener('click', showFetchModal);
+            }
+            if (btnFetchChatsMobile && fetchChatsConfirmModal) {
+                btnFetchChatsMobile.addEventListener('click', showFetchModal);
+            }
+
+            if (btnStartFetchChats && fetchChatsLoadingModal) {
+                btnStartFetchChats.addEventListener('click', function() {
+                    fetchChatsConfirmModal.hide();
+                    fetchChatsStatusText.textContent = 'جاري الاتصال بالواتساب وجمع المحادثات النشطة...';
+                    fetchChatsLoadingModal.show();
+
+                    fetch("{{ route('contacts.fetch-chats') }}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                                    .getAttribute('content'),
+                                'Accept': 'application/json'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            fetchChatsLoadingModal.hide();
+
+                            if (data.needs_reauth) {
+                                systemSwal.fire({
+                                    icon: 'warning',
+                                    title: 'غير متصل بالواتساب',
+                                    text: data.message,
+                                    confirmButtonText: 'فتح صفحة الربط',
+                                    showCancelButton: true,
+                                    cancelButtonText: 'إلغاء'
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        window.location.href =
+                                            "{{ route('login.reconnect') }}";
+                                    }
+                                });
+                                return;
+                            }
+
+                            if (data.success) {
+                                let msg = `<p class="mb-0">${data.message}</p>`;
+                                if (data.limit_reached) {
+                                    msg +=
+                                        `<p class="text-danger mt-2 mb-0"><i class="bi bi-exclamation-triangle-fill me-1"></i> تم الوصول للحد الأقصى لجهات الاتصال المسموح بها في باقتك.</p>`;
+                                }
+
+                                systemSwal.fire({
+                                    icon: 'success',
+                                    title: 'اكتمل السحب',
+                                    html: msg,
+                                    confirmButtonText: 'حسناً'
+                                }).then(() => {
+                                    window.location.reload();
+                                });
+                            } else {
+                                systemSwal.fire({
+                                    icon: 'error',
+                                    title: 'خطأ',
+                                    text: data.message || 'حدث خطأ أثناء سحب المحادثات',
+                                    confirmButtonText: 'حسناً'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            fetchChatsLoadingModal.hide();
+                            console.error('Fetch Chats Error:', error);
+                            systemSwal.fire({
+                                icon: 'error',
+                                title: 'خطأ في الاتصال',
+                                text: 'حدث خطأ أثناء محاولة الاتصال بالخادم.',
+                                confirmButtonText: 'حسناً'
+                            });
+                        });
                 });
             }
         });

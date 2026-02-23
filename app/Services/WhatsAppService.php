@@ -72,7 +72,8 @@ class WhatsAppService
 
             return [
                 'success' => $response->successful(),
-                'message' => $data['message'] ?? 'Token generated',
+                'token' => '',
+                'message' => $data['message'] ?? 'Failed to get token from JSON response',
             ];
         } catch (\Exception $e) {
             Log::error("WhatsApp generate token error: " . $e->getMessage());
@@ -304,9 +305,33 @@ class WhatsAppService
     public function checkConnection(): array
     {
         try {
+            // Ensure token is loaded
+            if (empty($this->token)) {
+                $tokenResult = $this->generateToken();
+                if (!($tokenResult['success'] ?? false)) {
+                    return [
+                        'connected' => false,
+                        'message' => 'فشل في توليد رمز المصادقة للجلسة',
+                    ];
+                }
+                $this->token = $tokenResult['token'] ?? '';
+            }
+
             $response = Http::withToken($this->token)
                 ->timeout(10)
                 ->get("{$this->baseUrl}/api/{$this->session}/check-connection-session");
+
+            // Handle 401 Token Expired/Missing
+            if ($response->status() === 401) {
+                Log::info("Token expired for {$this->session} in checkConnection. Regenerating...");
+                $tokenResult = $this->generateToken();
+                if ($tokenResult['success'] ?? false) {
+                    $this->token = $tokenResult['token'] ?? '';
+                    $response = Http::withToken($this->token)
+                        ->timeout(10)
+                        ->get("{$this->baseUrl}/api/{$this->session}/check-connection-session");
+                }
+            }
 
             if ($response->successful()) {
                 $data = $response->json();
@@ -318,11 +343,11 @@ class WhatsAppService
                 return [
                     'connected' => ($data['status'] ?? false) || $isPaired,
                     'message' => $message,
-                    'status' => $isPaired ? 'PAIRED' : ($data['status'] ? 'CONNECTED' : 'DISCONNECTED')
+                    'status' => $isPaired ? 'PAIRED' : (($data['status'] ?? false) ? 'CONNECTED' : 'DISCONNECTED')
                 ];
             }
 
-            Log::error("WhatsApp API Error for {$this->session}: " . $response->status() . " - " . $response->body());
+            Log::error("WhatsApp connection API Error for {$this->session}: " . $response->status() . " - " . $response->body());
 
             return [
                 'connected' => false,
@@ -332,6 +357,72 @@ class WhatsAppService
             Log::error("Connection check failed: " . $e->getMessage());
             return [
                 'connected' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    public function getChats(): array
+    {
+        try {
+            // Ensure token is loaded
+            if (empty($this->token)) {
+                $tokenResult = $this->generateToken();
+                if (!($tokenResult['success'] ?? false)) {
+                    return [
+                        'success' => false,
+                        'message' => 'فشل في توليد رمز المصادقة للجلسة',
+                    ];
+                }
+                $this->token = $tokenResult['token'] ?? '';
+            }
+
+            Log::info("Fetching chats from WhatsApp Server for session: {$this->session}");
+
+            $response = Http::withToken($this->token)
+                ->timeout(15)
+                ->get("{$this->baseUrl}/api/{$this->session}/chats");
+
+            // Handle Unauthorized error correctly and retry
+            if ($response->status() === 401) {
+                Log::info("Token expired for {$this->session} in getChats. Regenerating...");
+                $tokenResult = $this->generateToken();
+                if ($tokenResult['success'] ?? false) {
+                    $this->token = $tokenResult['token'] ?? '';
+                    $response = Http::withToken($this->token)
+                        ->timeout(15)
+                        ->get("{$this->baseUrl}/api/{$this->session}/chats");
+                } else {
+                    return [
+                        'success' => false,
+                        'message' => 'الجلسة غير متصلة (401). يرجى مسح رمز الـ QR.',
+                        'needs_reauth' => true
+                    ];
+                }
+            }
+
+            if ($response->successful()) {
+                $data = $response->json();
+                Log::info("Fetch chats success:", ['count' => count($data['response'] ?? [])]);
+                if (($data['status'] ?? '') === 'success') {
+                    return [
+                        'success' => true,
+                        'chats' => $data['response'] ?? [],
+                    ];
+                }
+            }
+
+            $body = $response->body();
+            Log::error("WhatsApp get chats API Error for {$this->session}: " . $response->status() . " - " . $body);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to fetch chats from WhatsApp server (Status: ' . $response->status() . ')'
+            ];
+        } catch (\Exception $e) {
+            Log::error("Fetch chats failed: " . $e->getMessage());
+            return [
+                'success' => false,
                 'message' => $e->getMessage()
             ];
         }

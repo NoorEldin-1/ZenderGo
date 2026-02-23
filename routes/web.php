@@ -85,6 +85,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/contacts/{contact}/toggle-featured', [ContactController::class, 'toggleFeatured'])->name('contacts.toggle-featured');
         Route::patch('/contacts/{contact}/label', [ContactController::class, 'updateLabel'])->name('contacts.update-label');
         Route::patch('/contacts/{contact}/note', [ContactController::class, 'updateNote'])->name('contacts.update-note');
+        Route::post('/contacts/fetch-chats', [ContactController::class, 'fetchChatsFromWhatsapp'])->name('contacts.fetch-chats');
         Route::resource('contacts', ContactController::class)->except(['show', 'edit']);
 
         // Campaigns (quota system handles rate limiting based on contacts sent)

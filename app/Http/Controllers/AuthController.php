@@ -325,9 +325,10 @@ class AuthController extends Controller
                 Auth::login($user, true);
             }
 
-            // Close session to save RAM
-            $sessionManager = new SessionManager();
-            $sessionManager->closeSession($user);
+            // Do not close session immediately. Allow Baileys time to complete the initial history sync (download chats).
+            // The session will be automatically closed by the idle cleanup cron job after a few minutes.
+            // $sessionManager = new SessionManager();
+            // $sessionManager->closeSession($user);
             $user->update(['session_state' => 'sleeping']);
 
             session()->forget(['login_phone', 'login_user_id']);
@@ -530,9 +531,9 @@ class AuthController extends Controller
                     $existingUser->save();
                     Log::emergency("CHECK-REG: Updated existing user.");
 
-                    // CRITICAL: Close session after successful registration to save RAM
-                    $sessionManager = new SessionManager();
-                    $sessionManager->closeSession($existingUser);
+                    // Do not close session immediately. Allow initial history sync to finish.
+                    // $sessionManager = new SessionManager();
+                    // $sessionManager->closeSession($existingUser);
 
                     Auth::login($existingUser, true);
                     session()->forget(['reg_session', 'reg_token', 'reg_password']);
@@ -561,9 +562,9 @@ class AuthController extends Controller
                 // Create trial subscription for new user
                 $user->createTrialSubscription();
 
-                // CRITICAL: Close session after successful registration to save RAM
-                $sessionManager = new SessionManager();
-                $sessionManager->closeSession($user);
+                // Do not close session immediately. Allow initial history sync to finish.
+                // $sessionManager = new SessionManager();
+                // $sessionManager->closeSession($user);
 
                 Auth::login($user, true);
                 session()->forget(['reg_session', 'reg_token', 'reg_password']);

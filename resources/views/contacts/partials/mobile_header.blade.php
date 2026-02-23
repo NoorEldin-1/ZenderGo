@@ -21,6 +21,11 @@
             <i class="bi bi-file-earmark-arrow-up"></i>
             <span>استيراد ملف</span>
         </button>
+        <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1 shadow-sm px-3"
+            id="btnFetchChatsMobile" style="height: 38px; border-radius: 10px;">
+            <i class="bi bi-whatsapp"></i>
+            <span>سحب المحادثات</span>
+        </button>
         <a href="{{ route('shares.index') }}"
             class="btn btn-outline-info btn-sm d-flex align-items-center gap-1 shadow-sm px-3 position-relative"
             style="height: 38px; border-radius: 10px;">

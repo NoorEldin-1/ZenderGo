@@ -920,4 +920,162 @@ class ContactController extends Controller
             'message' => $contact->is_featured ? 'تم إضافة جهة الاتصال للمميزة' : 'تم إزالة جهة الاتصال من المميزة'
         ]);
     }
+    /**
+     * Fetch chats from connected WhatsApp session and store as contacts.
+     */
+    public function fetchChatsFromWhatsapp(Request $request)
+    {
+        $user = Auth::user();
+
+        if (empty($user->whatsapp_session) || empty($user->whatsapp_token)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لم تقم بربط حساب الواتساب الخاص بك بعد. يرجى مسح الرمز الشريطي (QR Code) أو ربط رقم الهاتف أولاً.',
+                'needs_reauth' => true
+            ], 400);
+        }
+
+        // Use SessionManager to properly wake up and validate the session (same as Campaigns)
+        $sessionManager = new \App\Services\SessionManager();
+        $userSession = $user->whatsapp_session;
+        $userToken = $user->whatsapp_token;
+
+        if ($user->session_state === 'sleeping' || $user->session_state === 'none' || !$user->session_state) {
+            $wakeResult = $sessionManager->wakeSession($user, 'web');
+
+            if ($wakeResult['status'] === 'needs_qr') {
+                $user->update(['session_state' => 'disconnected']);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'تم فقدان اتصال WhatsApp من الموبايل. يرجى إعادة الربط.',
+                    'needs_reauth' => true
+                ], 400);
+            }
+
+            if ($wakeResult['status'] !== 'connected') {
+                return response()->json([
+                    'success' => false,
+                    'message' => $wakeResult['message'] ?? 'خطأ في تشغيل جلسة WhatsApp. حاول مرة أخرى.'
+                ], 400);
+            }
+
+            $user->update(['session_state' => 'active']);
+        } else {
+            // Do a quick live check
+            $whatsapp = new \App\Services\WhatsAppService($userSession, $userToken);
+            $connectionStatus = $whatsapp->checkConnection();
+
+            if (!($connectionStatus['connected'] ?? false) || ($connectionStatus['status'] ?? '') !== 'CONNECTED') {
+                $wakeResult = $sessionManager->wakeSession($user, 'web');
+
+                if ($wakeResult['status'] === 'needs_qr') {
+                    $user->update(['session_state' => 'disconnected']);
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'تم فقدان اتصال WhatsApp من الموبايل. يرجى إعادة الربط.',
+                        'needs_reauth' => true
+                    ], 400);
+                }
+
+                if ($wakeResult['status'] !== 'connected') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $wakeResult['message'] ?? 'خطأ في تشغيل جلسة WhatsApp. حاول مرة أخرى.'
+                    ], 400);
+                }
+
+                $user->update(['session_state' => 'active']);
+            }
+        }
+
+        // Mark session as active
+        $sessionManager->markSessionActive($user->id, $userSession);
+
+        $waService = new \App\Services\WhatsAppService($userSession, $userToken);
+
+        // Step 2: Fetch chats
+        $fetchResult = $waService->getChats();
+        if (!$fetchResult['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => 'فشل في سحب المحادثات: ' . ($fetchResult['message'] ?? 'خطأ غير معروف')
+            ], 500);
+        }
+
+        $chats = $fetchResult['chats'] ?? [];
+        if (empty($chats)) {
+            return response()->json([
+                'success' => true,
+                'imported' => 0,
+                'skipped' => 0,
+                'message' => 'لا توجد محادثات نشطة لسحبها.'
+            ]);
+        }
+
+        // Step 3: Process and store contacts
+        $existingPhones = $user->contacts()->pluck('phone')->flip()->toArray();
+        $remainingSlots = $user->remaining_contact_slots;
+        $limitReached = false;
+
+        $imported = 0;
+        $skipped = 0;
+        $batchData = [];
+        $batchSize = 500;
+        $now = now();
+
+        foreach ($chats as $chat) {
+            // Check remaining slots
+            if ($imported >= $remainingSlots) {
+                $limitReached = true;
+                break;
+            }
+
+            $phone = $chat['phone'];
+            $name = $chat['name'] ?: $phone;
+
+            // Skip if already in contacts array
+            if (isset($existingPhones[$phone])) {
+                $skipped++;
+                continue;
+            }
+
+            // Validations (similar to import logic)
+            if (empty($phone) || strlen($phone) < 10 || strlen($phone) > 20) {
+                $skipped++;
+                continue;
+            }
+            if (empty($name) || strlen($name) > 255) {
+                // Generate fallback name
+                $name = 'عميل ' . substr($phone, -4);
+            }
+
+            $batchData[] = [
+                'user_id' => $user->id,
+                'name' => $name,
+                'phone' => $phone,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+
+            $existingPhones[$phone] = true;
+            $imported++;
+
+            if (count($batchData) >= $batchSize) {
+                Contact::insert($batchData);
+                $batchData = [];
+            }
+        }
+
+        if (!empty($batchData)) {
+            Contact::insert($batchData);
+        }
+
+        return response()->json([
+            'success' => true,
+            'imported' => $imported,
+            'skipped' => $skipped,
+            'limit_reached' => $limitReached,
+            'message' => "تم سحب {$imported} جهة اتصال بنجاح" . ($skipped > 0 ? " (تم تخطي {$skipped} جهة مسجلة مسبقاً أو غير صالحة)" : "")
+        ]);
+    }
 }
