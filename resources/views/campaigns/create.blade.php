@@ -615,6 +615,85 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     @include('partials.smart-filter-css')
     <style>
+        /* Custom Action Button & Dropdown Styles */
+        .custom-action-btn {
+            width: 34px !important;
+            height: 34px !important;
+            padding: 0 !important;
+            background-color: transparent !important;
+            color: #6c757d !important;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .contact-item:hover .custom-action-btn {
+            background-color: rgba(33, 37, 41, 0.05) !important;
+        }
+
+        .custom-action-btn:hover,
+        .custom-action-btn:focus,
+        .custom-action-btn[aria-expanded="true"] {
+            background-color: rgba(33, 37, 41, 0.08) !important;
+            color: #212529 !important;
+            transform: scale(1.05);
+        }
+
+        .dropdown-no-arrow::after {
+            display: none !important;
+        }
+
+        /* Dark Theme Support */
+        [data-bs-theme="dark"] .contact-item:hover .custom-action-btn {
+            background-color: rgba(248, 249, 250, 0.06) !important;
+        }
+
+        [data-bs-theme="dark"] .custom-action-btn:hover,
+        [data-bs-theme="dark"] .custom-action-btn:focus,
+        [data-bs-theme="dark"] .custom-action-btn[aria-expanded="true"] {
+            background-color: rgba(248, 249, 250, 0.1) !important;
+            color: #f8f9fa !important;
+        }
+
+        /* Improved Dropdown Menu */
+        .custom-dropdown-menu {
+            min-width: 180px;
+            animation: dropdownFade 0.2s ease;
+        }
+
+        @keyframes dropdownFade {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .custom-dropdown-menu .dropdown-item {
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .custom-dropdown-menu .dropdown-item:hover {
+            background-color: #f8f9fa;
+            transform: translateX(-4px);
+        }
+
+        .custom-dropdown-menu .dropdown-item-danger:hover {
+            background-color: #fee2e2 !important;
+            color: #dc3545 !important;
+        }
+
+        [data-bs-theme="dark"] .custom-dropdown-menu .dropdown-item:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        [data-bs-theme="dark"] .custom-dropdown-menu .dropdown-item-danger:hover {
+            background-color: rgba(220, 53, 69, 0.15) !important;
+        }
+
         /* Flatpickr Dark Mode Styles */
         [data-bs-theme="dark"] .flatpickr-input {
             background-color: #2b3035 !important;
@@ -1600,22 +1679,22 @@
                             <!-- 5. Notes -->
                             ${contact.notes ? 
                                 `<div class="mt-1 d-flex align-items-center text-muted small">
-                                                         <i class="bi bi-journal-text me-1 text-info opacity-75 flex-shrink-0"></i>
-                                                         <span class="text-truncate" style="max-width: 130px;">${escapeHtml(stripHtml(contact.notes))}</span>
-                                                    </div>` : ''}
+                                                                 <i class="bi bi-journal-text me-1 text-info opacity-75 flex-shrink-0"></i>
+                                                                 <span class="text-truncate" style="max-width: 130px;">${escapeHtml(stripHtml(contact.notes))}</span>
+                                                            </div>` : ''}
                         </div>
                         
                         <div class="dropdown ms-2 mt-1">
-                            <button class="btn btn-sm btn-light border-0 p-1 rounded-circle action-btn text-muted" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-three-dots-vertical"></i>
+                            <button class="btn border-0 rounded-circle custom-action-btn dropdown-toggle d-flex align-items-center justify-content-center dropdown-no-arrow" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="إجراءات أخرى">
+                                <i class="bi bi-three-dots-vertical fs-5"></i>
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
-                                <li><h6 class="dropdown-header small text-muted">إجراءات</h6></li>
-                                <li><a class="dropdown-item small label-contact-btn" href="#" data-id="${contact.id}" data-label="${escapeHtml(contact.label_text || '')}" data-color="${contact.label_color || '#0d6efd'}"><i class="bi bi-tag me-2 text-primary"></i>تسمية (Label)</a></li>
-                                <li><a class="dropdown-item small note-contact-btn" href="#" data-id="${contact.id}" data-notes="${escapeHtml(contact.notes || '')}"><i class="bi bi-journal-plus me-2 text-info"></i>ملاحظة</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item small edit-contact-btn" href="#" data-id="${contact.id}" data-name="${escapeHtml(contact.name)}" data-phone="${escapeHtml(contact.phone)}"><i class="bi bi-pencil me-2 text-secondary"></i>تعديل</a></li>
-                                <li><a class="dropdown-item small text-danger delete-contact-btn" href="#" data-id="${contact.id}"><i class="bi bi-trash me-2"></i>حذف</a></li>
+                            <ul class="dropdown-menu dropdown-menu-end shadow rounded-3 border-0 p-2 custom-dropdown-menu">
+                                <li><h6 class="dropdown-header small text-muted px-2 py-1">إجراءات</h6></li>
+                                <li class="mb-1"><a class="dropdown-item small label-contact-btn rounded-2 py-2 d-flex align-items-center" href="#" data-id="${contact.id}" data-label="${escapeHtml(contact.label_text || '')}" data-color="${contact.label_color || '#0d6efd'}"><i class="bi bi-tag me-2 text-primary fs-6"></i>تسمية (Label)</a></li>
+                                <li class="mb-1"><a class="dropdown-item small note-contact-btn rounded-2 py-2 d-flex align-items-center" href="#" data-id="${contact.id}" data-notes="${escapeHtml(contact.notes || '')}"><i class="bi bi-journal-plus me-2 text-info fs-6"></i>ملاحظة</a></li>
+                                <li><hr class="dropdown-divider my-1"></li>
+                                <li class="mb-1"><a class="dropdown-item small edit-contact-btn rounded-2 py-2 d-flex align-items-center" href="#" data-id="${contact.id}" data-name="${escapeHtml(contact.name)}" data-phone="${escapeHtml(contact.phone)}"><i class="bi bi-pencil me-2 text-secondary fs-6"></i>تعديل</a></li>
+                                <li><a class="dropdown-item small text-danger delete-contact-btn rounded-2 py-2 d-flex align-items-center dropdown-item-danger" href="#" data-id="${contact.id}"><i class="bi bi-trash me-2 fs-6"></i>حذف</a></li>
                             </ul>
                         </div>
                     </div>

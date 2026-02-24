@@ -34,6 +34,9 @@
             <button type="button" class="btn btn-outline-secondary btn-sm" id="btnFetchGroups">
                 <i class="bi bi-people me-1"></i>سحب الجروبات
             </button>
+            <a href="{{ route('contacts.export') }}" class="btn btn-outline-success btn-sm" title="تحميل جهات الاتصال">
+                <i class="bi bi-download"></i>
+            </a>
             <a href="{{ route('contacts.create') }}" class="btn btn-primary btn-sm">
                 <i class="bi bi-plus-lg me-1"></i>إضافة جهة
             </a>

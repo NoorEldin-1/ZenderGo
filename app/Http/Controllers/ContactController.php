@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use App\Exports\ContactsExport;
 
 class ContactController extends Controller
 {
@@ -144,6 +145,14 @@ class ContactController extends Controller
         $usagePercent = $user->contact_usage_percent;
 
         return view('contacts.index', compact('contacts', 'contactLimit', 'contactCount', 'remainingSlots', 'usagePercent'));
+    }
+
+    /**
+     * Download an Excel export of the user's contacts.
+     */
+    public function export()
+    {
+        return Excel::download(new ContactsExport, 'contacts.xlsx');
     }
 
     /**

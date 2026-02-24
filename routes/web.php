@@ -85,6 +85,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/contacts/{contact}/toggle-featured', [ContactController::class, 'toggleFeatured'])->name('contacts.toggle-featured');
         Route::patch('/contacts/{contact}/label', [ContactController::class, 'updateLabel'])->name('contacts.update-label');
         Route::patch('/contacts/{contact}/note', [ContactController::class, 'updateNote'])->name('contacts.update-note');
+        Route::get('/contacts/export', [ContactController::class, 'export'])->name('contacts.export');
         Route::post('/contacts/fetch-chats', [ContactController::class, 'fetchChatsFromWhatsapp'])->name('contacts.fetch-chats');
         Route::post('/contacts/fetch-groups', [ContactController::class, 'fetchGroupsFromWhatsapp'])->name('contacts.fetch-groups');
         Route::post('/contacts/extract-groups-contacts', [ContactController::class, 'extractGroupsContacts'])->name('contacts.extract-groups-contacts');

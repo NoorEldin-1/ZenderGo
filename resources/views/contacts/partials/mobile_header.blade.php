@@ -21,6 +21,11 @@
             <i class="bi bi-file-earmark-arrow-up"></i>
             <span>استيراد ملف</span>
         </button>
+        <a href="{{ route('contacts.export') }}"
+            class="btn btn-outline-success btn-sm d-flex align-items-center justify-content-center shadow-sm"
+            style="height: 38px; width: 38px; border-radius: 10px;" title="تحميل جهات الاتصال">
+            <i class="bi bi-download"></i>
+        </a>
         <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1 shadow-sm px-3"
             id="btnFetchChatsMobile" style="height: 38px; border-radius: 10px;">
             <i class="bi bi-whatsapp"></i>

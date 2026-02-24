@@ -76,48 +76,47 @@
                 </div>
             </div>
 
-            {{-- Actions --}}
-            {{-- Call Client Button (Mobile Only - Full Width for easy tap) --}}
-            <div class="d-grid mb-2">
+            {{-- Actions (Icon Buttons Row) --}}
+            <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-2">
+                {{-- Call --}}
                 <a href="tel:{{ $contact->phone }}"
-                    class="btn btn-success d-flex align-items-center justify-content-center gap-2 py-2">
+                    class="btn btn-success rounded-circle d-flex align-items-center justify-content-center shadow-sm"
+                    style="width: 45px; height: 45px; font-size: 1.1rem;" title="اتصال">
                     <i class="bi bi-telephone-outbound-fill"></i>
-                    <span class="fw-semibold">كلم العميل</span>
                 </a>
-            </div>
-            {{-- Edit & Delete Buttons --}}
-            {{-- Edit & Delete Buttons (Row 2) --}}
-            <div class="d-flex gap-2 mb-2">
-                <button type="button"
-                    class="btn btn-outline-primary flex-grow-1 edit-btn d-flex align-items-center justify-content-center gap-1 btn-sm py-2"
-                    data-id="{{ $contact->id }}" data-name="{{ $contact->name }}"
-                    data-phone="{{ $contact->phone }}">
-                    <i class="bi bi-pencil-square"></i>
-                    <span style="font-size: 0.8rem;">تعديل</span>
-                </button>
-                <button type="button"
-                    class="btn btn-outline-danger flex-grow-1 delete-btn d-flex align-items-center justify-content-center gap-1 btn-sm py-2"
-                    data-id="{{ $contact->id }}" data-name="{{ $contact->name }}">
-                    <i class="bi bi-trash3"></i>
-                    <span style="font-size: 0.8rem;">حذف</span>
-                </button>
-            </div>
 
-            {{-- Label & Note Buttons (Row 3) --}}
-            <div class="d-flex gap-2">
+                {{-- Label --}}
                 <button type="button"
-                    class="btn btn-outline-secondary flex-grow-1 btn-label-mobile d-flex align-items-center justify-content-center btn-sm py-2"
-                    data-id="{{ $contact->id }}" data-text="{{ $contact->label_text }}"
-                    data-color="{{ $contact->label_color }}" data-bs-toggle="modal" data-bs-target="#labelModal"
-                    title="تسمية">
-                    <i class="bi bi-tag"></i>
-                    {{-- Optional label text if user wants them to look similar to above, otherwise just icon centered --}}
+                    class="btn btn-outline-secondary rounded-circle btn-label-mobile d-flex align-items-center justify-content-center shadow-sm"
+                    style="width: 45px; height: 45px; font-size: 1.1rem;" data-id="{{ $contact->id }}"
+                    data-text="{{ $contact->label_text }}" data-color="{{ $contact->label_color }}"
+                    data-bs-toggle="modal" data-bs-target="#labelModal" title="تسمية">
+                    <i class="bi bi-tag-fill"></i>
                 </button>
+
+                {{-- Note --}}
                 <button type="button"
-                    class="btn btn-outline-info flex-grow-1 btn-note-mobile d-flex align-items-center justify-content-center btn-sm py-2"
-                    data-id="{{ $contact->id }}" data-note="{{ $contact->notes }}" data-bs-toggle="modal"
-                    data-bs-target="#noteModal" title="ملاحظات">
+                    class="btn btn-outline-info rounded-circle btn-note-mobile d-flex align-items-center justify-content-center shadow-sm"
+                    style="width: 45px; height: 45px; font-size: 1.1rem;" data-id="{{ $contact->id }}"
+                    data-note="{{ $contact->notes }}" data-bs-toggle="modal" data-bs-target="#noteModal"
+                    title="ملاحظات">
                     <i class="bi bi-journal-text"></i>
+                </button>
+
+                {{-- Edit --}}
+                <button type="button"
+                    class="btn btn-outline-primary rounded-circle edit-btn d-flex align-items-center justify-content-center shadow-sm"
+                    style="width: 45px; height: 45px; font-size: 1.1rem;" data-id="{{ $contact->id }}"
+                    data-name="{{ $contact->name }}" data-phone="{{ $contact->phone }}" title="تعديل">
+                    <i class="bi bi-pencil-square"></i>
+                </button>
+
+                {{-- Delete --}}
+                <button type="button"
+                    class="btn btn-outline-danger rounded-circle delete-btn d-flex align-items-center justify-content-center shadow-sm"
+                    style="width: 45px; height: 45px; font-size: 1.1rem;" data-id="{{ $contact->id }}"
+                    data-name="{{ $contact->name }}" title="حذف">
+                    <i class="bi bi-trash3-fill"></i>
                 </button>
             </div>
         </div>
