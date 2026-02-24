@@ -37,19 +37,58 @@
             background: var(--body-bg);
             color: #fff;
             min-height: 100vh;
-            overflow-x: hidden;
+            position: relative;
         }
 
-        .navbar-landing {
-            background: rgba(10, 15, 26, 0.9);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 1rem 0;
+        #particles-canvas {
             position: fixed;
             top: 0;
             left: 0;
-            right: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--body-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(37, 211, 102, 0.4);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--whatsapp-green);
+        }
+
+        .navbar-landing {
+            background: rgba(10, 15, 26, 0.6);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 50px;
+            padding: 0.75rem 1.5rem;
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 40px);
+            max-width: 1200px;
             z-index: 1000;
+            transition: transform 0.4s ease, top 0.4s ease, opacity 0.4s ease;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .navbar-landing.nav-hidden {
+            transform: translate(-50%, -150%);
+            opacity: 0;
         }
 
         .navbar-brand {
@@ -110,16 +149,7 @@
             overflow: hidden;
         }
 
-        .hero-section::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -30%;
-            width: 100%;
-            height: 150%;
-            background: radial-gradient(circle, rgba(37, 211, 102, 0.15) 0%, transparent 60%);
-            pointer-events: none;
-        }
+
 
         .hero-content {
             position: relative;
@@ -165,6 +195,7 @@
             display: flex;
             gap: 1rem;
             flex-wrap: wrap;
+            justify-content: center;
         }
 
         .btn-hero-primary {
@@ -386,171 +417,168 @@
             line-height: 1.7;
         }
 
-        /* ========== Timeline Section ========== */
-        .timeline-section {
-            padding: 5rem 0;
+        /* ========== Sticky Steps Section ========== */
+        .steps-section {
+            padding: 5rem 0 5rem 0;
             position: relative;
-            background: linear-gradient(180deg, var(--body-bg) 0%, rgba(37, 211, 102, 0.03) 50%, var(--body-bg) 100%);
+            z-index: 2;
         }
 
-        .timeline-title {
-            font-size: 2.5rem;
+        .steps-sticky-wrapper {
+            position: sticky;
+            top: 15vh;
+            padding-right: 2rem;
+        }
+
+        .steps-title {
+            font-size: clamp(2.5rem, 4vw, 3.5rem);
             font-weight: 800;
-            text-align: center;
-            margin-bottom: 0.5rem;
+            line-height: 1.2;
+            margin-bottom: 1rem;
             background: linear-gradient(135deg, #fff, var(--whatsapp-green));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
 
-        .timeline-subtitle {
-            text-align: center;
+        .steps-subtitle {
             color: var(--text-muted);
-            font-size: 1.1rem;
-            margin-bottom: 3rem;
+            font-size: 1.15rem;
+            margin-bottom: 2rem;
+            line-height: 1.6;
         }
 
-        .timeline-wrapper {
-            position: relative;
-            max-width: 700px;
-            margin: 0 auto;
-            padding-right: 50px;
+        .step-card {
+            background: #0a0f1a;
+            /* Opaque to hide previous cards */
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            /* Softer border */
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            /* Stronger highlight on top edge to separate stacked cards */
+            border-radius: 24px;
+            padding: 2.5rem;
+            position: sticky;
+            transition: all 0.4s ease;
+            box-shadow: 0 -25px 50px rgba(0, 0, 0, 0.6);
+            /* Enhanced shadow above the card for a clear 3D overlap effect */
         }
 
-        .timeline-wrapper::before {
-            content: '';
+        .step-card:nth-of-type(1) {
+            top: 15vh;
+            margin-bottom: 40vh;
+        }
+
+        .step-card:nth-of-type(2) {
+            top: calc(15vh + 80px);
+            /* 80px offset ensures badge doesn't overlap text above */
+            margin-bottom: 40vh;
+        }
+
+        .step-card:nth-of-type(3) {
+            top: calc(15vh + 160px);
+            margin-bottom: 0vh;
+            /* No huge sticky margin on the last box to prevent blank scroll */
+        }
+
+        .step-card:hover {
+            border-color: rgba(37, 211, 102, 0.4);
+            background: #0d1424;
+            /* Solid slightly lighter dark background instead of transparent */
+            transform: translateX(-10px);
+        }
+
+        .step-number {
             position: absolute;
-            right: 20px;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background: linear-gradient(180deg, var(--whatsapp-green), #667eea, #f7c94b);
-            border-radius: 4px;
-        }
-
-        .timeline-item {
-            position: relative;
-            margin-bottom: 2.5rem;
-            padding-right: 20px;
-        }
-
-        .timeline-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .timeline-indicator {
-            position: absolute;
-            right: -50px;
-            top: 0;
-            width: 44px;
-            height: 44px;
+            top: -20px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
             background: linear-gradient(135deg, var(--whatsapp-green), var(--whatsapp-dark));
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #fff;
             border: 4px solid var(--body-bg);
-            box-shadow: 0 0 0 4px rgba(37, 211, 102, 0.2);
-            z-index: 2;
+            box-shadow: 0 10px 20px rgba(37, 211, 102, 0.3);
         }
 
-        .timeline-indicator .step-num {
-            color: white;
-            font-weight: 700;
-            font-size: 1.1rem;
-        }
-
-        .timeline-content {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+        .step-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, rgba(37, 211, 102, 0.15), rgba(37, 211, 102, 0.05));
             border-radius: 16px;
-            padding: 1.5rem;
-            transition: all 0.3s ease;
-        }
-
-        .timeline-content:hover {
-            background: rgba(255, 255, 255, 0.06);
-            border-color: rgba(37, 211, 102, 0.3);
-            transform: translateX(-5px);
-        }
-
-        .timeline-icon {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, rgba(37, 211, 102, 0.2), rgba(37, 211, 102, 0.05));
-            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
         }
 
-        .timeline-icon i {
-            font-size: 1.5rem;
+        .step-icon i {
+            font-size: 1.8rem;
             color: var(--whatsapp-green);
         }
 
-        .timeline-icon.blue {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(102, 126, 234, 0.05));
+        .step-icon.blue {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(102, 126, 234, 0.05));
         }
 
-        .timeline-icon.blue i {
+        .step-icon.blue i {
             color: #667eea;
         }
 
-        .timeline-icon.gold {
-            background: linear-gradient(135deg, rgba(247, 201, 75, 0.2), rgba(247, 201, 75, 0.05));
+        .step-icon.gold {
+            background: linear-gradient(135deg, rgba(247, 201, 75, 0.15), rgba(247, 201, 75, 0.05));
         }
 
-        .timeline-icon.gold i {
+        .step-icon.gold i {
             color: #f7c94b;
         }
 
-        .timeline-content h3 {
-            font-size: 1.25rem;
+        .step-card h3 {
+            font-size: 1.5rem;
             font-weight: 700;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
             color: white;
         }
 
-        .timeline-content p {
+        .step-card p {
             color: var(--text-muted);
-            font-size: 0.95rem;
-            margin-bottom: 1rem;
-            line-height: 1.6;
+            font-size: 1.05rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.7;
         }
 
-        .timeline-features {
+        .step-features {
             display: flex;
             flex-wrap: wrap;
             gap: 0.75rem;
         }
 
-        .timeline-features span {
+        .step-features span {
             background: rgba(37, 211, 102, 0.1);
             border: 1px solid rgba(37, 211, 102, 0.2);
             color: var(--whatsapp-green);
-            padding: 0.4rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
             font-weight: 600;
             display: inline-flex;
             align-items: center;
-            gap: 0.4rem;
+            gap: 0.5rem;
         }
 
-        .timeline-features span i {
-            font-size: 0.9rem;
+        .step-features span i {
+            font-size: 1rem;
         }
 
-        .timeline-cta {
-            text-align: center;
-            margin-top: 3rem;
+        .steps-cta-wrapper {
+            margin-top: 2rem;
         }
 
-        .btn-timeline-cta {
+        .btn-steps-cta {
             background: linear-gradient(135deg, var(--whatsapp-green), var(--whatsapp-dark));
             color: white;
             padding: 1rem 2.5rem;
@@ -565,37 +593,71 @@
             box-shadow: 0 8px 25px rgba(37, 211, 102, 0.3);
         }
 
-        .btn-timeline-cta:hover {
+        .btn-steps-cta:hover {
             transform: translateY(-3px);
             box-shadow: 0 15px 40px rgba(37, 211, 102, 0.4);
             color: white;
         }
 
+        @media (max-width: 991.98px) {
+            .steps-sticky-wrapper {
+                position: relative;
+                top: 0;
+                padding-right: 0;
+                margin-bottom: 4rem;
+                text-align: center;
+            }
+
+            .step-card {
+                position: relative;
+                top: 0 !important;
+                margin-bottom: 2rem !important;
+                box-shadow: none;
+            }
+
+            .steps-cta-wrapper {
+                text-align: center;
+            }
+        }
+
         .footer-section {
-            background: rgba(0, 0, 0, 0.3);
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 2rem 0;
+            padding: 3rem 0;
+            background: transparent;
         }
 
         .footer-content {
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 0.75rem;
         }
 
         .footer-brand {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--whatsapp-green);
+            font-size: 1.75rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: #fff;
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            text-decoration: none;
+            transition: opacity 0.3s;
         }
 
-        .footer-year {
-            color: var(--text-muted);
-            font-size: 0.9rem;
+        .footer-brand:hover {
+            opacity: 0.8;
+            color: #fff;
+        }
+
+        .footer-brand span {
+            background: linear-gradient(135deg, var(--whatsapp-green), #67e89a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .footer-brand i {
+            color: var(--whatsapp-green);
+            font-size: 2rem;
         }
 
         @media (max-width: 991.98px) {
@@ -608,16 +670,30 @@
                 margin-right: auto;
             }
 
-            .hero-buttons {
-                justify-content: center;
-            }
-
             .hero-visual {
                 margin-top: 3rem;
             }
         }
 
         @media (max-width: 575.98px) {
+            .navbar-brand {
+                font-size: 1.25rem;
+            }
+
+            .navbar-brand i {
+                font-size: 1.5rem;
+            }
+
+            .btn-login,
+            .btn-register {
+                padding: 0.4rem 1rem;
+                font-size: 0.9rem;
+            }
+
+            .navbar-landing {
+                padding: 0.5rem 1rem;
+            }
+
             .hero-buttons {
                 flex-direction: column;
             }
@@ -684,6 +760,9 @@
 </head>
 
 <body>
+    <!-- Particles Background Canvas -->
+    <canvas id="particles-canvas"></canvas>
+
     <nav class="navbar-landing">
         <div class="container">
             <div class="d-flex justify-content-between align-items-center">
@@ -699,11 +778,11 @@
         </div>
     </nav>
 
-    <section class="hero-section">
+    <section class="hero-section text-center">
         <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-6 hero-content">
-                    <div class="hero-badge">
+            <div class="row align-items-center justify-content-center">
+                <div class="col-lg-10 hero-content">
+                    <div class="hero-badge mx-auto">
                         <i class="bi bi-lightning-charge-fill"></i>
                         <span>منصة التسويق #1 عبر واتساب</span>
                     </div>
@@ -711,7 +790,7 @@
                         ضاعف <span class="highlight">مبيعاتك</span><br>
                         عبر واتساب مع زندر
                     </h1>
-                    <p class="hero-description">
+                    <p class="hero-description mx-auto">
                         منصة متكاملة لأتمتة الرسائل وإدارة علاقات العملاء (CRM).
                         أرسل حملات تسويقية ذكية وتواصل مع عملائك بسهولة.
                     </p>
@@ -726,159 +805,246 @@
                         </a>
                     </div>
                 </div>
-                <div class="col-lg-6 hero-visual">
-                    <div class="hero-mockup">
-                        <div class="mockup-card">
-                            <div class="mockup-header">
-                                <div class="mockup-avatar">
-                                    <i class="bi bi-people-fill"></i>
-                                </div>
-                                <div class="mockup-info">
-                                    <h5>جهات الاتصال</h5>
-                                    <small>إدارة العملاء</small>
-                                </div>
-                            </div>
-                            <div class="mockup-contacts">
-                                <div class="contact-item">
-                                    <div class="contact-avatar">أ</div>
-                                    <div class="contact-info">
-                                        <p class="name">أحمد محمد</p>
-                                        <span class="status">عميل نشط</span>
-                                    </div>
-                                    <span class="contact-badge">VIP</span>
-                                </div>
-                                <div class="contact-item">
-                                    <div class="contact-avatar">س</div>
-                                    <div class="contact-info">
-                                        <p class="name">سارة علي</p>
-                                        <span class="status">عميل جديد</span>
-                                    </div>
-                                </div>
-                                <div class="contact-item">
-                                    <div class="contact-avatar">م</div>
-                                    <div class="contact-info">
-                                        <p class="name">محمود حسن</p>
-                                        <span class="status">مهتم</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+
             </div>
         </div>
     </section>
 
-    <!-- How It Works Timeline Section -->
-    <section class="timeline-section">
+    <!-- How It Works Sticky Section -->
+    <section class="steps-section">
         <div class="container">
-            <h2 class="timeline-title">كيف تبدأ مع زندر؟</h2>
-            <p class="timeline-subtitle">٣ خطوات بسيطة لإطلاق حملتك الأولى</p>
+            <div class="row">
 
-            <div class="timeline-wrapper">
-                <!-- Step 1 -->
-                <div class="timeline-item">
-                    <div class="timeline-indicator">
-                        <span class="step-num">1</span>
+                <!-- Sticky Content (Title & CTA) -->
+                <div class="col-lg-5">
+                    <div class="steps-sticky-wrapper">
+                        <h2 class="steps-title">كيف تبدأ مع زندر؟</h2>
+                        <p class="steps-subtitle">٣ خطوات بسيطة لإطلاق حملتك الأولى بكل احترافية، ابدأ الآن ووفر وقتك.
+                        </p>
+
+                        <div class="steps-cta-wrapper d-none d-lg-block">
+                            <a href="/register" class="btn-steps-cta">
+                                <i class="bi bi-rocket-takeoff-fill"></i>
+                                ابدأ الآن مجاناً
+                            </a>
+                        </div>
                     </div>
-                    <div class="timeline-content">
-                        <div class="timeline-icon">
+                </div>
+
+                <!-- Scrolling Cards -->
+                <div class="col-lg-7">
+                    <!-- Step 1 -->
+                    <div class="step-card">
+                        <div class="step-number">1</div>
+                        <div class="step-icon">
                             <i class="bi bi-person-plus-fill"></i>
                         </div>
                         <h3>أنشئ حسابك واربط واتساب</h3>
-                        <p>سجّل حساباً جديداً ثم اربط رقم واتساب الخاص بك بسهولة عبر:</p>
-                        <div class="timeline-features">
-                            <span><i class="bi bi-qr-code"></i> مسح رمز QR</span>
+                        <p>سجّل حساباً جديداً ثم اربط رقم واتساب الخاص بك بسهولة وأمان عبر خيارات الربط المباشرة
+                            المتوفرة لدينا.</p>
+                        <div class="step-features">
                             <span><i class="bi bi-phone"></i> كود الربط</span>
                         </div>
                     </div>
-                </div>
 
-                <!-- Step 2 -->
-                <div class="timeline-item">
-                    <div class="timeline-indicator">
-                        <span class="step-num">2</span>
-                    </div>
-                    <div class="timeline-content">
-                        <div class="timeline-icon blue">
+                    <!-- Step 2 -->
+                    <div class="step-card">
+                        <div class="step-number">2</div>
+                        <div class="step-icon blue">
                             <i class="bi bi-people-fill"></i>
                         </div>
                         <h3>أضف جهات الاتصال</h3>
-                        <p>أضف عملاءك بالطريقة التي تناسبك:</p>
-                        <div class="timeline-features">
+                        <p>أضف عملاءك بالطريقة التي تناسبك وفي ثوانٍ معدودة لتنظيم جهات اتصالك استعداداً لإطلاق حملتك.
+                        </p>
+                        <div class="step-features">
                             <span><i class="bi bi-pencil-square"></i> إضافة يدوية</span>
                             <span><i class="bi bi-file-earmark-excel"></i> استيراد من Excel</span>
+                            <span><i class="bi bi-chat-dots"></i> سحب المحادثات</span>
+                            <span><i class="bi bi-collection"></i> سحب الجروبات</span>
                         </div>
                     </div>
-                </div>
 
-                <!-- Step 3 -->
-                <div class="timeline-item">
-                    <div class="timeline-indicator">
-                        <span class="step-num">3</span>
-                    </div>
-                    <div class="timeline-content">
-                        <div class="timeline-icon gold">
+                    <!-- Step 3 -->
+                    <div class="step-card">
+                        <div class="step-number">3</div>
+                        <div class="step-icon gold">
                             <i class="bi bi-send-fill"></i>
                         </div>
                         <h3>أطلق حملتك الأولى</h3>
-                        <p>أرسل رسائل مخصصة لكل عميل تلقائياً:</p>
-                        <div class="timeline-features">
+                        <p>أرسل رسائل مخصصة لكل عميل تلقائياً بضغطة زر واحدة وتتبع حالة إرسال حملتك مباشرة.</p>
+                        <div class="step-features">
                             <span><i class="bi bi-image"></i> صور ومرفقات</span>
                             <span><i class="bi bi-person-badge"></i> اسم المستلم تلقائياً</span>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <div class="timeline-cta">
-                <a href="/register" class="btn-timeline-cta">
-                    <i class="bi bi-rocket-takeoff-fill"></i>
-                    ابدأ الآن مجاناً
-                </a>
+                    <!-- Mobile CTA (Shows only on mobile) -->
+                    <div class="steps-cta-wrapper d-block d-lg-none mt-5">
+                        <a href="/register" class="btn-steps-cta w-100 justify-content-center">
+                            <i class="bi bi-rocket-takeoff-fill"></i>
+                            ابدأ الآن مجاناً
+                        </a>
+                    </div>
+                </div>
+
             </div>
         </div>
     </section>
 
-    <section class="features-section">
-        <div class="container">
-            <h2 class="section-title">كل ما تحتاجه في منصة واحدة</h2>
-            <p class="section-subtitle">أدوات قوية تساعدك على تنمية أعمالك وزيادة مبيعاتك عبر واتساب</p>
-            <div class="row g-4 justify-content-center">
-                <div class="col-md-6 col-lg-4">
-                    <div class="feature-card">
-                        <div class="feature-icon green"><i class="bi bi-send-fill"></i></div>
-                        <h4>رسائل جماعية</h4>
-                        <p>أرسل حملات تسويقية لآلاف العملاء دفعة واحدة مع تخصيص الرسائل لكل عميل. جدولة الرسائل وتتبع
-                            حالة التسليم.</p>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="feature-card">
-                        <div class="feature-icon blue"><i class="bi bi-people-fill"></i></div>
-                        <h4>إدارة العملاء</h4>
-                        <p>نظام CRM متكامل لتنظيم جهات الاتصال وتصنيف العملاء حسب اهتماماتهم. استيراد وتصدير البيانات
-                            بسهولة.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+
 
     <footer class="footer-section">
         <div class="container">
             <div class="footer-content">
-                <div class="footer-brand">
+                <a href="/" class="footer-brand">
                     <i class="bi bi-whatsapp"></i>
-                    Zender
-                </div>
-                <span class="footer-year">© 2026</span>
+                    <span>ZenderGo</span>
+                </a>
             </div>
         </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous">
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            let lastScrollTop = 0;
+            const navbar = document.querySelector('.navbar-landing');
+
+            window.addEventListener('scroll', function() {
+                let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+                if (scrollTop > lastScrollTop && scrollTop > 100) {
+                    // Scroll Down
+                    navbar.classList.add('nav-hidden');
+                } else {
+                    // Scroll Up
+                    navbar.classList.remove('nav-hidden');
+                }
+                lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; // For Mobile or negative scrolling
+            });
+
+            // Particles Animation
+            const canvas = document.getElementById('particles-canvas');
+            const ctx = canvas.getContext('2d');
+            let width, height, particles;
+            let mouse = {
+                x: null,
+                y: null,
+                radius: 150
+            }; // Interaction radius
+            let isDesktop = window.matchMedia("(min-width: 992px)").matches;
+
+            function initCanvas() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+                particles = [];
+                isDesktop = window.matchMedia("(min-width: 992px)").matches;
+
+                // Creates particles based on screen size (responsive count)
+                let particleCount = Math.floor((width * height) / 18000);
+                if (particleCount > 100) particleCount = 100; // Cap particles for performance
+
+                for (let i = 0; i < particleCount; i++) {
+                    particles.push(new Particle());
+                }
+            }
+
+            class Particle {
+                constructor() {
+                    this.x = Math.random() * width;
+                    this.y = Math.random() * height;
+                    this.vx = (Math.random() - 0.5) * 1.5;
+                    this.vy = (Math.random() - 0.5) * 1.5;
+                    this.radius = Math.random() * 2 + 1;
+                }
+
+                update() {
+                    this.x += this.vx;
+                    this.y += this.vy;
+
+                    // Bounce off walls
+                    if (this.x < 0 || this.x > width) this.vx = -this.vx;
+                    if (this.y < 0 || this.y > height) this.vy = -this.vy;
+                }
+
+                draw() {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(37, 211, 102, 0.6)';
+                    ctx.fill();
+                }
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, width, height);
+
+                for (let i = 0; i < particles.length; i++) {
+                    particles[i].update();
+                    particles[i].draw();
+
+                    // Draw connecting lines between particles
+                    for (let j = i + 1; j < particles.length; j++) {
+                        let dx = particles[i].x - particles[j].x;
+                        let dy = particles[i].y - particles[j].y;
+                        let distance = Math.sqrt(dx * dx + dy * dy);
+
+                        if (distance < 120) {
+                            ctx.beginPath();
+                            ctx.strokeStyle =
+                                `rgba(37, 211, 102, ${0.4 - distance / 300})`; // Fade depending on distance
+                            ctx.lineWidth = 0.8;
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            ctx.stroke();
+                        }
+                    }
+
+                    // Mouse Interaction (Desktop Only)
+                    if (isDesktop && mouse.x !== null && mouse.y !== null) {
+                        let dxMouse = particles[i].x - mouse.x;
+                        let dyMouse = particles[i].y - mouse.y;
+                        let distanceMouse = Math.sqrt(dxMouse * dxMouse + dyMouse * dyMouse);
+
+                        if (distanceMouse < mouse.radius) {
+                            ctx.beginPath();
+                            ctx.strokeStyle =
+                                `rgba(37, 211, 102, ${0.6 - distanceMouse / (mouse.radius * 1.5)})`; // Stronger connection to mouse
+                            ctx.lineWidth = 1;
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(mouse.x, mouse.y);
+                            ctx.stroke();
+
+                            // Optional: slight magnetic pull effect towards the cursor (uncomment to activate)
+                            // particles[i].x -= dxMouse / 100;
+                            // particles[i].y -= dyMouse / 100;
+                        }
+                    }
+                }
+                requestAnimationFrame(animate);
+            }
+
+            initCanvas();
+            animate();
+
+            // Event Listeners for Mouse
+            window.addEventListener('mousemove', (event) => {
+                if (isDesktop) {
+                    mouse.x = event.x;
+                    mouse.y = event.y;
+                }
+            });
+
+            window.addEventListener('mouseout', () => {
+                mouse.x = null;
+                mouse.y = null;
+            });
+
+            window.addEventListener('resize', () => {
+                initCanvas();
+            });
+        });
     </script>
 </body>
 
