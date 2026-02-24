@@ -34,6 +34,13 @@ class SendWhatsappCampaign implements ShouldQueue
     public int $backoff = 30;
 
     /**
+     * The number of seconds the job can run before timing out.
+     * Increased to accommodate video uploads which involve:
+     * anti-ban delay (15-45s) + typing sim (3-8s) + large file upload (30-60s)
+     */
+    public int $timeout = 180;
+
+    /**
      * Anti-ban delay range in seconds (min, max).
      * A random value in this range is used between messages.
      */
@@ -241,12 +248,26 @@ class SendWhatsappCampaign implements ShouldQueue
         $sendResult = null;
 
         if ($normalizedImagePath && file_exists($normalizedImagePath)) {
-            // Send image with caption (collage or single image)
-            Log::info("Sending image with campaign to {$this->phone}");
-            $sendResult = $whatsapp->sendImageWithVerification($this->phone, $this->message, $normalizedImagePath, $typingTime);
+            // Detect attachment type by mime
+            $mimeType = mime_content_type($normalizedImagePath);
+            Log::info("Attachment mime type: {$mimeType} for {$this->phone}");
+
+            if (str_starts_with($mimeType, 'video/')) {
+                // Send video with caption
+                Log::info("Sending video with campaign to {$this->phone}");
+                $sendResult = $whatsapp->sendVideoWithVerification($this->phone, $this->message, $normalizedImagePath, $typingTime);
+            } elseif (str_starts_with($mimeType, 'image/')) {
+                // Send image with caption (collage or single image)
+                Log::info("Sending image with campaign to {$this->phone}");
+                $sendResult = $whatsapp->sendImageWithVerification($this->phone, $this->message, $normalizedImagePath, $typingTime);
+            } else {
+                // Send document with caption
+                Log::info("Sending document with campaign to {$this->phone}");
+                $sendResult = $whatsapp->sendFileWithVerification($this->phone, $this->message, $normalizedImagePath, $typingTime);
+            }
         } else {
             // Send text message only
-            Log::info("No image found, sending text only to {$this->phone}");
+            Log::info("No attachment found, sending text only to {$this->phone}");
             $sendResult = $whatsapp->sendMessageWithVerification($this->phone, $this->message, $typingTime);
         }
 

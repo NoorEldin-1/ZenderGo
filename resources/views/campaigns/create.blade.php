@@ -184,30 +184,94 @@
                         </div>
                         <textarea class="d-none" id="message" name="message">{{ old('message') }}</textarea>
 
-                        <!-- Multi-Image Upload Section -->
+                        <!-- Attachment Type Selector -->
+                        <input type="hidden" name="attachment_type" id="attachmentType" value="none">
                         <div class="p-2 border-top bg-light">
-                            <div class="d-flex align-items-center gap-2 flex-wrap">
-                                <label class="btn btn-sm btn-outline-success mb-0 position-relative" for="images"
-                                    id="imagesLabel">
-                                    <i class="bi bi-images"></i>
-                                    <span class="ms-1">صور</span>
-                                    <span class="badge bg-success rounded-pill ms-1" id="imageCount">0/5</span>
-                                </label>
-                                <input type="file" class="d-none" id="images" name="images[]" accept="image/*"
-                                    multiple>
-
-                                <!-- Images Preview Container -->
-                                <div id="imagesPreview" class="d-flex gap-2 flex-wrap flex-grow-1"></div>
-                            </div>
-                            <div class="mt-2 d-flex align-items-center gap-2">
-                                <div class="alert alert-info py-1 px-2 mb-0 small d-flex align-items-center gap-2 flex-grow-1"
-                                    id="imageHint">
-                                    <i class="bi bi-lightbulb text-warning"></i>
-                                    <span>يمكنك رفع <strong>حتى 5 صور</strong> مع كل رسالة (بحد أقصى 5MB لكل صورة)</span>
+                            <!-- Attachment Type Pills -->
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="text-muted small"><i class="bi bi-paperclip"></i> مرفقات:</span>
+                                <div class="btn-group btn-group-sm" role="group" id="attachmentTypePills">
+                                    <button type="button" class="btn btn-outline-success active" data-type="image">
+                                        <i class="bi bi-images me-1"></i>صور
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary" data-type="document">
+                                        <i class="bi bi-file-earmark-text me-1"></i>ملف
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger" data-type="video">
+                                        <i class="bi bi-camera-video me-1"></i>فيديو
+                                    </button>
                                 </div>
-                                <button type="button" class="btn btn-sm btn-outline-danger d-none" id="clearAllImages">
-                                    <i class="bi bi-x-lg me-1"></i>مسح الكل
-                                </button>
+                            </div>
+
+                            <!-- Image Upload Area -->
+                            <div id="imageUploadArea" class="attachment-area">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <label class="btn btn-sm btn-outline-success mb-0 position-relative" for="images"
+                                        id="imagesLabel">
+                                        <i class="bi bi-images"></i>
+                                        <span class="ms-1">اختر صور</span>
+                                        <span class="badge bg-success rounded-pill ms-1" id="imageCount">0/5</span>
+                                    </label>
+                                    <input type="file" class="d-none" id="images" name="images[]"
+                                        accept="image/*" multiple>
+                                    <div id="imagesPreview" class="d-flex gap-2 flex-wrap flex-grow-1"></div>
+                                </div>
+                                <div class="mt-2 d-flex align-items-center gap-2">
+                                    <div class="alert alert-info py-1 px-2 mb-0 small d-flex align-items-center gap-2 flex-grow-1"
+                                        id="imageHint">
+                                        <i class="bi bi-lightbulb text-warning"></i>
+                                        <span>يمكنك رفع <strong>حتى 5 صور</strong> مع كل رسالة (بحد أقصى 5MB لكل
+                                            صورة)</span>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-danger d-none"
+                                        id="clearAllImages">
+                                        <i class="bi bi-x-lg me-1"></i>مسح الكل
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Document Upload Area -->
+                            <div id="documentUploadArea" class="attachment-area d-none">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <label class="btn btn-sm btn-outline-primary mb-0 position-relative" for="document"
+                                        id="documentLabel">
+                                        <i class="bi bi-file-earmark-arrow-up"></i>
+                                        <span class="ms-1">اختر ملف</span>
+                                    </label>
+                                    <input type="file" class="d-none" id="document" name="document"
+                                        accept=".pdf,.doc,.docx,.xls,.xlsx,.csv">
+                                    <div id="documentPreview" class="d-flex gap-2 flex-wrap flex-grow-1"></div>
+                                </div>
+                                <div class="mt-2">
+                                    <div class="alert alert-info py-1 px-2 mb-0 small d-flex align-items-center gap-2"
+                                        id="documentHint">
+                                        <i class="bi bi-lightbulb text-warning"></i>
+                                        <span>يمكنك رفع <strong>ملف واحد</strong> (PDF، Word، Excel، CSV) بحد أقصى
+                                            10MB</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Video Upload Area -->
+                            <div id="videoUploadArea" class="attachment-area d-none">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <label class="btn btn-sm btn-outline-danger mb-0 position-relative" for="video"
+                                        id="videoLabel">
+                                        <i class="bi bi-camera-video"></i>
+                                        <span class="ms-1">اختر فيديو</span>
+                                    </label>
+                                    <input type="file" class="d-none" id="video" name="video"
+                                        accept="video/mp4,video/mpeg,video/quicktime,video/x-msvideo">
+                                    <div id="videoPreview" class="d-flex gap-2 flex-wrap flex-grow-1"></div>
+                                </div>
+                                <div class="mt-2">
+                                    <div class="alert alert-info py-1 px-2 mb-0 small d-flex align-items-center gap-2"
+                                        id="videoHint">
+                                        <i class="bi bi-lightbulb text-warning"></i>
+                                        <span>يمكنك رفع <strong>فيديو واحد قصير</strong> (MP4، MPEG، MOV، AVI) بحد أقصى
+                                            16MB</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -1679,9 +1743,9 @@
                             <!-- 5. Notes -->
                             ${contact.notes ? 
                                 `<div class="mt-1 d-flex align-items-center text-muted small">
-                                                                 <i class="bi bi-journal-text me-1 text-info opacity-75 flex-shrink-0"></i>
-                                                                 <span class="text-truncate" style="max-width: 130px;">${escapeHtml(stripHtml(contact.notes))}</span>
-                                                            </div>` : ''}
+                                                                         <i class="bi bi-journal-text me-1 text-info opacity-75 flex-shrink-0"></i>
+                                                                         <span class="text-truncate" style="max-width: 130px;">${escapeHtml(stripHtml(contact.notes))}</span>
+                                                                    </div>` : ''}
                         </div>
                         
                         <div class="dropdown ms-2 mt-1">
@@ -2718,6 +2782,11 @@
                     imageCount.className = 'badge bg-secondary rounded-pill ms-1';
                 }
 
+                // Sync attachment type input
+                if (typeof updateAttachmentTypeInput === 'function') {
+                    updateAttachmentTypeInput();
+                }
+
                 // Show/hide clear all button
                 if (count > 0) {
                     clearAllBtn.classList.remove('d-none');
@@ -2811,6 +2880,207 @@
 
             clearAllBtn?.addEventListener('click', () => {
                 clearAllImages();
+            });
+
+            // ========== ATTACHMENT TYPE SWITCHING ==========
+            const attachmentTypeInput = document.getElementById('attachmentType');
+            const attachmentPills = document.querySelectorAll('#attachmentTypePills button');
+            const imageUploadArea = document.getElementById('imageUploadArea');
+            const documentUploadArea = document.getElementById('documentUploadArea');
+            const videoUploadArea = document.getElementById('videoUploadArea');
+            const documentInput = document.getElementById('document');
+            const documentPreview = document.getElementById('documentPreview');
+            const videoInput = document.getElementById('video');
+            const videoPreview = document.getElementById('videoPreview');
+
+            // Track current attachment type
+            let currentAttachmentType = 'image';
+
+            function switchAttachmentType(type) {
+                currentAttachmentType = type;
+
+                // Update hidden input only when files are actually selected
+                // (default to 'none' if no files present)
+                updateAttachmentTypeInput();
+
+                // Update pill active states
+                attachmentPills.forEach(pill => {
+                    if (pill.dataset.type === type) {
+                        pill.classList.add('active');
+                    } else {
+                        pill.classList.remove('active');
+                    }
+                });
+
+                // Show/hide upload areas
+                imageUploadArea.classList.toggle('d-none', type !== 'image');
+                documentUploadArea.classList.toggle('d-none', type !== 'document');
+                videoUploadArea.classList.toggle('d-none', type !== 'video');
+
+                // Clear files from non-active types
+                if (type !== 'image') {
+                    clearAllImages();
+                }
+                if (type !== 'document') {
+                    clearDocument();
+                }
+                if (type !== 'video') {
+                    clearVideo();
+                }
+            }
+
+            function updateAttachmentTypeInput() {
+                if (currentAttachmentType === 'image' && selectedFiles.files.length > 0) {
+                    attachmentTypeInput.value = 'image';
+                } else if (currentAttachmentType === 'document' && documentInput.files.length > 0) {
+                    attachmentTypeInput.value = 'document';
+                } else if (currentAttachmentType === 'video' && videoInput.files.length > 0) {
+                    attachmentTypeInput.value = 'video';
+                } else {
+                    attachmentTypeInput.value = 'none';
+                }
+            }
+
+            attachmentPills.forEach(pill => {
+                pill.addEventListener('click', () => {
+                    switchAttachmentType(pill.dataset.type);
+                });
+            });
+
+            // ========== DOCUMENT UPLOAD HANDLER ==========
+            const DOCUMENT_MAX_SIZE_MB = 10;
+            const DOCUMENT_EXTENSIONS = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv'];
+
+            const DOCUMENT_ICONS = {
+                'pdf': 'bi-file-earmark-pdf text-danger',
+                'doc': 'bi-file-earmark-word text-primary',
+                'docx': 'bi-file-earmark-word text-primary',
+                'xls': 'bi-file-earmark-excel text-success',
+                'xlsx': 'bi-file-earmark-excel text-success',
+                'csv': 'bi-file-earmark-spreadsheet text-success',
+            };
+
+            function getDocumentIcon(filename) {
+                const ext = filename.split('.').pop().toLowerCase();
+                return DOCUMENT_ICONS[ext] || 'bi-file-earmark text-secondary';
+            }
+
+            function formatFileSize(bytes) {
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            }
+
+            function renderDocumentPreview() {
+                documentPreview.innerHTML = '';
+                if (documentInput.files.length === 0) return;
+
+                const file = documentInput.files[0];
+                const iconClass = getDocumentIcon(file.name);
+
+                const previewItem = document.createElement('div');
+                previewItem.className = 'd-flex align-items-center gap-2 bg-white border rounded px-3 py-2 flex-grow-1';
+                previewItem.innerHTML = `
+                    <i class="bi ${iconClass} fs-4"></i>
+                    <div class="flex-grow-1 text-truncate">
+                        <div class="fw-medium small text-truncate">${escapeHtml(file.name)}</div>
+                        <div class="text-muted" style="font-size: 0.75rem;">${formatFileSize(file.size)}</div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger" title="إزالة">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                `;
+
+                previewItem.querySelector('button').onclick = () => {
+                    clearDocument();
+                };
+
+                documentPreview.appendChild(previewItem);
+                updateAttachmentTypeInput();
+            }
+
+            function clearDocument() {
+                documentInput.value = '';
+                documentPreview.innerHTML = '';
+                updateAttachmentTypeInput();
+            }
+
+            documentInput?.addEventListener('change', function() {
+                if (this.files.length === 0) return;
+
+                const file = this.files[0];
+                const ext = file.name.split('.').pop().toLowerCase();
+
+                if (!DOCUMENT_EXTENSIONS.includes(ext)) {
+                    showAlert('صيغة الملف غير مدعومة. الصيغ المسموحة: PDF، Word، Excel، CSV.', 'error');
+                    this.value = '';
+                    return;
+                }
+
+                if (file.size > DOCUMENT_MAX_SIZE_MB * 1024 * 1024) {
+                    showAlert(`حجم الملف يتجاوز الحد الأقصى (${DOCUMENT_MAX_SIZE_MB}MB)`, 'error');
+                    this.value = '';
+                    return;
+                }
+
+                renderDocumentPreview();
+            });
+
+            // ========== VIDEO UPLOAD HANDLER ==========
+            const VIDEO_MAX_SIZE_MB = 16;
+
+            function renderVideoPreview() {
+                videoPreview.innerHTML = '';
+                if (videoInput.files.length === 0) return;
+
+                const file = videoInput.files[0];
+                const videoUrl = URL.createObjectURL(file);
+
+                const previewItem = document.createElement('div');
+                previewItem.className = 'd-flex align-items-center gap-2 bg-white border rounded px-3 py-2 flex-grow-1';
+                previewItem.innerHTML = `
+                    <video src="${videoUrl}" style="width: 60px; height: 40px; object-fit: cover; border-radius: 4px;" muted></video>
+                    <div class="flex-grow-1 text-truncate">
+                        <div class="fw-medium small text-truncate">${escapeHtml(file.name)}</div>
+                        <div class="text-muted" style="font-size: 0.75rem;">${formatFileSize(file.size)}</div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger" title="إزالة">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                `;
+
+                previewItem.querySelector('button').onclick = () => {
+                    clearVideo();
+                };
+
+                videoPreview.appendChild(previewItem);
+                updateAttachmentTypeInput();
+            }
+
+            function clearVideo() {
+                videoInput.value = '';
+                videoPreview.innerHTML = '';
+                updateAttachmentTypeInput();
+            }
+
+            videoInput?.addEventListener('change', function() {
+                if (this.files.length === 0) return;
+
+                const file = this.files[0];
+
+                if (!file.type.startsWith('video/')) {
+                    showAlert('يرجى اختيار ملف فيديو صالح', 'error');
+                    this.value = '';
+                    return;
+                }
+
+                if (file.size > VIDEO_MAX_SIZE_MB * 1024 * 1024) {
+                    showAlert(`حجم الفيديو يتجاوز الحد الأقصى (${VIDEO_MAX_SIZE_MB}MB)`, 'error');
+                    this.value = '';
+                    return;
+                }
+
+                renderVideoPreview();
             });
 
             // Editor input handler

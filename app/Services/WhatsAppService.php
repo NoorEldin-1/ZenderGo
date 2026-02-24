@@ -983,6 +983,178 @@ class WhatsAppService
     }
 
     /**
+     * Send a file/document via WhatsApp with detailed verification.
+     */
+    public function sendFileWithVerification(string $phone, string $message, string $filePath, int $typingTime = 0): array
+    {
+        try {
+            $fileData = base64_encode(file_get_contents($filePath));
+            $mimeType = mime_content_type($filePath);
+            $filename = basename($filePath);
+
+            $response = Http::withToken($this->token)
+                ->timeout(60 + (int) ceil($typingTime / 1000))
+                ->post("{$this->baseUrl}/api/{$this->session}/send-file", [
+                    'phone' => $this->formatPhone($phone),
+                    'caption' => $message,
+                    'filename' => $filename,
+                    'base64' => "data:{$mimeType};base64,{$fileData}",
+                    'typingTime' => $typingTime,
+                ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $responseData = $data['response'] ?? $data;
+
+                Log::info("WhatsApp file sent to {$phone}", [
+                    'session' => $this->session,
+                    'filename' => $filename,
+                ]);
+
+                return [
+                    'success' => true,
+                    'data' => $responseData,
+                ];
+            }
+
+            $statusCode = $response->status();
+            $body = $response->json() ?? [];
+            $bodyMessage = $body['message'] ?? '';
+
+            Log::error("WhatsApp API error (file)", [
+                'phone' => $phone,
+                'status' => $statusCode,
+                'body' => $body,
+            ]);
+
+            if (
+                $statusCode === 404 ||
+                stripos($bodyMessage, 'Disconnected') !== false ||
+                stripos($bodyMessage, 'não está ativa') !== false ||
+                stripos($bodyMessage, 'not active') !== false
+            ) {
+                return [
+                    'success' => false,
+                    'reason' => 'disconnected',
+                    'message' => 'الجلسة مفصولة',
+                    'needs_reauth' => true,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'reason' => 'api_error',
+                'status_code' => $statusCode,
+                'message' => $bodyMessage ?: 'خطأ في إرسال الملف',
+                'needs_reauth' => false,
+            ];
+
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            Log::error("WhatsApp connection error: " . $e->getMessage());
+            return [
+                'success' => false,
+                'reason' => 'connection_error',
+                'message' => 'لا يمكن الاتصال بخادم WhatsApp',
+                'needs_reauth' => false,
+            ];
+        } catch (\Exception $e) {
+            Log::error("WhatsApp service error: " . $e->getMessage());
+            return [
+                'success' => false,
+                'reason' => 'exception',
+                'message' => $e->getMessage(),
+                'needs_reauth' => false,
+            ];
+        }
+    }
+
+    /**
+     * Send a video with caption via WhatsApp with detailed verification.
+     */
+    public function sendVideoWithVerification(string $phone, string $message, string $filePath, int $typingTime = 0): array
+    {
+        try {
+            $videoData = base64_encode(file_get_contents($filePath));
+            $mimeType = mime_content_type($filePath);
+            $filename = basename($filePath);
+
+            $response = Http::withToken($this->token)
+                ->timeout(120 + (int) ceil($typingTime / 1000))
+                ->post("{$this->baseUrl}/api/{$this->session}/send-video", [
+                    'phone' => $this->formatPhone($phone),
+                    'caption' => $message,
+                    'filename' => $filename,
+                    'base64' => "data:{$mimeType};base64,{$videoData}",
+                    'typingTime' => $typingTime,
+                ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $responseData = $data['response'] ?? $data;
+
+                Log::info("WhatsApp video sent to {$phone}", [
+                    'session' => $this->session,
+                    'filename' => $filename,
+                ]);
+
+                return [
+                    'success' => true,
+                    'data' => $responseData,
+                ];
+            }
+
+            $statusCode = $response->status();
+            $body = $response->json() ?? [];
+            $bodyMessage = $body['message'] ?? '';
+
+            Log::error("WhatsApp API error (video)", [
+                'phone' => $phone,
+                'status' => $statusCode,
+                'body' => $body,
+            ]);
+
+            if (
+                $statusCode === 404 ||
+                stripos($bodyMessage, 'Disconnected') !== false ||
+                stripos($bodyMessage, 'não está ativa') !== false ||
+                stripos($bodyMessage, 'not active') !== false
+            ) {
+                return [
+                    'success' => false,
+                    'reason' => 'disconnected',
+                    'message' => 'الجلسة مفصولة',
+                    'needs_reauth' => true,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'reason' => 'api_error',
+                'status_code' => $statusCode,
+                'message' => $bodyMessage ?: 'خطأ في إرسال الفيديو',
+                'needs_reauth' => false,
+            ];
+
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            Log::error("WhatsApp connection error: " . $e->getMessage());
+            return [
+                'success' => false,
+                'reason' => 'connection_error',
+                'message' => 'لا يمكن الاتصال بخادم WhatsApp',
+                'needs_reauth' => false,
+            ];
+        } catch (\Exception $e) {
+            Log::error("WhatsApp service error: " . $e->getMessage());
+            return [
+                'success' => false,
+                'reason' => 'exception',
+                'message' => $e->getMessage(),
+                'needs_reauth' => false,
+            ];
+        }
+    }
+
+    /**
      * Format phone number for WhatsApp API.
      */
     protected function formatPhone(string $phone): string

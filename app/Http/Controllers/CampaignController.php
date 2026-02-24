@@ -116,17 +116,37 @@ class CampaignController extends Controller
         try {
             $limit = SystemSetting::getCampaignLimit();
 
-            $validated = $request->validate([
+            // Base validation rules
+            $rules = [
                 'contacts' => 'required|array|min:1|max:' . $limit,
                 'contacts.*' => 'exists:contacts,id',
                 'message' => 'required|string|max:4096',
-                'images' => 'nullable|array|max:5', // Max 5 images
-                'images.*' => 'image|max:5120', // Max 5MB each
-            ], [
+                'attachment_type' => 'nullable|in:none,image,document,video',
+            ];
+
+            $messages = [
                 'contacts.max' => "عفواً، لا يمكن إرسال الحملة لأكثر من {$limit} مستلم في المرة الواحدة.",
-                'images.max' => 'عفواً، الحد الأقصى هو 5 صور فقط.',
-                'images.*.max' => 'عفواً، حجم كل صورة يجب ألا يتجاوز 5MB.',
-            ]);
+            ];
+
+            // Conditionally add attachment validation rules based on type
+            $attachmentType = $request->input('attachment_type', 'none');
+
+            if ($attachmentType === 'image') {
+                $rules['images'] = 'required|array|min:1|max:5';
+                $rules['images.*'] = 'image|max:5120';
+                $messages['images.max'] = 'عفواً، الحد الأقصى هو 5 صور فقط.';
+                $messages['images.*.max'] = 'عفواً، حجم كل صورة يجب ألا يتجاوز 5MB.';
+            } elseif ($attachmentType === 'document') {
+                $rules['document'] = 'required|file|mimes:pdf,doc,docx,xls,xlsx,csv|max:10240';
+                $messages['document.mimes'] = 'عفواً، صيغة الملف غير مدعومة. الصيغ المسموحة: PDF، Word، Excel، CSV.';
+                $messages['document.max'] = 'عفواً، حجم الملف يجب ألا يتجاوز 10MB.';
+            } elseif ($attachmentType === 'video') {
+                $rules['video'] = 'required|file|mimetypes:video/mp4,video/mpeg,video/quicktime,video/x-msvideo|max:16384';
+                $messages['video.mimetypes'] = 'عفواً، صيغة الفيديو غير مدعومة. الصيغ المسموحة: MP4، MPEG، MOV، AVI.';
+                $messages['video.max'] = 'عفواً، حجم الفيديو يجب ألا يتجاوز 16MB.';
+            }
+
+            $validated = $request->validate($rules, $messages);
 
             $contactCount = count($validated['contacts']);
 
@@ -153,31 +173,36 @@ class CampaignController extends Controller
                 return back()->withErrors(['contacts' => 'No valid contacts selected.']);
             }
 
-            // Handle multiple image uploads and create collage
-            $imagePath = null;
-            if ($request->hasFile('images')) {
+            // Handle attachment uploads based on type
+            $attachmentPath = null;
+
+            if ($attachmentType === 'image' && $request->hasFile('images')) {
+                // Existing image handling with collage support
                 $imagePaths = [];
                 foreach ($request->file('images') as $image) {
                     $storedPath = $image->store('campaign-images', 'public');
-                    // Normalize path for cross-platform compatibility
                     $fullPath = storage_path('app' . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $storedPath));
                     $imagePaths[] = $fullPath;
                 }
 
-                // Create collage if multiple images
                 if (count($imagePaths) > 1) {
                     $collageService = new ImageCollageService();
-                    $imagePath = $collageService->createCollage($imagePaths);
+                    $attachmentPath = $collageService->createCollage($imagePaths);
 
-                    // Cleanup original images after collage creation (saves storage)
                     foreach ($imagePaths as $originalPath) {
                         if (file_exists($originalPath)) {
                             @unlink($originalPath);
                         }
                     }
                 } elseif (count($imagePaths) === 1) {
-                    $imagePath = $imagePaths[0];
+                    $attachmentPath = $imagePaths[0];
                 }
+            } elseif ($attachmentType === 'document' && $request->hasFile('document')) {
+                $storedPath = $request->file('document')->store('campaign-documents', 'public');
+                $attachmentPath = storage_path('app' . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $storedPath));
+            } elseif ($attachmentType === 'video' && $request->hasFile('video')) {
+                $storedPath = $request->file('video')->store('campaign-videos', 'public');
+                $attachmentPath = storage_path('app' . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $storedPath));
             }
 
             // Get the user's WhatsApp session and token
@@ -290,7 +315,7 @@ class CampaignController extends Controller
                 SendWhatsappCampaign::dispatch(
                     $contact->phone,
                     $personalizedMessage,
-                    $imagePath,
+                    $attachmentPath,
                     $userSession,
                     $userToken,
                     $user->id,
