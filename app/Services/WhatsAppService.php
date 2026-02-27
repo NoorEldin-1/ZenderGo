@@ -1159,12 +1159,11 @@ class WhatsAppService
      */
     protected function formatPhone(string $phone): string
     {
-        $phone = preg_replace('/[\s\-\(\)\+]/', '', $phone);
+        $phone = preg_replace('/[^\d]/', '', $phone);
 
-        if (str_starts_with($phone, '0')) {
+        // Backward compatibility for old Egyptian numbers stored without country code
+        if (str_starts_with($phone, '01') && strlen($phone) == 11) {
             $phone = '20' . substr($phone, 1);
-        } elseif (!str_starts_with($phone, '20')) {
-            $phone = '20' . $phone;
         }
 
         return $phone;

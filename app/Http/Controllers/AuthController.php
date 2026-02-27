@@ -27,14 +27,31 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'phone' => 'required|string|min:10|max:20',
+            'phone' => 'required|string|min:8|max:20',
             'password' => 'required|string|min:6',
         ]);
 
-        $phone = $request->phone;
+        $phone = preg_replace('/[^\d]/', '', $request->phone);
 
         // Find user by phone
         $user = User::where('phone', $phone)->first();
+
+        // Fallback for old Egyptian numbers (auto-migration)
+        if (!$user && str_starts_with($phone, '201') && strlen($phone) == 12) {
+            $fallbackPhone = '0' . substr($phone, 2);
+            $user = User::where('phone', $fallbackPhone)->first();
+            if ($user) {
+                $user->update(['phone' => $phone]);
+                Log::info("Migrated user {$user->id} phone from {$fallbackPhone} to {$phone} on login");
+            }
+        } elseif (!$user && str_starts_with($phone, '01') && strlen($phone) == 11) {
+            $fallbackPhone = '20' . substr($phone, 1);
+            $user = User::where('phone', $fallbackPhone)->first();
+            if ($user) {
+                // Keep the phone as it is in DB, just login, or we can use $fallbackPhone for session
+                $phone = $fallbackPhone; // Used in session assignment later if no WhatsApp
+            }
+        }
 
         if (!$user) {
             // User doesn't exist, redirect to registration
@@ -525,6 +542,17 @@ class AuthController extends Controller
                 // Check if user already exists with this phone
                 $existingUser = User::where('phone', $phoneNumber)->first();
 
+                // Fallback for old Egyptian numbers
+                if (!$existingUser && str_starts_with($phoneNumber, '201') && strlen($phoneNumber) == 12) {
+                    $fallbackPhone = '0' . substr($phoneNumber, 2);
+                    $existingUser = User::where('phone', $fallbackPhone)->first();
+
+                    if ($existingUser) {
+                        $existingUser->phone = $phoneNumber; // Update object state; saved later
+                        Log::info("Migrated user {$existingUser->id} phone from {$fallbackPhone} to {$phoneNumber} on checkRegistration");
+                    }
+                }
+
                 if ($existingUser) {
                     Log::emergency("CHECK-REG: Found existing user ID: {$existingUser->id}");
                     // Keep the registration session name - tokens are stored under this name
@@ -697,11 +725,6 @@ class AuthController extends Controller
     {
         // Remove any non-numeric characters (handles formats like "201234567890@c.us")
         $phone = preg_replace('/[^0-9]/', '', $phone);
-
-        // Convert from international (20...) to local (0...) format
-        if (str_starts_with($phone, '20') && strlen($phone) > 10) {
-            $phone = '0' . substr($phone, 2);
-        }
 
         return $phone;
     }

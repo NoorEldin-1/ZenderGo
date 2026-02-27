@@ -2,6 +2,65 @@
 
 @section('title', 'استعادة كلمة المرور')
 
+@push('styles')
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@23.0.12/build/css/intlTelInput.css">
+    <style>
+        .iti {
+            width: 100%;
+        }
+
+        .iti__flag {
+            background-image: url("https://cdn.jsdelivr.net/npm/intl-tel-input@23.0.12/build/img/flags.png");
+        }
+
+        @media (min-resolution: 2x) {
+            .iti__flag {
+                background-image: url("https://cdn.jsdelivr.net/npm/intl-tel-input@23.0.12/build/img/flags@2x.png");
+            }
+        }
+
+        .iti__country-list {
+            text-align: left;
+            direction: ltr;
+            z-index: 9999 !important;
+        }
+
+        /* Fix for RTL dropdown positioning when appended to body */
+        .iti--container .iti__dropdown-content {
+            left: 0 !important;
+            right: auto !important;
+            transform: none !important;
+        }
+
+        /* Dark mode support for intl-tel-input */
+        [data-bs-theme="dark"] .iti__country-list {
+            background-color: #212529 !important;
+            color: #e9ecef !important;
+            border-color: #495057 !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5) !important;
+        }
+
+        [data-bs-theme="dark"] .iti__country {
+            padding: 8px 10px;
+        }
+
+        [data-bs-theme="dark"] .iti__country:hover,
+        [data-bs-theme="dark"] .iti__country.iti__highlight {
+            background-color: #343a40 !important;
+        }
+
+        [data-bs-theme="dark"] .iti__search-input {
+            background-color: #1a1d21 !important;
+            color: #e9ecef !important;
+            border-color: #495057 !important;
+        }
+
+        [data-bs-theme="dark"] .iti__divider {
+            border-bottom-color: #495057 !important;
+        }
+    </style>
+@endpush
+
 @section('content')
     <div class="auth-card">
         <div class="card">
@@ -29,15 +88,11 @@
                 <div id="phoneStep">
                     <div class="mb-4">
                         <label for="phone" class="form-label fw-semibold">رقم الهاتف</label>
-                        <div class="input-group input-group-lg">
-                            <span class="input-group-text bg-light">
-                                <i class="bi bi-phone text-success"></i>
-                            </span>
-                            <input type="tel" class="form-control" id="phone" name="phone"
-                                placeholder="01012345678" inputmode="numeric" pattern="[0-9]*" autocomplete="tel" required
-                                autofocus>
+                        <div dir="ltr">
+                            <input type="tel" class="form-control form-control-lg" id="phone" name="phone"
+                                inputmode="tel" autocomplete="tel" required autofocus style="width:100%">
                         </div>
-                        <div class="form-text">أدخل رقم الهاتف المصري المسجل في حسابك</div>
+                        <div class="form-text mt-2 text-end">أدخل رقم الهاتف متضمناً رمز الدولة</div>
                     </div>
 
                     <!-- Instructions -->
@@ -94,9 +149,25 @@
 @endsection
 
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23.0.12/build/js/intlTelInput.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const phoneInput = document.getElementById('phone');
+
+            // Initialize intl-tel-input
+            let iti = null;
+            if (phoneInput) {
+                iti = window.intlTelInput(phoneInput, {
+                    initialCountry: "eg",
+                    preferredCountries: ["eg", "sa", "ae", "kw", "qa", "bh", "om", "jo", "lb", "sy", "iq",
+                        "sd", "ye", "dz", "ma", "tn", "ly"
+                    ],
+                    separateDialCode: true,
+                    utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@23.0.12/build/js/utils.js",
+                    nationalMode: false,
+                    dropdownContainer: document.body
+                });
+            }
             const sendOtpBtn = document.getElementById('sendOtpBtn');
             const sendError = document.getElementById('sendError');
             const sendErrorText = document.getElementById('sendErrorText');
@@ -122,10 +193,10 @@
             }
 
             sendOtpBtn.addEventListener('click', function() {
-                const phone = phoneInput.value.trim();
+                const phone = iti ? iti.getNumber() : phoneInput.value.trim();
 
-                if (!phone || phone.length < 10) {
-                    showError('يرجى إدخال رقم هاتف صحيح.', false);
+                if (!phone || phone.length < 8) {
+                    showError('يرجى إدخال رقم هاتف صحيح متضمناً رمز الدولة.', false);
                     return;
                 }
 

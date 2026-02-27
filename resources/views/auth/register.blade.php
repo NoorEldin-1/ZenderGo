@@ -70,15 +70,12 @@
                         <h6 class="fw-bold mb-2"><i class="bi bi-phone me-2"></i>الربط برقم الهاتف:</h6>
                         <p class="mb-2 small">أدخل رقم WhatsApp الخاص بك وسنرسل لك كود للربط.</p>
                         <div class="mb-3">
-                            <label for="phoneNumber" class="form-label small fw-semibold">رقم الهاتف (بدون +)</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light">
-                                    <i class="bi bi-telephone text-success"></i>
-                                </span>
-                                <input type="tel" class="form-control" id="phoneNumber" placeholder="مثال: 201234567890"
-                                    dir="ltr">
+                            <label for="phoneNumber" class="form-label small fw-semibold">رقم الهاتف</label>
+                            <div dir="ltr">
+                                <input type="tel" class="form-control form-control-lg" id="phoneNumber" inputmode="tel"
+                                    autocomplete="tel" style="width:100%">
                             </div>
-                            <div class="form-text small">أدخل الرقم كاملاً مع رمز الدولة</div>
+                            <div class="form-text mt-2 text-end small">أدخل الرقم كاملاً متضمناً رمز الدولة</div>
                         </div>
                         <ol class="mb-0 small text-muted">
                             <li>أدخل رقمك واضغط "الحصول على الكود"</li>
@@ -162,6 +159,7 @@
 @endsection
 
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23.0.12/build/js/intlTelInput.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Elements
@@ -192,6 +190,21 @@
             const pairingCodeDisplay = document.getElementById('pairingCodeDisplay');
             const phoneNumberInput = document.getElementById('phoneNumber');
             const codeInstructions = document.getElementById('codeInstructions');
+
+            // Initialize intl-tel-input
+            let iti = null;
+            if (phoneNumberInput) {
+                iti = window.intlTelInput(phoneNumberInput, {
+                    initialCountry: "eg",
+                    preferredCountries: ["eg", "sa", "ae", "kw", "qa", "bh", "om", "jo", "lb", "sy", "iq",
+                        "sd", "ye", "dz", "ma", "tn", "ly"
+                    ],
+                    separateDialCode: true,
+                    utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@23.0.12/build/js/utils.js",
+                    nationalMode: false,
+                    dropdownContainer: document.body
+                });
+            }
 
             let statusCheckInterval = null;
             let registrationPassword = '';
@@ -297,6 +310,7 @@
                     showError('يرجى إدخال رقم الهاتف');
                     return;
                 }
+                const fullPhoneNumber = iti ? iti.getNumber() : phoneNumberInput.value.trim();
 
                 showLoading('جاري الحصول على كود الربط...');
 
@@ -305,7 +319,7 @@
                         password: registrationPassword,
                         password_confirmation: registrationPassword,
                         method: 'code',
-                        phone: phoneNumberInput.value.trim()
+                        phone: fullPhoneNumber
                     };
 
                     const response = await fetch('{{ route('register.start') }}', {
@@ -382,7 +396,62 @@
 @endpush
 
 @push('styles')
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@23.0.12/build/css/intlTelInput.css">
     <style>
+        .iti {
+            width: 100%;
+        }
+
+        .iti__flag {
+            background-image: url("https://cdn.jsdelivr.net/npm/intl-tel-input@23.0.12/build/img/flags.png");
+        }
+
+        @media (min-resolution: 2x) {
+            .iti__flag {
+                background-image: url("https://cdn.jsdelivr.net/npm/intl-tel-input@23.0.12/build/img/flags@2x.png");
+            }
+        }
+
+        .iti__country-list {
+            text-align: left;
+            direction: ltr;
+            z-index: 9999 !important;
+        }
+
+        /* Fix for RTL dropdown positioning when appended to body */
+        .iti--container .iti__dropdown-content {
+            left: 0 !important;
+            right: auto !important;
+            transform: none !important;
+        }
+
+        /* Dark mode support for intl-tel-input */
+        [data-bs-theme="dark"] .iti__country-list {
+            background-color: #212529 !important;
+            color: #e9ecef !important;
+            border-color: #495057 !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5) !important;
+        }
+
+        [data-bs-theme="dark"] .iti__country {
+            padding: 8px 10px;
+        }
+
+        [data-bs-theme="dark"] .iti__country:hover,
+        [data-bs-theme="dark"] .iti__country.iti__highlight {
+            background-color: #343a40 !important;
+        }
+
+        [data-bs-theme="dark"] .iti__search-input {
+            background-color: #1a1d21 !important;
+            color: #e9ecef !important;
+            border-color: #495057 !important;
+        }
+
+        [data-bs-theme="dark"] .iti__divider {
+            border-bottom-color: #495057 !important;
+        }
+
         @keyframes fadeIn {
             from {
                 opacity: 0;

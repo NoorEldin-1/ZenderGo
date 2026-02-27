@@ -15,6 +15,12 @@
                     <div class="alert alert-info mb-4">
                         <i class="bi bi-info-circle-fill me-2"></i>
                         يمكنك كتابة اسم العمود أو اختياره من القائمة.
+                        <br>
+                        <small class="mt-2 d-block">
+                            <i class="bi bi-lightbulb text-warning me-1"></i>
+                            <strong>ملاحظة هامة للأرقام:</strong> يرجى التأكد من أن الأرقام غير المصرية تبدأ بكود الدولة
+                            الخاص بها (مثل 966 للسعودية). الأرقام المصرية التي تبدأ بـ 01 سيتم التعرف عليها تلقائياً.
+                        </small>
                     </div>
 
                     <div class="d-flex align-items-center mb-4 text-muted small">

@@ -39,29 +39,26 @@ class ContactController extends Controller
      */
     private function normalizePhone(string $phone): string
     {
-        // Remove any whitespace
-        $phone = trim($phone);
+        // Remove any non-digit characters
+        $cleaned = preg_replace('/[^\d]/', '', $phone);
 
-        // Remove any non-digit characters except + at the beginning
-        $cleaned = preg_replace('/[^\d+]/', '', $phone);
-
-        // If it already starts with + (international format), return as is
-        if (str_starts_with($cleaned, '+')) {
-            return $cleaned;
-        }
-
-        // If already starts with 0, it's already normalized
-        if (str_starts_with($cleaned, '0')) {
-            return $cleaned;
-        }
-
-        // Check if it's a 10-digit number starting with 1 (likely missing leading 0)
+        // Check if it's a 10-digit number starting with 1 (likely missing leading 0 due to Excel)
         // Egyptian mobile prefixes: 10, 11, 12, 15
         if (strlen($cleaned) === 10 && preg_match('/^1[0125]\d{8}$/', $cleaned)) {
-            return '0' . $cleaned;
+            return '20' . $cleaned; // We know it's Egyptian, format it globally
         }
 
-        // For other cases, return as is (might be international format without +)
+        // If it starts with 01 and is exactly 11 digits (Egyptian local)
+        if (strlen($cleaned) === 11 && preg_match('/^01[0125]\d{8}$/', $cleaned)) {
+            return '20' . substr($cleaned, 1);
+        }
+
+        // If it already starts with 00, remove it (e.g. 00966 -> 966)
+        if (str_starts_with($cleaned, '00')) {
+            return substr($cleaned, 2);
+        }
+
+        // For other cases, return as is (assuming it includes country code either inherently or stripped of +)
         return $cleaned;
     }
 
@@ -184,8 +181,11 @@ class ContactController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'phone' => 'required|string|min:10|max:20',
+            'phone' => 'required|string|min:8|max:20',
         ]);
+
+        // Ensure phone is normalized globally (digits only)
+        $validated['phone'] = preg_replace('/[^\d]/', '', $validated['phone']);
 
         // Check for duplicate
         $exists = Auth::user()->contacts()->where('phone', $validated['phone'])->exists();
@@ -407,8 +407,8 @@ class ContactController extends Controller
             // Validate phone
             if (empty($phone)) {
                 $errors[] = 'رقم الهاتف مطلوب';
-            } elseif (strlen($phone) < 10) {
-                $errors[] = 'رقم الهاتف قصير جداً ({$phone})';
+            } elseif (strlen($phone) < 8) {
+                $errors[] = 'رقم الهاتف قصير جداً';
             } elseif (strlen($phone) > 20) {
                 $errors[] = 'رقم الهاتف طويل جداً';
             }

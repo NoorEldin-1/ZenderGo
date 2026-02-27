@@ -40,13 +40,28 @@ class ForgotPasswordController extends Controller
     public function sendOtp(Request $request)
     {
         $request->validate([
-            'phone' => 'required|string|min:10|max:20',
+            'phone' => 'required|string|min:8|max:20',
         ]);
 
-        $phone = $request->phone;
+        $phone = preg_replace('/[^\d]/', '', $request->phone);
 
         // Check if user exists with this phone
         $targetUser = User::where('phone', $phone)->first();
+
+        // Fallback for old Egyptian numbers (auto-migration support)
+        if (!$targetUser && str_starts_with($phone, '201') && strlen($phone) == 12) {
+            $fallbackPhone = '0' . substr($phone, 2);
+            $targetUser = User::where('phone', $fallbackPhone)->first();
+            if ($targetUser) {
+                $phone = $targetUser->phone;
+            }
+        } elseif (!$targetUser && str_starts_with($phone, '01') && strlen($phone) == 11) {
+            $fallbackPhone = '20' . substr($phone, 1);
+            $targetUser = User::where('phone', $fallbackPhone)->first();
+            if ($targetUser) {
+                $phone = $targetUser->phone;
+            }
+        }
 
         if (!$targetUser) {
             return response()->json([
