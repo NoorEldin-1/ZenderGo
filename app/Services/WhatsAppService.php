@@ -1155,6 +1155,91 @@ class WhatsAppService
     }
 
     /**
+     * Send a poll message via WhatsApp (Anti-Ban: Auto-Poll Tactic).
+     * Sends a single-select poll to force two-way interaction with the recipient.
+     *
+     * @param string $phone    Recipient phone number
+     * @param string $name     Poll question text
+     * @param array  $options  Array of poll option strings (min 2)
+     * @return array           Result with success status
+     */
+    public function sendPollWithVerification(string $phone, string $name, array $options): array
+    {
+        try {
+            $response = Http::withToken($this->token)
+                ->timeout(30)
+                ->post("{$this->baseUrl}/api/{$this->session}/send-poll", [
+                    'phone' => $this->formatPhone($phone),
+                    'name' => $name,
+                    'options' => $options,
+                ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $responseData = $data['response'] ?? $data;
+
+                Log::info("WhatsApp poll sent to {$phone}", [
+                    'session' => $this->session,
+                    'poll_name' => $name,
+                ]);
+
+                return [
+                    'success' => true,
+                    'data' => $responseData,
+                ];
+            }
+
+            $statusCode = $response->status();
+            $body = $response->json() ?? [];
+            $bodyMessage = $body['message'] ?? '';
+
+            Log::error("WhatsApp API error (poll)", [
+                'phone' => $phone,
+                'status' => $statusCode,
+                'body' => $body,
+            ]);
+
+            if (
+                $statusCode === 404 ||
+                stripos($bodyMessage, 'Disconnected') !== false ||
+                stripos($bodyMessage, 'not active') !== false
+            ) {
+                return [
+                    'success' => false,
+                    'reason' => 'disconnected',
+                    'message' => 'الجلسة مفصولة',
+                    'needs_reauth' => true,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'reason' => 'api_error',
+                'status_code' => $statusCode,
+                'message' => $bodyMessage ?: 'خطأ في إرسال الاستطلاع',
+                'needs_reauth' => false,
+            ];
+
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            Log::error("WhatsApp connection error (poll): " . $e->getMessage());
+            return [
+                'success' => false,
+                'reason' => 'connection_error',
+                'message' => 'لا يمكن الاتصال بخادم WhatsApp',
+                'needs_reauth' => false,
+            ];
+        } catch (\Exception $e) {
+            Log::error("WhatsApp service error (poll): " . $e->getMessage());
+            return [
+                'success' => false,
+                'reason' => 'exception',
+                'message' => $e->getMessage(),
+                'needs_reauth' => false,
+            ];
+        }
+    }
+
+    /**
      * Format phone number for WhatsApp API.
      */
     protected function formatPhone(string $phone): string

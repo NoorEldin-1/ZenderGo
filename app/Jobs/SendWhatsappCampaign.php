@@ -284,6 +284,33 @@ class SendWhatsappCampaign implements ShouldQueue
         }
 
         Log::info("Successfully sent campaign to {$this->phone}");
+
+        // ====== AUTO-POLL ANTI-BAN TACTIC ======
+        // Immediately after the main message, send a mandatory poll to trigger
+        // two-way interaction. This removes the "Report" button from the
+        // recipient's UI and boosts the sender's Trust Score dramatically.
+        try {
+            // Brief humanistic pause before the follow-up poll (0.5-1.5s)
+            usleep(rand(500000, 1500000));
+
+            $pollResult = $whatsapp->sendPollWithVerification(
+                $this->phone,
+                'هل أنت مهتم بمعرفة المزيد؟',
+                ['✅ مهتم', '❌ لا، شكراً', '🛑 إيقاف هذه الرسائل']
+            );
+
+            if ($pollResult['success'] ?? false) {
+                Log::info("Auto-Poll sent successfully to {$this->phone}");
+            } else {
+                Log::warning("Auto-Poll failed for {$this->phone}", [
+                    'reason' => $pollResult['reason'] ?? 'unknown',
+                    'message' => $pollResult['message'] ?? '',
+                ]);
+            }
+        } catch (\Exception $e) {
+            // Non-fatal: poll failure should never abort the campaign
+            Log::warning("Auto-Poll exception for {$this->phone}: " . $e->getMessage());
+        }
     }
 
     /**
