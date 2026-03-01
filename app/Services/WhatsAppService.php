@@ -141,7 +141,7 @@ class WhatsAppService
      * Start a new WhatsApp session.
      * Returns the QR code if authentication is needed.
      */
-    public function startSession(): array
+    public function startSession(bool $waitQrCode = true): array
     {
         try {
             // Only generate token if we don't have one yet
@@ -158,7 +158,7 @@ class WhatsAppService
                 ->timeout(60)
                 ->post("{$this->baseUrl}/api/{$this->session}/start-session", [
                     'webhook' => null,
-                    'waitQrCode' => true,
+                    'waitQrCode' => $waitQrCode,
                 ]);
 
             $data = $response->json();

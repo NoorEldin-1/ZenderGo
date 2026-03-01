@@ -81,17 +81,15 @@ class SessionManager
      */
     public function wakeSession(User $user, string $source = 'job'): array
     {
-        // STRICT WAKE POLICY: Background jobs cannot start a disconnected session
-        if ($source === 'job') {
-            // Check DB status first
-            if (in_array($user->session_state, ['disconnected', 'requires_reconnect'])) {
-                Log::warning("Strict Wake: Blocking background job for disconnected user {$user->id}");
-                return [
-                    'status' => 'needs_qr', // Use existing status that implies disconnect
-                    'service' => null,
-                    'message' => 'الجلسة مفصولة. يرجى إعادة الربط من لوحة التحكم.',
-                ];
-            }
+        // STRICT WAKE POLICY: If the database knows the session is disconnected, 
+        // do not attempt to start it. Fast fail to prevent 30-second hanging.
+        if (in_array($user->session_state, ['disconnected', 'requires_reconnect'])) {
+            Log::warning("Strict Wake: Blocking wake attempt for disconnected user {$user->id}");
+            return [
+                'status' => 'needs_qr', // implies disconnect/re-auth needed
+                'service' => null,
+                'message' => 'الجلسة مفصولة. يرجى إعادة الربط من لوحة التحكم.',
+            ];
         }
 
         if (!$user->whatsapp_session || !$user->whatsapp_token) {
@@ -152,9 +150,9 @@ class SessionManager
         $maxRetries = 3;
         $retryDelay = 2; // seconds between retries
 
-        // STRICT WAKE: If source is 'job', DO NOT wait for QR code
-        // If the session needs QR, it should fail fast so we can mark it disconnected
-        $shouldWaitQr = ($source === 'web');
+        // We use pairing codes now, so we never want to block for 30 seconds waiting for a QR scan.
+        // Failing fast is much better for UI responsiveness.
+        $shouldWaitQr = false;
 
         for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
             $result = $whatsapp->startSession($shouldWaitQr);
@@ -164,7 +162,8 @@ class SessionManager
             Log::debug("Wake attempt {$attempt} for user {$user->id}: status={$status}");
 
             // Handle "STARTING" state - dedicated polling loop
-            if (in_array($upperStatus, ['STARTING', 'INITIALIZING', 'OPENING'])) {
+            // Added CONNECTING as waitQrCode=false returns CONNECTING instantly
+            if (in_array($upperStatus, ['STARTING', 'INITIALIZING', 'OPENING', 'CONNECTING'])) {
                 Log::info("Session initializing for user {$user->id}, entering polling mode...");
 
                 // Poll for up to 60 seconds (20 checks x 3 seconds)
