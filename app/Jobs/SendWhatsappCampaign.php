@@ -35,17 +35,8 @@ class SendWhatsappCampaign implements ShouldQueue
 
     /**
      * The number of seconds the job can run before timing out.
-     * Increased to accommodate video uploads which involve:
-     * anti-ban delay (15-45s) + typing sim (3-8s) + large file upload (30-60s)
      */
-    public int $timeout = 180;
-
-    /**
-     * Anti-ban delay range in seconds (min, max).
-     * A random value in this range is used between messages.
-     */
-    private const DELAY_MIN_SECONDS = 15;
-    private const DELAY_MAX_SECONDS = 45;
+    public int $timeout = 120;
 
     /**
      * Typing simulation time range in milliseconds (min, max).
@@ -89,13 +80,11 @@ class SendWhatsappCampaign implements ShouldQueue
 
         // ====== SEQUENTIAL PROCESSING VIA BLOCKING LOCK ======
         // Per-user campaign lock - blocks until previous job completes for instant sequential sending
-        // Lock timeout increased to accommodate anti-ban delays (up to 120s per message)
-        $lock = Cache::lock("campaign_job_lock:{$this->userId}", 120);
+        $lock = Cache::lock("campaign_job_lock:{$this->userId}", 60);
 
-        // Block for up to 90 seconds waiting for lock (instead of releasing to queue)
-        // Increased to accommodate anti-ban random delays between messages
-        if (!$lock->block(90)) {
-            Log::warning("Failed to acquire lock after 90s for user {$this->userId}, releasing to queue");
+        // Block for up to 30 seconds waiting for lock
+        if (!$lock->block(30)) {
+            Log::warning("Failed to acquire lock after 30s for user {$this->userId}, releasing to queue");
             $this->release(2); // Try again in 2 seconds as fallback
             return;
         }
@@ -159,12 +148,6 @@ class SendWhatsappCampaign implements ShouldQueue
                 $this->handleDisconnection($user, 'تم فقدان الاتصال أثناء الإرسال');
                 return;
             }
-
-            // ====== ANTI-BAN: RANDOM DELAY BETWEEN MESSAGES ======
-            // Sleep for a random duration to simulate human pacing
-            $delay = rand(self::DELAY_MIN_SECONDS, self::DELAY_MAX_SECONDS);
-            Log::info("Anti-ban delay: sleeping {$delay}s before sending to {$this->phone}");
-            sleep($delay);
 
             // ====== SEND MESSAGE ======
             $this->sendMessage($whatsapp, $sessionManager, $user);
@@ -285,32 +268,7 @@ class SendWhatsappCampaign implements ShouldQueue
 
         Log::info("Successfully sent campaign to {$this->phone}");
 
-        // ====== AUTO-POLL ANTI-BAN TACTIC ======
-        // Immediately after the main message, send a mandatory poll to trigger
-        // two-way interaction. This removes the "Report" button from the
-        // recipient's UI and boosts the sender's Trust Score dramatically.
-        try {
-            // Brief humanistic pause before the follow-up poll (0.5-1.5s)
-            usleep(rand(500000, 1500000));
 
-            $pollResult = $whatsapp->sendPollWithVerification(
-                $this->phone,
-                'هل أنت مهتم بمعرفة المزيد؟',
-                ['✅ مهتم', '❌ لا، شكراً', '🛑 إيقاف هذه الرسائل']
-            );
-
-            if ($pollResult['success'] ?? false) {
-                Log::info("Auto-Poll sent successfully to {$this->phone}");
-            } else {
-                Log::warning("Auto-Poll failed for {$this->phone}", [
-                    'reason' => $pollResult['reason'] ?? 'unknown',
-                    'message' => $pollResult['message'] ?? '',
-                ]);
-            }
-        } catch (\Exception $e) {
-            // Non-fatal: poll failure should never abort the campaign
-            Log::warning("Auto-Poll exception for {$this->phone}: " . $e->getMessage());
-        }
     }
 
     /**
