@@ -1,6 +1,6 @@
-# Zender - SaaS WhatsApp Marketing Platform (Baileys Edition)
+# ZenderGo - SaaS WhatsApp Marketing Platform (Baileys Edition)
 
-Zender is a high-performance, SaaS-ready WhatsApp marketing platform built with **Laravel 10**, **Node.js**, and **Baileys**. Unlike traditional solutions that rely on heavy browser automation (Puppeteer/WPPConnect), Zender uses the lightweight **Baileys** library to communicate directly with WhatsApp via WebSocket, reducing RAM usage by **90%**.
+ZenderGo is a high-performance, SaaS-ready WhatsApp marketing platform built with **Laravel 10**, **Node.js**, and **Baileys**. Unlike traditional solutions that rely on heavy browser automation (Puppeteer/WPPConnect), ZenderGo uses the lightweight **Baileys** library to communicate directly with WhatsApp via WebSocket, reducing RAM usage by **90%**.
 
 This edition is optimized for shared hosting/VPS environments, featuring an "On-Demand" session lifecycle, Redis-powered atomic locks, and a complete subscription management system (SaaS).
 
@@ -53,8 +53,8 @@ This edition is optimized for shared hosting/VPS environments, featuring an "On-
 ### 1. Clone & Setup Backend
 
 ```bash
-git clone https://github.com/yourusername/zender.git
-cd zender
+git clone https://github.com/yourusername/ZenderGo.git
+cd ZenderGo
 
 # Install PHP dependencies
 composer install --optimize-autoloader --no-dev
@@ -74,7 +74,7 @@ Edit `.env` and set your database and Redis credentials:
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=zender
+DB_DATABASE=ZenderGo
 DB_USERNAME=root
 DB_PASSWORD=
 
@@ -143,7 +143,7 @@ php artisan queue:work redis --tries=3 --timeout=90
 
 ### 1. The "On-Demand" Lifecycle (RAM Optimization)
 
-Traditional WhatsApp bots keep the browser open 24/7, consuming massive RAM. Zender introduces an intelligent lifecycle:
+Traditional WhatsApp bots keep the browser open 24/7, consuming massive RAM. ZenderGo introduces an intelligent lifecycle:
 
 1.  **Sleep:** After 5 minutes of inactivity, the Baileys socket closes. RAM usage drops to near zero.
 2.  **Wake:** When a campaign starts, the `SendWhatsappCampaign` job triggers a "Wake Up" signal.
@@ -157,7 +157,7 @@ This allows a 2GB VPS to handle **50+ concurrent users** instead of just 4-5.
 
 When a user sends a campaign to 1,000 contacts, 1,000 jobs are dispatched instantly. Without protection, all 1,000 jobs would try to "wake up" the session simultaneously, crashing the server.
 
-Zender uses **Atomic Locks** (`Cache::lock`):
+ZenderGo uses **Atomic Locks** (`Cache::lock`):
 
 - **Job #1** acquires the lock and wakes the session.
 - **Job #2-1000** checks the lock/status and waits.
@@ -167,7 +167,7 @@ Zender uses **Atomic Locks** (`Cache::lock`):
 
 ## 💎 SaaS & Subscription Model
 
-Zender is built as a multi-tenant SaaS. Here's how the subscription flow works:
+ZenderGo is built as a multi-tenant SaaS. Here's how the subscription flow works:
 
 ### 1. Trial & Expiry
 
@@ -180,7 +180,7 @@ Zender is built as a multi-tenant SaaS. Here's how the subscription flow works:
 
 ### 2. Renewal Flow (Offline Payments)
 
-Since in many regions (like Egypt) automated payments (Stripe) aren't always preferred for B2B, Zender prioritizes **Manual/Offline Payments**:
+Since in many regions (like Egypt) automated payments (Stripe) aren't always preferred for B2B, ZenderGo prioritizes **Manual/Offline Payments**:
 
 1.  **User** visits "My Subscription".
 2.  **User** sees the payment details (Vodafone Cash / Instapay Number).
@@ -196,7 +196,7 @@ Since in many regions (like Egypt) automated payments (Stripe) aren't always pre
 
 ## 📱 WhatsApp Connection Methods
 
-Zender supports the latest Baileys connection methods:
+ZenderGo supports the latest Baileys connection methods:
 
 ### Option A: QR Code (Standard)
 
